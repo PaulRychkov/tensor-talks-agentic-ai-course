@@ -1,0 +1,29 @@
+{
+  "id": "question_dropout_01",
+  "theory_id": "theory_dropout",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как Dropout предотвращает переобучение в нейронных сетях?",
+    "expected_points": ["случайное отключение нейронов", "независимость от конкретных нейронов", "регуляризация", "только на обучении"],
+    "links_to_theory": [
+      {"theory_id": "theory_dropout", "segment_type": "definition"},
+      {"theory_id": "theory_dropout", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Dropout случайно отключает часть нейронов во время обучения, заставляя сеть не полагаться на конкретные нейроны. Это делает модель более устойчивой и лучше обобщающейся. На inference все нейроны активны, но их выходы масштабируются.",
+    "covers": [
+      "механизм работы dropout",
+      "влияние на переобучение",
+      "разница между обучением и inference"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

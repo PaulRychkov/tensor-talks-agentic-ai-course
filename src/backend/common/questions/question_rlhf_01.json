@@ -1,0 +1,29 @@
+{
+  "id": "question_rlhf_01",
+  "theory_id": "theory_rlhf",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "Что такое RLHF и зачем он нужен для production LLM?",
+    "expected_points": ["alignment с предпочтениями", "reward model", "PPO", "полезность и безопасность"],
+    "links_to_theory": [
+      {"theory_id": "theory_rlhf", "segment_type": "definition"},
+      {"theory_id": "theory_rlhf", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "RLHF выравнивает LLM с человеческими предпочтениями через обучение с подкреплением. Процесс: supervised fine-tuning → обучение reward model на человеческих оценках → оптимизация через PPO. Критично для production, так как создает более полезные, честные и безвредные ответы.",
+    "covers": [
+      "процесс RLHF",
+      "компоненты системы",
+      "важность для production"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

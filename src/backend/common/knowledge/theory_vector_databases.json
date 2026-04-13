@@ -1,0 +1,45 @@
+{
+  "id": "theory_vector_databases",
+  "concept": "Векторные базы данных",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "rag", "embeddings", "databases"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Векторные БД — специализированные базы данных для хранения и поиска векторов (embeddings) по сходству, используемые в RAG системах."
+    },
+    {
+      "type": "intuition",
+      "content": "Хранят документы как векторы и позволяют быстро находить похожие по семантике через векторный поиск (cosine similarity, dot product)."
+    },
+    {
+      "type": "formula",
+      "content": "similarity = cosine(query_vector, document_vector) = (q·d) / (||q|| * ||d||)"
+    },
+    {
+      "type": "example",
+      "content": "Pinecone, Weaviate, Qdrant, Milvus. Используются в RAG для поиска релевантных документов по запросу пользователя."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Индексируют векторы для быстрого поиска (HNSW, IVF). Поддерживают метаданные фильтрацию. Критичны для производительности RAG систем."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_rag",
+      "relation_type": "used_in"
+    },
+    {
+      "target_id": "theory_word_embeddings",
+      "relation_type": "stores"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

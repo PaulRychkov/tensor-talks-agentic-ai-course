@@ -1,0 +1,11 @@
+{{- if .Values.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    {{- if .Values.istio.injection.enabled }}
+    istio-injection: enabled
+    {{- end }}
+{{- end }}

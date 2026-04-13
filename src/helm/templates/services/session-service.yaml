@@ -1,0 +1,21 @@
+{{- if (index .Values.services "session-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-session-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: session-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: session-service
+{{- end }}
+

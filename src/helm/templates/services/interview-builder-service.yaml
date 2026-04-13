@@ -1,0 +1,25 @@
+{{- if (index .Values.services "interview-builder-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-interview-builder-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: interview-builder-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8089
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9093
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: interview-builder-service
+{{- end }}
+

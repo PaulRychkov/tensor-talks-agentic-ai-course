@@ -1,0 +1,29 @@
+{
+  "id": "question_batch_norm_01",
+  "theory_id": "theory_batch_normalization",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 3,
+  "content": {
+    "question": "Как Batch Normalization ускоряет обучение нейронных сетей?",
+    "expected_points": ["нормализация активаций", "стабилизация градиентов", "большие learning rates", "уменьшение covariate shift"],
+    "links_to_theory": [
+      {"theory_id": "theory_batch_normalization", "segment_type": "definition"},
+      {"theory_id": "theory_batch_normalization", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Batch Normalization нормализует активации каждого слоя по батчу, стабилизируя распределение входов. Это позволяет использовать большие learning rates, ускоряет сходимость и уменьшает внутренний covariate shift. Также работает как регуляризация.",
+    "covers": [
+      "механизм нормализации",
+      "влияние на скорость обучения",
+      "дополнительные преимущества"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

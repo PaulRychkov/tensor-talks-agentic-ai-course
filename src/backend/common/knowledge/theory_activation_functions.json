@@ -1,0 +1,45 @@
+{
+  "id": "theory_activation_functions",
+  "concept": "Функции активации",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "neural_networks", "deep_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Функции активации — нелинейные функции, применяемые к выходу нейрона для введения нелинейности в нейронную сеть."
+    },
+    {
+      "type": "intuition",
+      "content": "Без активации многослойная сеть эквивалентна одной линейной модели. Активация позволяет моделировать сложные нелинейные зависимости."
+    },
+    {
+      "type": "formula",
+      "content": "y = f(z), где z = Σ(wᵢxᵢ + b), f — функция активации"
+    },
+    {
+      "type": "example",
+      "content": "ReLU (max(0, x)) — самая популярная. Sigmoid и tanh — для старых сетей. Swish, GELU — современные альтернативы."
+    },
+    {
+      "type": "practical_notes",
+      "content": "ReLU решает проблему исчезающих градиентов, но может 'умереть' (Dying ReLU). Leaky ReLU и ELU решают эту проблему."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_neural_networks",
+      "relation_type": "required_by"
+    },
+    {
+      "target_id": "theory_backpropagation",
+      "relation_type": "affects"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

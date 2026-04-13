@@ -1,0 +1,49 @@
+{
+  "id": "theory_llama",
+  "concept": "LLaMA (Large Language Model Meta AI)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "llama", "open_source"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "LLaMA — семейство больших языковых моделей от Meta AI, основанных на Transformer decoder архитектуре, оптимизированных для эффективности."
+    },
+    {
+      "type": "intuition",
+      "content": "Open-source альтернатива GPT, оптимизированная для работы на меньшем количестве ресурсов при сохранении качества."
+    },
+    {
+      "type": "formula",
+      "content": "LLaMA = GPT-like architecture + оптимизации (RMSNorm, SwiGLU, rotary positional embeddings)"
+    },
+    {
+      "type": "example",
+      "content": "LLaMA-7B, LlaMA-13B, LLaMA-65B — разные размеры. Используется как база для fine-tuning (Alpaca, Vicuna)."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Более эффективна чем GPT при том же качестве. Rotary positional embeddings вместо learnable. SwiGLU активация. Популярна для локального развертывания."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "alternative_to"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "based_on"
+    },
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "used_with"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

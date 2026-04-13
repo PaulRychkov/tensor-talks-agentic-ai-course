@@ -1,0 +1,21 @@
+{{- if .Values.kafka.ui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-kafdrop
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.kafka.ui.port | default 9000 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+{{- end }}
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_overfitting_01",
+  "theory_id": "theory_overfitting",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое переобучение и как его распознать?",
+    "expected_points": ["высокая точность на train", "низкая точность на test", "запоминание шума"],
+    "links_to_theory": [
+      {"theory_id": "theory_overfitting", "segment_type": "definition"},
+      {"theory_id": "theory_overfitting", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Переобучение — ситуация, когда модель слишком хорошо запоминает обучающие данные, но плохо обобщается на новые. Признаки: высокая точность на обучающей выборке, но низкая на тестовой. Модель запоминает шум вместо реальных паттернов.",
+    "covers": [
+      "определение переобучения",
+      "признаки переобучения",
+      "разница между train и test accuracy"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

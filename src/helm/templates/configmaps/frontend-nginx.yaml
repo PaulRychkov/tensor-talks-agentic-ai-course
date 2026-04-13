@@ -1,0 +1,64 @@
+{{- if (index .Values.services "frontend").enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-frontend-nginx
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  nginx.conf: |
+    # Основной конфиг nginx для работы без root прав
+    pid /tmp/nginx.pid;
+    error_log /var/log/nginx/error.log warn;
+    
+    events {
+        worker_connections 1024;
+        use epoll;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        
+        access_log /var/log/nginx/access.log main;
+        
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        
+        # Кэш директории
+        client_body_temp_path /var/cache/nginx/client_temp;
+        proxy_temp_path /var/cache/nginx/proxy_temp;
+        fastcgi_temp_path /var/cache/nginx/fastcgi_temp;
+        uwsgi_temp_path /var/cache/nginx/uwsgi_temp;
+        scgi_temp_path /var/cache/nginx/scgi_temp;
+        
+        server {
+            listen 8080;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            location /api/ {
+                proxy_pass http://{{ include "tensor-talks.fullname" . }}-bff-service:8080;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }
+{{- end }}

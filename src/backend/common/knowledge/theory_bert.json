@@ -1,0 +1,45 @@
+{
+  "id": "theory_bert",
+  "concept": "BERT (Bidirectional Encoder Representations)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "bert", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "BERT — двунаправленная модель на основе Transformer encoder, предобученная на задаче masked language modeling и next sentence prediction."
+    },
+    {
+      "type": "intuition",
+      "content": "Одновременно 'читает' текст слева направо и справа налево, что даёт лучшее понимание контекста."
+    },
+    {
+      "type": "formula",
+      "content": "BERT = Transformer Encoder + Bidirectional context"
+    },
+    {
+      "type": "example",
+      "content": "Fine-tuning для классификации текста, NER, question answering. RoBERTa, ALBERT — улучшенные версии."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Предобучение на больших корпусах, затем fine-tuning на конкретной задаче. Не подходит для генерации (только encoder). Современные альтернативы: DeBERTa, ELECTRA."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "based_on"
+    },
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

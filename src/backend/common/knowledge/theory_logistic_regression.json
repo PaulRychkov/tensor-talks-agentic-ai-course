@@ -1,0 +1,45 @@
+{
+  "id": "theory_logistic_regression",
+  "concept": "Логистическая регрессия",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "classification", "supervised_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Логистическая регрессия — модель для бинарной классификации, использующая сигмоидную функцию для получения вероятностей."
+    },
+    {
+      "type": "intuition",
+      "content": "Преобразует линейную комбинацию признаков в вероятность принадлежности к классу через сигмоиду."
+    },
+    {
+      "type": "formula",
+      "content": "P(y=1|x) = 1 / (1 + e^(-z)), где z = w₀ + w₁x₁ + ..."
+    },
+    {
+      "type": "example",
+      "content": "Предсказание вероятности того, что клиент совершит покупку на основе его характеристик."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Хорошо работает для линейно разделимых данных. Использует cross-entropy loss. Может быть расширена до многоклассовой (softmax)."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_linear_regression",
+      "relation_type": "extends"
+    },
+    {
+      "target_id": "theory_sigmoid",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

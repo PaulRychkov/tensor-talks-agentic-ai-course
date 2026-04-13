@@ -1,0 +1,49 @@
+{
+  "id": "theory_transformer",
+  "concept": "Transformer архитектура",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "transformer", "attention"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Transformer — архитектура на основе механизма внимания (attention), позволяющая параллельно обрабатывать последовательности без рекуррентных связей."
+    },
+    {
+      "type": "intuition",
+      "content": "Self-attention позволяет каждому элементу последовательности 'смотреть' на все остальные и взвешивать их важность."
+    },
+    {
+      "type": "formula",
+      "content": "Attention(Q, K, V) = softmax(QK^T / √d_k) · V"
+    },
+    {
+      "type": "example",
+      "content": "BERT, GPT, T5 — все основаны на Transformer. Лежит в основе современных LLM."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Параллелизуемость ускоряет обучение. Multi-head attention захватывает разные типы зависимостей. Positional encoding добавляет информацию о порядке."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_attention",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_bert",
+      "relation_type": "prerequisite_for"
+    },
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "prerequisite_for"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

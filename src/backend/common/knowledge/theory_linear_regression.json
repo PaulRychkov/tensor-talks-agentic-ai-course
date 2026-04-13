@@ -1,0 +1,45 @@
+{
+  "id": "theory_linear_regression",
+  "concept": "Линейная регрессия",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "regression", "supervised_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Линейная регрессия — модель, которая предсказывает целевую переменную как линейную комбинацию признаков."
+    },
+    {
+      "type": "intuition",
+      "content": "Находит прямую линию (или гиперплоскость), которая наилучшим образом приближает зависимость между признаками и целевой переменной."
+    },
+    {
+      "type": "formula",
+      "content": "y = w₀ + w₁x₁ + w₂x₂ + ... + wₙxₙ"
+    },
+    {
+      "type": "example",
+      "content": "Предсказание цены дома на основе площади, количества комнат и района."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Быстрая и интерпретируемая модель. Чувствительна к выбросам и мультиколлинеарности."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gradient_descent",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_logistic_regression",
+      "relation_type": "prerequisite_for"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

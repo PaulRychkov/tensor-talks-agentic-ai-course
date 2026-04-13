@@ -1,0 +1,99 @@
+{{- if (index .Values.services "results-crud-service").enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-results-crud-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: results-crud-service
+spec:
+  replicas: {{ (index .Values.services "results-crud-service").replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: results-crud-service
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: results-crud-service
+        team: tensor-talks
+        project: tensor-talks
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8088"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+{{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: results-crud-service
+          image: {{ include "tensor-talks.image" (dict "Values" .Values "repository" (index .Values.services "results-crud-service").image.repository "tag" (index .Values.services "results-crud-service").image.tag) }}
+          imagePullPolicy: {{ (index .Values.services "results-crud-service").image.pullPolicy | default (include "tensor-talks.imagePullPolicy" .Values) }}
+          ports:
+            - name: http
+              containerPort: 8088
+              protocol: TCP
+          env:
+            - name: RESULTS_CRUD_SERVER_HOST
+              value: "0.0.0.0"
+            - name: RESULTS_CRUD_SERVER_PORT
+              value: "8088"
+            - name: RESULTS_CRUD_DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: host
+            - name: RESULTS_CRUD_DATABASE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: port
+            - name: RESULTS_CRUD_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: user
+            - name: RESULTS_CRUD_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: password
+            - name: RESULTS_CRUD_DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: database
+            - name: RESULTS_CRUD_DATABASE_SSL_MODE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-postgresql
+                  key: sslmode
+            - name: RESULTS_CRUD_DATABASE_SCHEMA
+              value: {{ (index .Values.services "results-crud-service").database.schema | quote }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml (index .Values.services "results-crud-service").resources | nindent 12 }}
+{{- end }}
+

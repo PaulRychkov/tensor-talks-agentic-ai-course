@@ -1,0 +1,45 @@
+{
+  "id": "theory_rnn",
+  "concept": "Рекуррентные нейронные сети (RNN)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "neural_networks", "sequence_models"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "RNN — тип нейронных сетей с цикличными связями, позволяющий обрабатывать последовательности данных с учётом контекста."
+    },
+    {
+      "type": "intuition",
+      "content": "Каждый шаг использует информацию из предыдущих шагов через скрытое состояние (hidden state)."
+    },
+    {
+      "type": "formula",
+      "content": "h_t = f(W·x_t + U·h_{t-1} + b)"
+    },
+    {
+      "type": "example",
+      "content": "Обработка текста, временных рядов, распознавание речи. LSTM и GRU — улучшенные варианты RNN."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Проблема исчезающих градиентов ограничивает длину последовательностей. LSTM/GRU решают эту проблему через gates."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_lstm",
+      "relation_type": "prerequisite_for"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "preceded_by"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

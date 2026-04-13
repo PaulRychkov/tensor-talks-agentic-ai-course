@@ -1,0 +1,45 @@
+{
+  "id": "theory_l1_regularization",
+  "concept": "L1 регуляризация",
+  "complexity": 2,
+  "parent_id": "theory_regularization_common",
+  "tags": ["machine_learning", "regularization", "optimization", "feature_selection"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "L1‑регуляризация добавляет штраф за сумму абсолютных значений весов в функцию потерь."
+    },
+    {
+      "type": "intuition",
+      "content": "L1 регуляризация способна обнулять веса, что делает её полезной для отбора признаков."
+    },
+    {
+      "type": "formula",
+      "content": "L(w) = L₀(w) + λ * Σ |wᵢ|"
+    },
+    {
+      "type": "example",
+      "content": "Lasso регрессия использует L1 регуляризацию для создания разреженных моделей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "L1 может обнулить неважные признаки, но менее стабильна чем L2 при мультиколлинеарности."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_regularization_common",
+      "relation_type": "subtopic_of"
+    },
+    {
+      "target_id": "theory_l2_regularization",
+      "relation_type": "analogous_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

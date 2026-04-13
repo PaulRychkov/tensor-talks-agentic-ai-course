@@ -1,0 +1,29 @@
+{
+  "id": "question_gradient_descent_01",
+  "theory_id": "theory_gradient_descent",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Как работает алгоритм градиентного спуска?",
+    "expected_points": ["движение против градиента", "итеративное обновление весов", "learning rate"],
+    "links_to_theory": [
+      {"theory_id": "theory_gradient_descent", "segment_type": "definition"},
+      {"theory_id": "theory_gradient_descent", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Градиентный спуск — итеративный алгоритм, который обновляет веса модели, двигаясь в направлении, противоположном градиенту функции потерь. Скорость обучения (learning rate) определяет размер шага на каждой итерации.",
+    "covers": [
+      "принцип работы алгоритма",
+      "направление движения",
+      "роль learning rate"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

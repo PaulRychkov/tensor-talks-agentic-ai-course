@@ -1,0 +1,45 @@
+{
+  "id": "theory_svm",
+  "concept": "Метод опорных векторов (SVM)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["machine_learning", "classification", "optimization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "SVM находит оптимальную разделяющую гиперплоскость, максимизирующую зазор между классами."
+    },
+    {
+      "type": "intuition",
+      "content": "Фокусируется на 'опорных векторах' — точках, ближайших к границе между классами."
+    },
+    {
+      "type": "formula",
+      "content": "Maximize margin: 2/||w||, subject to y_i(w·x_i + b) ≥ 1"
+    },
+    {
+      "type": "example",
+      "content": "Классификация текста, распознавание изображений. Kernel trick позволяет работать с нелинейными границами."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Эффективен для высокоразмерных данных. Kernel functions (RBF, polynomial) расширяют применимость. Чувствителен к масштабированию."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_kernel_trick",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_optimization",
+      "relation_type": "requires"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

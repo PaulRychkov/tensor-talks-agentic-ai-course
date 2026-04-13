@@ -1,0 +1,63 @@
+{{- if .Values.kafka.ui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-kafdrop
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kafka-ui
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-ui
+    spec:
+      containers:
+        - name: kafdrop
+          image: {{ .Values.kafka.ui.image.repository }}:{{ .Values.kafka.ui.image.tag }}
+          imagePullPolicy: {{ .Values.kafka.ui.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.kafka.ui.port | default 9000 }}
+              protocol: TCP
+          env:
+            - name: KAFKA_BROKERCONNECT
+              value: "tensor-talks-kafka-kafka-bootstrap.tensor-talks.svc.cluster.local:9092"
+            - name: SERVER_PORT
+              value: {{ .Values.kafka.ui.port | default "9000" | quote }}
+            - name: JVM_OPTS
+              value: {{ .Values.kafka.ui.jvmOpts | default "-Xms32M -Xmx64M" | quote }}
+          resources:
+            {{- toYaml .Values.kafka.ui.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+{{- end }}
+

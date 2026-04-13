@@ -1,0 +1,51 @@
+{{- if .Values.kafka.deployment.enabled }}
+# Kafka Node Pools для KRaft режима
+# Controller pool для управления метаданными
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: tensor-talks-kafka-controller
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+  storage:
+    type: ephemeral
+  resources:
+    requests:
+      cpu: {{ .Values.kafka.controller.resources.requests.cpu | default "200m" }}
+      memory: {{ .Values.kafka.controller.resources.requests.memory | default "512Mi" }}
+    limits:
+      cpu: {{ .Values.kafka.controller.resources.limits.cpu | default "500m" }}
+      memory: {{ .Values.kafka.controller.resources.limits.memory | default "1Gi" }}
+
+---
+# Broker pool для обработки сообщений
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: tensor-talks-kafka-broker
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  roles:
+    - broker
+  storage:
+    type: ephemeral
+  resources:
+    requests:
+      cpu: {{ .Values.kafka.broker.resources.requests.cpu | default "500m" }}
+      memory: {{ .Values.kafka.broker.resources.requests.memory | default "1Gi" }}
+    limits:
+      cpu: {{ .Values.kafka.broker.resources.limits.cpu | default "1" }}
+      memory: {{ .Values.kafka.broker.resources.limits.memory | default "2Gi" }}
+{{- end }}
+

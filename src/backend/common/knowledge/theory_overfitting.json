@@ -1,0 +1,45 @@
+{
+  "id": "theory_overfitting",
+  "concept": "Переобучение",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "model_evaluation", "generalization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Переобучение — ситуация, когда модель слишком хорошо запоминает обучающие данные и плохо обобщается на новые."
+    },
+    {
+      "type": "intuition",
+      "content": "Модель 'заучивает' шум в данных вместо реальных паттернов, что приводит к низкой точности на тестовой выборке."
+    },
+    {
+      "type": "formula",
+      "content": "High train accuracy, Low test accuracy → Overfitting"
+    },
+    {
+      "type": "example",
+      "content": "Дерево решений с очень большой глубиной может запомнить каждый пример обучающей выборки."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Методы борьбы: регуляризация, dropout, early stopping, увеличение данных, упрощение модели."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_regularization_common",
+      "relation_type": "solved_by"
+    },
+    {
+      "target_id": "theory_bias_variance",
+      "relation_type": "related_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

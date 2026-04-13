@@ -1,0 +1,20 @@
+{{- if .Values.logging.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-logging-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+data:
+  # Ограничения логирования для предотвращения засорения общего Loki
+  log-level: {{ .Values.logging.level | default "INFO" | quote }}
+  log-format: {{ "json" | quote }}
+  # Ограничение частоты логов
+  log-rate-limit: {{ .Values.logging.rateLimit | default "100" | quote }}  # Логов в секунду на сервис
+  # Размер сообщений
+  log-max-size: {{ .Values.logging.maxSize | default "1024" | quote }}  # Максимум 1KB на лог
+  # Отключение debug логов в продакшене
+  disable-debug: {{ "true" | quote }}
+{{- end }}
+

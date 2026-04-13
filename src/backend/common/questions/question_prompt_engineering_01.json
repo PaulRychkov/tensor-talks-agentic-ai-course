@@ -1,0 +1,29 @@
+{
+  "id": "question_prompt_engineering_01",
+  "theory_id": "theory_prompt_engineering",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое few-shot learning и как оно работает в промптинге?",
+    "expected_points": ["примеры в промпте", "in-context learning", "zero-shot vs few-shot", "chain-of-thought"],
+    "links_to_theory": [
+      {"theory_id": "theory_prompt_engineering", "segment_type": "definition"},
+      {"theory_id": "theory_prompt_engineering", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Few-shot learning — включение нескольких примеров задачи в промпт, чтобы модель поняла паттерн и применила его к новому примеру. Работает через in-context learning — модель использует примеры как контекст. Zero-shot — только инструкция, few-shot — с примерами.",
+    "covers": [
+      "определение few-shot",
+      "механизм in-context learning",
+      "сравнение с zero-shot"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

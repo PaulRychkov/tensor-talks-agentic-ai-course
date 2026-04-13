@@ -1,0 +1,45 @@
+{
+  "id": "theory_attention_mechanism",
+  "concept": "Механизм внимания (детально)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "attention", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Attention — механизм вычисления взвешенной суммы значений на основе сходства между запросами и ключами, позволяющий модели фокусироваться на релевантных частях входных данных."
+    },
+    {
+      "type": "intuition",
+      "content": "Как человек читает текст, обращая внимание на ключевые слова, модель 'взвешивает' важность каждого элемента входной последовательности при генерации выхода."
+    },
+    {
+      "type": "formula",
+      "content": "Attention(Q, K, V) = softmax(QK^T / √d_k) · V, где Q=query, K=key, V=value, d_k — размерность ключей"
+    },
+    {
+      "type": "example",
+      "content": "Self-attention (все элементы из одной последовательности) и cross-attention (между разными последовательностями). Multi-head attention захватывает разные типы отношений."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Масштабирование на √d_k предотвращает экстремальные значения softmax. Multi-head позволяет моделировать разные типы зависимостей параллельно. Вычислительная сложность O(n²)."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_attention",
+      "relation_type": "detailed_version_of"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "core_of"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

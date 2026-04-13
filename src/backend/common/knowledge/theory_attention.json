@@ -1,0 +1,45 @@
+{
+  "id": "theory_attention",
+  "concept": "Механизм внимания",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "attention", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Attention — механизм, позволяющий модели фокусироваться на релевантных частях входной последовательности при генерации каждого элемента выхода."
+    },
+    {
+      "type": "intuition",
+      "content": "Как человек читает текст, обращая внимание на ключевые слова, модель 'взвешивает' важность каждого входного элемента."
+    },
+    {
+      "type": "formula",
+      "content": "Attention(Q, K, V) = softmax(QK^T / √d_k) · V, где Q=query, K=key, V=value"
+    },
+    {
+      "type": "example",
+      "content": "При переводе 'кот сидит на ковре' модель обращает больше внимания на 'кот' при генерации 'cat'."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Self-attention (все элементы из одной последовательности) и cross-attention (между разными последовательностями). Multi-head позволяет захватывать разные типы отношений."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "core_of"
+    },
+    {
+      "target_id": "theory_bert",
+      "relation_type": "used_in"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

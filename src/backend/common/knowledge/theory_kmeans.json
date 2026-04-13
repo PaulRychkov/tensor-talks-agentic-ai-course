@@ -1,0 +1,41 @@
+{
+  "id": "theory_kmeans",
+  "concept": "K-means кластеризация",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "clustering", "unsupervised"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "K-means — алгоритм кластеризации, который разделяет данные на k кластеров, минимизируя сумму квадратов расстояний от точек до центроидов кластеров."
+    },
+    {
+      "type": "intuition",
+      "content": "Итеративно находит центры кластеров и присваивает точки ближайшему центру, пока центры не перестанут меняться."
+    },
+    {
+      "type": "formula",
+      "content": "argmin Σ Σ ||x - μᵢ||², где μᵢ — центроид i-го кластера"
+    },
+    {
+      "type": "example",
+      "content": "Сегментация клиентов, группировка документов, анализ изображений. K выбирается заранее (elbow method, silhouette score)."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Чувствителен к начальным центроидам (используйте k-means++). Работает только с числовыми данными. Предполагает сферические кластеры."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_pca",
+      "relation_type": "can_use_with"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

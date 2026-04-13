@@ -1,0 +1,45 @@
+{
+  "id": "theory_cross_validation",
+  "concept": "Кросс-валидация",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "validation", "model_evaluation"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Кросс-валидация — метод оценки модели путём разбиения данных на несколько частей (folds) и последовательной проверки на каждой."
+    },
+    {
+      "type": "intuition",
+      "content": "Позволяет использовать все данные и для обучения, и для валидации, уменьшая зависимость от конкретного разбиения."
+    },
+    {
+      "type": "formula",
+      "content": "CV_score = (1/k) * Σ score(fold_i)"
+    },
+    {
+      "type": "example",
+      "content": "При k-fold CV данные делятся на k частей, модель обучается на k-1 частях и тестируется на оставшейся."
+    },
+    {
+      "type": "practical_notes",
+      "content": "K=5 или K=10 — стандартные значения. Стратифицированная CV важна для несбалансированных классов."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_train_test_split",
+      "relation_type": "extends"
+    },
+    {
+      "target_id": "theory_overfitting",
+      "relation_type": "helps_prevent"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

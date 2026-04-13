@@ -1,0 +1,45 @@
+{
+  "id": "theory_regularization_common",
+  "concept": "Регуляризация (общее)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "regularization", "overfitting"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Регуляризация — техника добавления штрафа к функции потерь для предотвращения переобучения и улучшения обобщающей способности модели."
+    },
+    {
+      "type": "intuition",
+      "content": "Регуляризация 'наказывает' модель за сложность, заставляя её быть проще и лучше обобщаться на новые данные."
+    },
+    {
+      "type": "formula",
+      "content": "L(w) = L₀(w) + λ * R(w), где R(w) — регуляризатор"
+    },
+    {
+      "type": "example",
+      "content": "L1 (Lasso) и L2 (Ridge) регуляризация — два основных типа. Dropout в нейронных сетях — тоже форма регуляризации."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Коэффициент λ контролирует силу регуляризации. Подбирается через кросс-валидацию. Слишком большой λ — недообучение, слишком маленький — переобучение."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_l1_regularization",
+      "relation_type": "parent_of"
+    },
+    {
+      "target_id": "theory_l2_regularization",
+      "relation_type": "parent_of"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

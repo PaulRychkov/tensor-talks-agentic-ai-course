@@ -1,0 +1,45 @@
+{
+  "id": "theory_neural_networks",
+  "concept": "Нейронные сети",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "deep_learning", "neural_networks"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Нейронная сеть — модель, состоящая из слоёв взаимосвязанных нейронов, способная обучаться сложным нелинейным паттернам."
+    },
+    {
+      "type": "intuition",
+      "content": "Каждый слой извлекает всё более абстрактные признаки из входных данных."
+    },
+    {
+      "type": "formula",
+      "content": "y = f(Wₙ · f(Wₙ₋₁ · ... · f(W₁x + b₁) ... + bₙ₋₁) + bₙ)"
+    },
+    {
+      "type": "example",
+      "content": "Распознавание изображений: первый слой — края, средние — формы, последние — объекты."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Требуют много данных и вычислительных ресурсов. Backpropagation для обучения. Dropout и batch normalization для регуляризации."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_backpropagation",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_activation_functions",
+      "relation_type": "requires"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

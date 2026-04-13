@@ -1,0 +1,29 @@
+{
+  "id": "question_gradient_boosting_01",
+  "theory_id": "theory_gradient_boosting",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "Как работает Gradient Boosting и чем он отличается от Random Forest?",
+    "expected_points": ["последовательное обучение", "исправление ошибок", "vs параллельное обучение", "склонность к переобучению"],
+    "links_to_theory": [
+      {"theory_id": "theory_gradient_boosting", "segment_type": "definition"},
+      {"theory_id": "theory_random_forest", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Gradient Boosting обучает модели последовательно, каждая исправляет ошибки предыдущих. Random Forest обучает модели параллельно на разных выборках. Boosting более склонен к переобучению, но часто дает лучшую точность. Forest более стабилен и параллелизуем.",
+    "covers": [
+      "принцип последовательного обучения",
+      "различие с Random Forest",
+      "преимущества и недостатки"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

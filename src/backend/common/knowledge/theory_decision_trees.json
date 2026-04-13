@@ -1,0 +1,45 @@
+{
+  "id": "theory_decision_trees",
+  "concept": "Деревья решений",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "classification", "regression", "ensemble"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Дерево решений — модель, которая разбивает пространство признаков на регионы с помощью последовательных правил."
+    },
+    {
+      "type": "intuition",
+      "content": "Работает как серия вопросов 'да/нет', которые приводят к финальному решению."
+    },
+    {
+      "type": "formula",
+      "content": "Разбиение по критерию: Information Gain, Gini Impurity или MSE"
+    },
+    {
+      "type": "example",
+      "content": "Классификация: если возраст > 30 и доход > 50000, то кредит одобрен."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Интерпретируемы, но склонны к переобучению. Используются в Random Forest и Gradient Boosting."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_random_forest",
+      "relation_type": "prerequisite_for"
+    },
+    {
+      "target_id": "theory_gradient_boosting",
+      "relation_type": "prerequisite_for"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

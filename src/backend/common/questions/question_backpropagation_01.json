@@ -1,0 +1,29 @@
+{
+  "id": "question_backpropagation_01",
+  "theory_id": "theory_backpropagation",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 3,
+  "content": {
+    "question": "Объясните алгоритм обратного распространения ошибки (backpropagation).",
+    "expected_points": ["цепное правило", "распространение от выхода к входу", "вычисление градиентов"],
+    "links_to_theory": [
+      {"theory_id": "theory_backpropagation", "segment_type": "definition"},
+      {"theory_id": "theory_backpropagation", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Backpropagation использует цепное правило дифференцирования для вычисления градиентов функции потерь по всем весам сети. Ошибка распространяется от выходного слоя к входному, вычисляя производные слой за слоем. Это позволяет эффективно обновлять веса через градиентный спуск.",
+    "covers": [
+      "принцип цепного правила",
+      "направление распространения",
+      "вычисление градиентов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

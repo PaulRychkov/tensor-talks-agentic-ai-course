@@ -1,0 +1,45 @@
+{
+  "id": "theory_tokenization",
+  "concept": "Токенизация",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["nlp", "preprocessing", "text_processing"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Токенизация — процесс разбиения текста на отдельные единицы (токены): слова, подслова или символы."
+    },
+    {
+      "type": "intuition",
+      "content": "Преобразует неструктурированный текст в последовательность токенов, которые модель может обработать."
+    },
+    {
+      "type": "formula",
+      "content": "Text → [token₁, token₂, ..., tokenₙ]"
+    },
+    {
+      "type": "example",
+      "content": "'Привет мир!' → ['Привет', 'мир', '!'] или ['При', '##вет', 'мир', '!'] (BPE)"
+    },
+    {
+      "type": "practical_notes",
+      "content": "Методы: word-level, subword (BPE, SentencePiece), character-level. Современные модели используют subword токенизацию для обработки OOV слов."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_word_embeddings",
+      "relation_type": "prerequisite_for"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "requires"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

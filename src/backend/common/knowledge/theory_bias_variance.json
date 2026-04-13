@@ -1,0 +1,45 @@
+{
+  "id": "theory_bias_variance",
+  "concept": "Bias-Variance Tradeoff",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "model_evaluation", "overfitting"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Bias-Variance Tradeoff — баланс между ошибкой смещения (bias) и ошибкой дисперсии (variance), определяющий обобщающую способность модели."
+    },
+    {
+      "type": "intuition",
+      "content": "Высокий bias приводит к недообучению (модель слишком простая), высокий variance — к переобучению (модель слишком сложная)."
+    },
+    {
+      "type": "formula",
+      "content": "Total Error = Bias² + Variance + Irreducible Error"
+    },
+    {
+      "type": "example",
+      "content": "Линейная регрессия имеет высокий bias, но низкий variance. Сложные деревья решений имеют низкий bias, но высокий variance."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Цель — найти оптимальный баланс. Регуляризация уменьшает variance, увеличение сложности модели уменьшает bias."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_overfitting",
+      "relation_type": "related_to"
+    },
+    {
+      "target_id": "theory_regularization_common",
+      "relation_type": "solved_by"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

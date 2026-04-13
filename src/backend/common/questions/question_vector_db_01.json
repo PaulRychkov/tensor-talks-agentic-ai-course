@@ -1,0 +1,29 @@
+{
+  "id": "question_vector_db_01",
+  "theory_id": "theory_vector_databases",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как векторные БД используются в RAG системах?",
+    "expected_points": ["хранение embeddings", "семантический поиск", "релевантные документы", "контекст для LLM"],
+    "links_to_theory": [
+      {"theory_id": "theory_vector_databases", "segment_type": "definition"},
+      {"theory_id": "theory_rag", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Векторные БД хранят документы как embeddings и позволяют быстро находить релевантные документы по семантическому сходству (cosine similarity). В RAG: запрос пользователя → поиск похожих документов → использование их как контекста для LLM → генерация ответа.",
+    "covers": [
+      "хранение и поиск embeddings",
+      "интеграция с RAG",
+      "процесс работы"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

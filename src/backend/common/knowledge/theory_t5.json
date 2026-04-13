@@ -1,0 +1,45 @@
+{
+  "id": "theory_t5",
+  "concept": "T5 (Text-to-Text Transfer Transformer)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "t5", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "T5 — универсальная модель Transformer, которая формулирует все NLP задачи как text-to-text преобразование с префиксом задачи."
+    },
+    {
+      "type": "intuition",
+      "content": "Единая архитектура для всех задач: классификация, перевод, summarization — всё через генерацию текста с префиксом типа 'translate:', 'summarize:'."
+    },
+    {
+      "type": "formula",
+      "content": "Input: 'translate English to German: Hello' → Output: 'Hallo'"
+    },
+    {
+      "type": "example",
+      "content": "Одна модель для множества задач. Предобучена на большом корпусе (C4). Fine-tuning на конкретной задаче через префикс."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Encoder-decoder архитектура. Универсальный подход упрощает использование. T5-base, T5-large, T5-3B — разные размеры."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "based_on"
+    },
+    {
+      "target_id": "theory_bert",
+      "relation_type": "alternative_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

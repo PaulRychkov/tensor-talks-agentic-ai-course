@@ -1,0 +1,37 @@
+{{- if and .Values.vault.enabled .Values.vault.deployment.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-vault-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+data:
+  vault.hcl: |
+    ui = true
+    
+    storage "file" {
+      path = "/vault/data"
+    }
+    
+    listener "tcp" {
+      address = "0.0.0.0:8200"
+      tls_disable = 1
+    }
+    
+    api_addr = "http://{{ include "tensor-talks.fullname" . }}-vault:8200"
+    cluster_addr = "http://{{ include "tensor-talks.fullname" . }}-vault:8201"
+    
+    # Разрешаем все для dev режима
+    # В продакшене используйте правильные политики
+    default_lease_ttl = "168h"
+    max_lease_ttl = "720h"
+    
+    # Disable clustering для простоты
+    disable_clustering = true
+    
+    # Dev mode с автоматическим unseal
+    disable_sealwrap = true
+    disable_performance_standby = true
+{{- end }}

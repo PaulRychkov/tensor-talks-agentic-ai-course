@@ -1,0 +1,29 @@
+{
+  "id": "question_cot_01",
+  "theory_id": "theory_chain_of_thought",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как работает Chain-of-Thought prompting и когда его использовать?",
+    "expected_points": ["пошаговое рассуждение", "улучшение качества", "сложные задачи", "zero-shot vs few-shot CoT"],
+    "links_to_theory": [
+      {"theory_id": "theory_chain_of_thought", "segment_type": "definition"},
+      {"theory_id": "theory_chain_of_thought", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Chain-of-Thought заставляет LLM генерировать пошаговое рассуждение перед ответом, что улучшает качество решения сложных задач. Используется для математических задач, логических головоломок. Zero-shot CoT: просто добавить 'Let's think step by step'. Few-shot CoT: показать примеры с рассуждением.",
+    "covers": [
+      "механизм работы",
+      "применение",
+      "варианты использования"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

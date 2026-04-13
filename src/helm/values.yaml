@@ -1,0 +1,606 @@
+# Значения по умолчанию для tensor-talks
+# Это YAML-форматированный файл.
+createNamespace: false
+
+# Флаг локальной разработки
+# Установите localDevelopment: true для локальной разработки
+# Это автоматически настроит:
+#   - imageRegistry: "" (без префикса registry)
+#   - pullPolicy: Never (использовать локальные образы)
+#   - Другие настройки для локальной разработки
+localDevelopment: false  # false для работы с ArgoCD/GHCR, true для локальной разработки без registry
+
+# Глобальные настройки
+global:
+  namespace: tensor-talks
+  # imageRegistry автоматически определяется на основе localDevelopment через helper
+  # Используется helper tensor-talks.imageRegistry в шаблонах
+  imageRegistry: "ghcr.io"  # ghcr.io для ArgoCD/GHCR, игнорируется если localDevelopment=true
+  imagePullSecrets:
+    - name: ghcr-secret
+  # Метки для изоляции в общем мониторинге
+  labels:
+    team: tensor-talks
+    project: tensor-talks
+
+# Конфигурация PostgreSQL
+postgresql:
+  # Развертывание локального PostgreSQL в Kubernetes
+  deployment:
+    enabled: true  # Установите true для локального развертывания
+  # ВАЖНО: Если vault.enabled = true, все значения берутся из Vault через External Secrets
+  # Эти значения используются только если vault.enabled = false (не рекомендуется для продакшена)
+  # Значения из Vault: tensor-talks/postgresql (host, port, database, user, password, sslmode)
+  host: ""  # Берется из Vault если vault.enabled = true, или tensor-talks-postgresql если deployment.enabled = true
+  port: 5432  # Берется из Vault если vault.enabled = true
+  database: tensor_talks_db  # Берется из Vault если vault.enabled = true
+  user: tensor_talks  # Берется из Vault если vault.enabled = true
+  password: ""  # Берется из Vault если vault.enabled = true, или генерируется если deployment.enabled = true
+  sslMode: disable  # disable для локального, require для внешнего
+  # Настройки для локального развертывания
+  image:
+    repository: postgres
+    tag: 16-alpine
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""  # Использует default storage class
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # pgAdmin UI для управления PostgreSQL
+  pgadmin:
+    enabled: true  # Включить pgAdmin UI
+    password: "admin"  # Дефолтный пароль (в продакшене берется из Vault)
+    image:
+      repository: dpage/pgadmin4
+      tag: latest
+      pullPolicy: IfNotPresent
+    port: 80
+    email: admin@tensor-talks.com
+    # ВАЖНО: Пароль должен храниться в Vault!
+    # Для локальной разработки можно использовать дефолт, но в продакшене ОБЯЗАТЕЛЬНО из Vault
+    password: ""  # Берется из Vault если vault.enabled = true, ОБЯЗАТЕЛЬНО для продакшена
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# Конфигурация Kafka (собственный кластер в namespace)
+kafka:
+  # Развертывание собственного Kafka кластера через Strimzi
+  deployment:
+    enabled: true
+  # Bootstrap server для подключения сервисов
+  bootstrapServers: tensor-talks-kafka-kafka-bootstrap.tensor-talks.svc.cluster.local:9092
+  # Версия Kafka
+  version: 4.1.1
+  metadataVersion: 4.1-IV1
+  # Конфигурация Node Pools
+  controller:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+      limits:
+        cpu: 256m
+        memory: 512Mi
+  broker:
+    replicas: 1  # Минимальная конфигурация для тестового окружения
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+      limits:
+        cpu: 256m
+        memory: 512Mi
+  # Хранилище
+  storage:
+    size: 5Gi
+    class: standard
+  # Конфигурация Kafka
+  config:
+    retentionHours: 72  # 3 дня
+  # Топики
+  topicPrefix: tensor-talks-
+  topics:
+    enabled: true  # Создавать KafkaTopic манифесты
+    partitions: 3
+    retentionDays: 3  # Хранение сообщений только 3 дня
+    maxMessageSize: 1048576  # 1MB максимум на сообщение
+    compression: snappy  # Сжатие для экономии места
+  # Ограничения для producer/consumer
+  producer:
+    batchSize: 16384  # 16KB батчи для эффективности
+    lingerMs: 10  # Небольшая задержка для батчинга
+    compressionType: snappy
+  consumer:
+    maxPollRecords: 100  # Максимум 100 сообщений за раз
+    fetchMinBytes: 1024  # Минимум 1KB для эффективности
+  # Kafka UI (Kafdrop)
+  ui:
+    enabled: true
+    image:
+      repository: obsidiandynamics/kafdrop
+      tag: latest
+      pullPolicy: IfNotPresent
+    port: 9000
+    jvmOpts: "-Xms32M -Xmx64M"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    ingress:
+      enabled: false  # Использовать port-forward для localhost
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      hosts:
+        - host: kafdrop.tensor-talks.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - kafdrop.tensor-talks.local
+          secretName: tls-secret
+
+# Конфигурация Redis (развертывается в namespace)
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+  service:
+    port: 6379
+  host: ""  # Автоматически определяется как tensor-talks-redis если deployment.enabled = true
+  port: 6379
+  db: 0
+  password: ""  # Берется из Vault если vault.enabled = true
+  persistence:
+    enabled: false  # Установить в true для продакшена с PVC
+
+# Конфигурация логирования (ограничения для общего Loki)
+logging:
+  enabled: true
+  level: INFO  # Только INFO и выше, без DEBUG
+  rateLimit: 100  # Максимум 100 логов в секунду на сервис
+  maxSize: 1024  # Максимум 1KB на одно лог-сообщение
+
+# Конфигурация мониторинга (Prometheus и Grafana)
+monitoring:
+  prometheus:
+    enabled: true
+    image:
+      repository: prom/prometheus
+      tag: latest
+      pullPolicy: IfNotPresent
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 15d
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    persistence:
+      enabled: false  # Установить в true для продакшена
+      size: 10Gi
+      storageClass: ""
+  grafana:
+    enabled: true
+    image:
+      repository: grafana/grafana
+      tag: latest
+      pullPolicy: IfNotPresent
+      # ВАЖНО: Все секреты должны храниться в Vault!
+      # Значения из Vault: tensor-talks/grafana (admin-user, admin-password)
+      # Для локальной разработки можно использовать дефолт, но в продакшене ОБЯЗАТЕЛЬНО из Vault
+    adminUser: ""  # Берется из Vault если vault.enabled = true, ОБЯЗАТЕЛЬНО для продакшена
+    adminPassword: ""  # Берется из Vault если vault.enabled = true, ОБЯЗАТЕЛЬНО для продакшена
+    plugins: ""  # Список плагинов через запятую
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+    persistence:
+      enabled: false  # Установить в true для продакшена
+      size: 5Gi
+      storageClass: ""
+    ingress:
+      enabled: false  # Использовать port-forward для localhost
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      hosts:
+        - host: grafana.tensor-talks.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - grafana.tensor-talks.local
+          secretName: tls-secret
+
+# Конфигурация Vault для секретов
+# ВАЖНО: Все чувствительные данные (пароли, секреты) должны храниться в Vault
+# Установите vault.enabled: true для использования Vault
+vault:
+  enabled: true
+  # Развертывание локального Vault в Kubernetes
+  deployment:
+    enabled: true  # Установите true для локального развертывания
+  # URL Vault сервера (используется если deployment.enabled = false)
+  server: ""  # URL Vault сервера (оставьте пустым для локального развертывания)
+  path: kv
+  version: v2
+  refreshInterval: 1h
+  auth:
+    mountPath: kubernetes
+    role: tensor-talks
+  # Настройки для локального развертывания
+  image:
+    repository: hashicorp/vault
+    tag: 1.16.0
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true  # Включить PVC для постоянного хранения секретов
+    size: 1Gi
+    storageClass: ""  # Использует default storage class
+  init:
+    enabled: false  # Отключить init job, если Vault уже инициализирован
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  # Пути к секретам в Vault
+  postgresql:
+    path: tensor-talks/postgresql
+  jwt:
+    path: tensor-talks/jwt
+  grafana:
+    path: tensor-talks/grafana
+  llm:
+    path: tensor-talks/llm
+
+# Конфигурации сервисов
+services:
+  auth-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-auth-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment через helper
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    jwt:
+      # ВАЖНО: Если vault.enabled = true, все значения берутся из Vault через External Secrets
+      # Значения из Vault: tensor-talks/jwt (secret, issuer, audience)
+      secret: ""  # Берется из Vault если vault.enabled = true
+      issuer: tensor-talks-auth  # Берется из Vault если vault.enabled = true
+      audience: tensor-talks-services  # Берется из Vault если vault.enabled = true
+      accessTokenTTL: 15m
+      refreshTokenTTL: 720h
+
+  user-store-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-user-store-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: user_store
+
+  bff-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-bff-service
+      tag: manual-20260120-141704
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 80
+    resources:
+      limits:
+        cpu: 150m
+        memory: 384Mi
+      requests:
+        cpu: 75m
+        memory: 192Mi
+
+  session-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-session-service
+      tag: manual-20260120-162421
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 80
+    resources:
+      limits:
+        cpu: 150m
+        memory: 384Mi
+      requests:
+        cpu: 75m
+        memory: 192Mi
+
+  session-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-session-crud-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: session_crud
+
+  chat-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-chat-crud-service
+      tag: manual-20260120-162421
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: chat_crud
+
+  results-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-results-crud-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: results_crud
+
+  knowledge-base-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-knowledge-base-crud-service
+      tag: manual-20260121-104408
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: knowledge_base_crud
+
+  questions-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-questions-crud-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: questions_crud
+
+  interview-builder-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-interview-builder-service
+      tag: manual-20260120-162421
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 80
+    resources:
+      limits:
+        cpu: 150m
+        memory: 384Mi
+      requests:
+        cpu: 75m
+        memory: 192Mi
+
+  knowledge-producer-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-knowledge-producer-service
+      tag: latest
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  mock-model-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-mock-model-service
+      tag: manual-20260121-094343
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 80
+    resources:
+      limits:
+        cpu: 150m
+        memory: 384Mi
+      requests:
+        cpu: 75m
+        memory: 192Mi
+
+  agent-service:
+    enabled: true
+    maxClarifications: 3
+    image:
+      repository: paulrychkov/tensor-talks-agent-service
+      tag: manual-20260121-153331
+      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+    replicaCount: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 80
+    llm:
+      provider: openai  # openai, anthropic, local
+      baseUrl: "https://openai.api.proxyapi.ru/v1"  # Прокси API для OpenAI
+      apiKey: ""  # Берется из Vault если vault.enabled = true, или из секрета
+      model: gpt-5-chat-latest
+      temperature: 1
+      maxTokens: 2000
+      timeout: 60
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+  frontend:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-frontend
+      tag: manual-20260122-004347
+      pullPolicy: Never  # Используем локальный образ из minikube
+    containerPort: 8080
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 50m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 64Mi
+
+# Конфигурация Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Cloudflare автоматически предоставляет SSL, поэтому можем использовать HTTP внутри
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  hosts:
+    - host: tensor-talks.ru
+      paths:
+        - path: /
+          pathType: Prefix
+    # Опционально: поддержка www поддомена
+    - host: www.tensor-talks.ru
+      paths:
+        - path: /
+          pathType: Prefix
+  # TLS опционален, так как Cloudflare предоставляет SSL
+  # Если хотите использовать TLS внутри кластера, раскомментируйте:
+  # tls:
+  #   - hosts:
+  #       - tensor-talks.ru
+  #       - www.tensor-talks.ru
+  #     secretName: tls-secret
+
+# Конфигурация Istio для Circuit Breaker
+istio:
+  enabled: true  # Включить Istio для Circuit Breaker
+  injection:
+    enabled: true  # Включить автоматический injection sidecar в поды
+
+# ServiceMonitor для Prometheus
+# ServiceMonitor - это Custom Resource Definition (CRD) от Prometheus Operator
+# Создается в нашем namespace для сбора метрик нашим Prometheus
+serviceMonitor:
+  enabled: false  # Отключено - используем статическую конфигурацию Prometheus (не требуется Prometheus Operator)
+  namespace: tensor-talks
+  interval: 15s
+  scrapeTimeout: 10s
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+
+# Контекст безопасности Pod
+podSecurityContext:
+  fsGroup: 2000
+
+# Контекст безопасности
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+

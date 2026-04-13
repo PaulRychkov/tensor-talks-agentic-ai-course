@@ -1,0 +1,29 @@
+{
+  "id": "question_attention_01",
+  "theory_id": "theory_attention",
+  "linked_segments": ["definition", "formula"],
+  "question_type": "technical",
+  "complexity": 3,
+  "content": {
+    "question": "Как работает механизм внимания (attention) и что такое Q, K, V?",
+    "expected_points": ["query, key, value", "взвешивание важности", "softmax нормализация"],
+    "links_to_theory": [
+      {"theory_id": "theory_attention", "segment_type": "definition"},
+      {"theory_id": "theory_attention", "segment_type": "formula"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Attention вычисляет взвешенную сумму значений (V) на основе сходства между запросами (Q) и ключами (K). Формула: Attention(Q, K, V) = softmax(QK^T / √d_k) · V. Query — что ищем, Key — что сравниваем, Value — что извлекаем.",
+    "covers": [
+      "роль Q, K, V",
+      "механизм взвешивания",
+      "математическая формула"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

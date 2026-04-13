@@ -1,0 +1,29 @@
+{
+  "id": "question_svm_01",
+  "theory_id": "theory_svm",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "Что такое опорные векторы и как SVM находит оптимальную разделяющую гиперплоскость?",
+    "expected_points": ["максимизация зазора", "опорные векторы", "kernel trick", "нелинейные границы"],
+    "links_to_theory": [
+      {"theory_id": "theory_svm", "segment_type": "definition"},
+      {"theory_id": "theory_svm", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "SVM находит гиперплоскость, максимизирующую зазор (margin) между классами. Опорные векторы — точки, ближайшие к границе. Kernel trick позволяет работать с нелинейными границами, не увеличивая размерность данных явно.",
+    "covers": [
+      "принцип максимизации зазора",
+      "роль опорных векторов",
+      "kernel trick для нелинейности"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

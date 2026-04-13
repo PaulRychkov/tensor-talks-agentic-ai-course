@@ -1,0 +1,45 @@
+{
+  "id": "theory_train_test_split",
+  "concept": "Train-Test Split",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "validation", "model_evaluation"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Train-Test Split — базовый метод разделения данных на обучающую и тестовую выборки для оценки обобщающей способности модели."
+    },
+    {
+      "type": "intuition",
+      "content": "Модель обучается на train данных и проверяется на test данных, которые она никогда не видела, чтобы оценить реальную производительность."
+    },
+    {
+      "type": "formula",
+      "content": "Обычно 80% train, 20% test. Или 70/30, 90/10 в зависимости от размера данных."
+    },
+    {
+      "type": "example",
+      "content": "Стандартная практика в ML. Важно делать split до любых преобразований данных. Stratified split для несбалансированных классов."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Простой, но может давать нестабильные оценки при малых данных. Кросс-валидация более надежна. Random state для воспроизводимости."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_cross_validation",
+      "relation_type": "extended_by"
+    },
+    {
+      "target_id": "theory_overfitting",
+      "relation_type": "helps_detect"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_roberta_01",
+  "theory_id": "theory_roberta",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "comparison",
+  "complexity": 3,
+  "content": {
+    "question": "Какие улучшения RoBERTa внесла по сравнению с BERT?",
+    "expected_points": ["убрана NSP", "динамическое masking", "больше данных", "больше итераций"],
+    "links_to_theory": [
+      {"theory_id": "theory_roberta", "segment_type": "definition"},
+      {"theory_id": "theory_bert", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "RoBERTa убрала next sentence prediction задачу, использует динамическое masking вместо статического, обучается на большем объеме данных и больше итераций. Без изменения архитектуры показывает лучшие результаты чем BERT на большинстве задач.",
+    "covers": [
+      "улучшения в предобучении",
+      "оптимизация процесса",
+      "результаты"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

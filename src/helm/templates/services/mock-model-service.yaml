@@ -1,0 +1,21 @@
+{{- if (index .Values.services "mock-model-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-dialogue-aggregator
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dialogue-aggregator
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8084
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: dialogue-aggregator
+{{- end }}
+

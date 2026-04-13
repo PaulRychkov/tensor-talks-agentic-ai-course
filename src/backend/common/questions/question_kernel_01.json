@@ -1,0 +1,29 @@
+{
+  "id": "question_kernel_01",
+  "theory_id": "theory_kernel_trick",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 3,
+  "content": {
+    "question": "Как kernel trick позволяет SVM находить нелинейные границы?",
+    "expected_points": ["высокоразмерное пространство", "без явного преобразования", "kernel функция", "RBF kernel"],
+    "links_to_theory": [
+      {"theory_id": "theory_kernel_trick", "segment_type": "definition"},
+      {"theory_id": "theory_svm", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Kernel trick позволяет работать в высокоразмерном пространстве без явного преобразования данных, вычисляя только скалярное произведение через kernel функцию. RBF kernel позволяет находить сложные нелинейные границы, оставаясь вычислительно эффективным.",
+    "covers": [
+      "принцип kernel trick",
+      "высокоразмерное пространство",
+      "практическое применение"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

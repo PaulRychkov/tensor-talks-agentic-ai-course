@@ -1,0 +1,45 @@
+{
+  "id": "theory_lstm",
+  "concept": "LSTM (Long Short-Term Memory)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "neural_networks", "sequence_models"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "LSTM — улучшенная RNN с механизмом ворот (gates), позволяющим контролировать поток информации и запоминать долгосрочные зависимости."
+    },
+    {
+      "type": "intuition",
+      "content": "Три ворота (forget, input, output) решают, что забыть, что запомнить и что передать дальше."
+    },
+    {
+      "type": "formula",
+      "content": "f_t = σ(W_f·[h_{t-1}, x_t] + b_f), i_t = σ(W_i·[h_{t-1}, x_t] + b_i), o_t = σ(W_o·[h_{t-1}, x_t] + b_o)"
+    },
+    {
+      "type": "example",
+      "content": "Машинный перевод, генерация текста, анализ временных рядов. Эффективны для длинных последовательностей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Решает проблему исчезающих градиентов в RNN. GRU — упрощённая версия LSTM с двумя воротами. В современных задачах часто заменяется Transformer."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_rnn",
+      "relation_type": "extends"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "preceded_by"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

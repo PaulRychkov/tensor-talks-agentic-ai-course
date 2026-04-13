@@ -1,0 +1,49 @@
+{
+  "id": "theory_l2_regularization",
+  "concept": "L2 регуляризация",
+  "complexity": 2,
+  "parent_id": "theory_regularization_common",
+  "tags": ["machine_learning", "regularization", "optimization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "L2‑регуляризация добавляет штраф за квадрат нормы весов модели в функцию потерь."
+    },
+    {
+      "type": "intuition",
+      "content": "Регуляризация заставляет модель избегать больших весов и уменьшает переобучение."
+    },
+    {
+      "type": "formula",
+      "content": "L(w) = L₀(w) + λ * Σ wᵢ²"
+    },
+    {
+      "type": "example",
+      "content": "В линейной регрессии добавление L2 стабилизирует коэффициенты (ридж‑регрессия)."
+    },
+    {
+      "type": "practical_notes",
+      "content": "λ подбирается кросс‑валидацией; слишком большое — недообучение, маленькое — переобучение."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_regularization_common",
+      "relation_type": "subtopic_of"
+    },
+    {
+      "target_id": "theory_gradient_descent",
+      "relation_type": "requires"
+    },
+    {
+      "target_id": "theory_l1_regularization",
+      "relation_type": "analogous_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

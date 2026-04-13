@@ -1,0 +1,53 @@
+{{- if .Values.kafka.deployment.enabled }}
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: tensor-talks-kafka
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+  annotations:
+    strimzi.io/node-pools: enabled
+spec:
+  kafka:
+    version: {{ .Values.kafka.version | default "4.1.1" }}
+    metadataVersion: {{ .Values.kafka.metadataVersion | default "4.1-IV1" }}
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      # Минимальная конфигурация для тестового окружения
+      default.replication.factor: {{ .Values.kafka.broker.replicas | default 1 }}
+      min.insync.replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+      offsets.topic.replication.factor: {{ .Values.kafka.broker.replicas | default 1 }}
+      transaction.state.log.replication.factor: {{ .Values.kafka.broker.replicas | default 1 }}
+      transaction.state.log.min.isr: {{ .Values.kafka.broker.replicas | default 1 }}
+      # Ограничения для экономии ресурсов
+      log.retention.hours: {{ .Values.kafka.config.retentionHours | default 72 }}
+      log.segment.bytes: 1073741824  # 1GB
+      num.partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  entityOperator:
+    topicOperator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    userOperator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+{{- end }}
+

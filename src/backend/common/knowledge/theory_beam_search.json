@@ -1,0 +1,45 @@
+{
+  "id": "theory_beam_search",
+  "concept": "Beam Search",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "generation", "decoding"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Beam Search — алгоритм декодирования для языковых моделей, который на каждом шаге сохраняет k наиболее вероятных последовательностей вместо одной (greedy) или всех (exhaustive)."
+    },
+    {
+      "type": "intuition",
+      "content": "Компромисс между жадным поиском (быстро, но может пропустить лучший вариант) и полным перебором (точно, но слишком медленно)."
+    },
+    {
+      "type": "formula",
+      "content": "На каждом шаге выбираются top-k гипотез по вероятности P(y₁,...,yₜ|x)"
+    },
+    {
+      "type": "example",
+      "content": "Используется в машинном переводе, генерации текста. Beam width=5-10 — типичные значения. Больше beam — лучше качество, но медленнее."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Может генерировать повторяющиеся последовательности. Length penalty помогает избежать слишком коротких или длинных ответов. Nucleus sampling (top-p) — альтернатива."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "used_in"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "decoding_for"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

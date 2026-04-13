@@ -1,0 +1,40 @@
+{
+  "id": "theory_kernel_trick",
+  "concept": "Kernel Trick",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["machine_learning", "svm", "kernel_methods"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Kernel Trick — математический приём, позволяющий работать в пространстве высокой размерности без явного вычисления координат в этом пространстве."
+    },
+    {
+      "type": "intuition",
+      "content": "Вместо преобразования данных в высокоразмерное пространство, вычисляется только скалярное произведение в этом пространстве через kernel функцию."
+    },
+    {
+      "type": "formula",
+      "content": "K(x, x') = φ(x)·φ(x'), где φ — преобразование в высокоразмерное пространство"
+    },
+    {
+      "type": "example",
+      "content": "RBF kernel: K(x, x') = exp(-γ||x-x'||²). Позволяет SVM находить нелинейные границы без явного преобразования данных."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Критичен для SVM. Позволяет работать с нелинейными данными. Выбор kernel зависит от задачи. RBF — универсальный выбор."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_svm",
+      "relation_type": "enables"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}

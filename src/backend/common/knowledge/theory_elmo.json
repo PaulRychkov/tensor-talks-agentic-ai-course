@@ -1,0 +1,49 @@
+{
+  "id": "theory_elmo",
+  "concept": "ELMo (Embeddings from Language Models)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "embeddings", "language_models"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "ELMo — контекстуальные word embeddings, полученные из двунаправленного языковой модели, учитывающие контекст использования слова."
+    },
+    {
+      "type": "intuition",
+      "content": "В отличие от статических embeddings (Word2Vec), ELMo генерирует разные векторы для одного слова в разных контекстах."
+    },
+    {
+      "type": "formula",
+      "content": "ELMo = γ * Σ s_k * h_k, где h_k — скрытые состояния разных слоев LSTM"
+    },
+    {
+      "type": "example",
+      "content": "Предшественник BERT. Использовался для NER, question answering. Показал важность контекстуальных embeddings."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Двунаправленный LSTM для контекста. Векторы комбинируются из разных слоев. Заменен более эффективными моделями (BERT, GPT)."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_word_embeddings",
+      "relation_type": "extends"
+    },
+    {
+      "target_id": "theory_lstm",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_bert",
+      "relation_type": "preceded_by"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

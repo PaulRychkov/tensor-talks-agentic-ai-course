@@ -1,0 +1,29 @@
+{
+  "id": "question_random_forest_01",
+  "theory_id": "theory_random_forest",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как случайный лес уменьшает переобучение по сравнению с одним деревом?",
+    "expected_points": ["ансамбль деревьев", "bootstrap выборки", "случайный выбор признаков", "усреднение предсказаний"],
+    "links_to_theory": [
+      {"theory_id": "theory_random_forest", "segment_type": "definition"},
+      {"theory_id": "theory_random_forest", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Случайный лес обучает множество деревьев на разных bootstrap выборках с случайным выбором признаков. Финальное предсказание — среднее (регрессия) или большинство голосов (классификация) всех деревьев, что уменьшает переобучение и повышает обобщающую способность.",
+    "covers": [
+      "принцип ансамбля",
+      "bootstrap и случайность",
+      "усреднение результатов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

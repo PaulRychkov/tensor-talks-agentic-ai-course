@@ -1,0 +1,123 @@
+{{- if and .Values.vault.enabled .Values.vault.deployment.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-vault
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: vault
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: vault
+    spec:
+      securityContext:
+        fsGroup: 100
+      initContainers:
+        - name: vault-config-check
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Проверка конфигурации Vault..."
+              if [ ! -f /vault/config/vault.hcl ]; then
+                echo "ОШИБКА: Файл конфигурации /vault/config/vault.hcl не найден!"
+                exit 1
+              fi
+              if ! grep -q 'storage "file"' /vault/config/vault.hcl; then
+                echo "ОШИБКА: Конфигурация не содержит storage file!"
+                exit 1
+              fi
+              echo "✓ Конфигурация валидна"
+          volumeMounts:
+            - name: config
+              mountPath: /vault/config
+              readOnly: true
+      containers:
+        - name: vault
+          image: {{ .Values.vault.image.repository }}:{{ .Values.vault.image.tag }}
+          imagePullPolicy: {{ .Values.vault.image.pullPolicy }}
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+            runAsNonRoot: false
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              # БЛОКИРУЕМ DEV РЕЖИМ - НИКАКИХ ФЛАГОВ -dev
+              if [ ! -f /vault/config/vault.hcl ]; then
+                echo "КРИТИЧЕСКАЯ ОШИБКА: Конфигурационный файл не найден! Vault НЕ МОЖЕТ запуститься без конфига."
+                exit 1
+              fi
+              # Запускаем Vault ТОЛЬКО с конфигурационным файлом, БЕЗ ФЛАГОВ -dev
+              exec vault server -config=/vault/config/vault.hcl
+          ports:
+            - name: http
+              containerPort: 8200
+              protocol: TCP
+          env:
+            - name: VAULT_ADDR
+              value: "http://0.0.0.0:8200"
+            # ЯВНО ЗАПРЕЩАЕМ DEV РЕЖИМ
+            - name: VAULT_DEV_ROOT_TOKEN_ID
+              value: ""
+            - name: VAULT_DEV_LISTEN_ADDRESS
+              value: ""
+          volumeMounts:
+            - name: data
+              mountPath: /vault/data
+            - name: config
+              mountPath: /vault/config
+              readOnly: true
+          resources:
+            {{- toYaml .Values.vault.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/health?uninitialized_code=200&sealed_code=200
+              port: http
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?uninitialized_code=200&sealed_code=200
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+      volumes:
+        {{- if .Values.vault.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "tensor-talks.fullname" . }}-vault
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        - name: config
+          configMap:
+            name: {{ include "tensor-talks.fullname" . }}-vault-config
+        - name: vault-token
+          secret:
+            secretName: {{ include "tensor-talks.fullname" . }}-vault
+            items:
+            - key: root-token
+              path: root-token
+{{- end }}

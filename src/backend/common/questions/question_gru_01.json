@@ -1,0 +1,29 @@
+{
+  "id": "question_gru_01",
+  "theory_id": "theory_gru",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "comparison",
+  "complexity": 2,
+  "content": {
+    "question": "В чём разница между GRU и LSTM?",
+    "expected_points": ["2 gates vs 3", "меньше параметров", "быстрее обучение", "сопоставимое качество"],
+    "links_to_theory": [
+      {"theory_id": "theory_gru", "segment_type": "definition"},
+      {"theory_id": "theory_lstm", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "GRU имеет 2 ворота (reset и update), LSTM — 3 (forget, input, output). GRU проще, меньше параметров, быстрее обучается, но часто показывает сопоставимое качество. Объединяет forget и input gates LSTM в один update gate.",
+    "covers": [
+      "архитектурные различия",
+      "преимущества GRU",
+      "практические соображения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

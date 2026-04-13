@@ -1,0 +1,38 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}
+  namespace: {{ .Values.serviceMonitor.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    team: tensor-talks
+    project: tensor-talks
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.global.namespace }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      team: tensor-talks
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+      metricRelabelings:
+        # Добавляем метки team и namespace для фильтрации в Grafana
+        - targetLabel: team
+          replacement: tensor-talks
+        - targetLabel: project
+          replacement: tensor-talks
+        - targetLabel: namespace
+          replacement: {{ .Values.global.namespace }}
+        # Удаляем только самые высокочастотные Go метрики для экономии места
+        # Остальные метрики остаются, но с нашими метками для фильтрации
+        - sourceLabels: [__name__]
+          regex: 'go_gc_duration_seconds_count|go_gc_duration_seconds_sum|go_memstats_mallocs_total|go_memstats_frees_total|go_memstats_alloc_bytes_total|go_memstats_sys_bytes'
+          action: drop
+{{- end }}
+

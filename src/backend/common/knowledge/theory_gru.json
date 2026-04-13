@@ -1,0 +1,45 @@
+{
+  "id": "theory_gru",
+  "concept": "GRU (Gated Recurrent Unit)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "neural_networks", "sequence_models"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "GRU — упрощенная версия LSTM с двумя воротами (reset и update), решающая проблему исчезающих градиентов в RNN."
+    },
+    {
+      "type": "intuition",
+      "content": "Как LSTM, но проще: меньше параметров, быстрее обучение, часто сопоставимое качество. Объединяет forget и input gates LSTM в один update gate."
+    },
+    {
+      "type": "formula",
+      "content": "r_t = σ(W_r·[h_{t-1}, x_t]), z_t = σ(W_z·[h_{t-1}, x_t]), h_t = (1-z_t)*h_{t-1} + z_t*tanh(W·[r_t*h_{t-1}, x_t])"
+    },
+    {
+      "type": "example",
+      "content": "Используется в машинном переводе, генерации текста. Часто предпочтительнее LSTM из-за простоты и скорости."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Меньше параметров чем LSTM (2 gates vs 3). Быстрее обучается. В современных задачах часто заменяется Transformer."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_lstm",
+      "relation_type": "simplified_version_of"
+    },
+    {
+      "target_id": "theory_rnn",
+      "relation_type": "improves"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,46 @@
+{{- if .Values.postgresql.deployment.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-create-schemas
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+data:
+  create-schemas.sql: |
+    -- Migration script to create PostgreSQL schemas for tensor_talks_db
+    -- This script is executed automatically by Kubernetes Job
+    
+    -- Create schemas for each service
+    CREATE SCHEMA IF NOT EXISTS user_store;
+    CREATE SCHEMA IF NOT EXISTS session_crud;
+    CREATE SCHEMA IF NOT EXISTS chat_crud;
+    CREATE SCHEMA IF NOT EXISTS results_crud;
+    CREATE SCHEMA IF NOT EXISTS knowledge_base_crud;
+    CREATE SCHEMA IF NOT EXISTS questions_crud;
+    
+    -- Grant necessary permissions to tensor_talks user
+    GRANT ALL PRIVILEGES ON SCHEMA user_store TO {{ .Values.postgresql.user }};
+    GRANT ALL PRIVILEGES ON SCHEMA session_crud TO {{ .Values.postgresql.user }};
+    GRANT ALL PRIVILEGES ON SCHEMA chat_crud TO {{ .Values.postgresql.user }};
+    GRANT ALL PRIVILEGES ON SCHEMA results_crud TO {{ .Values.postgresql.user }};
+    GRANT ALL PRIVILEGES ON SCHEMA knowledge_base_crud TO {{ .Values.postgresql.user }};
+    GRANT ALL PRIVILEGES ON SCHEMA questions_crud TO {{ .Values.postgresql.user }};
+    
+    -- Grant usage on all schemas
+    GRANT USAGE ON SCHEMA user_store TO {{ .Values.postgresql.user }};
+    GRANT USAGE ON SCHEMA session_crud TO {{ .Values.postgresql.user }};
+    GRANT USAGE ON SCHEMA chat_crud TO {{ .Values.postgresql.user }};
+    GRANT USAGE ON SCHEMA results_crud TO {{ .Values.postgresql.user }};
+    GRANT USAGE ON SCHEMA knowledge_base_crud TO {{ .Values.postgresql.user }};
+    GRANT USAGE ON SCHEMA questions_crud TO {{ .Values.postgresql.user }};
+    
+    -- Set default privileges for future tables
+    ALTER DEFAULT PRIVILEGES IN SCHEMA user_store GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA session_crud GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA chat_crud GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA results_crud GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA knowledge_base_crud GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA questions_crud GRANT ALL ON TABLES TO {{ .Values.postgresql.user }};
+{{- end }}

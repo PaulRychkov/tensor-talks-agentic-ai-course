@@ -1,0 +1,49 @@
+{
+  "id": "theory_fine_tuning",
+  "concept": "Дообучение (Fine-tuning)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "transfer_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Fine-tuning — процесс дообучения предобученной модели на специфичной задаче или домене с меньшим количеством данных."
+    },
+    {
+      "type": "intuition",
+      "content": "Использует знания, полученные на больших данных, и адаптирует их под конкретную задачу."
+    },
+    {
+      "type": "formula",
+      "content": "Full fine-tuning: обновление всех весов. LoRA: обновление только низкоранговых матриц."
+    },
+    {
+      "type": "example",
+      "content": "Дообучение BERT на медицинских текстах, GPT на корпоративных данных. Parameter-efficient methods: LoRA, Adapter."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Требует меньше данных чем обучение с нуля. LoRA позволяет эффективно дообучать большие модели. Prompt tuning — альтернатива без изменения весов."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_bert",
+      "relation_type": "applied_to"
+    },
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "applied_to"
+    },
+    {
+      "target_id": "theory_transfer_learning",
+      "relation_type": "is_type_of"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

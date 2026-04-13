@@ -1,0 +1,29 @@
+{
+  "id": "question_neural_networks_01",
+  "theory_id": "theory_neural_networks",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как многослойные нейронные сети извлекают признаки из данных?",
+    "expected_points": ["иерархия признаков", "низкоуровневые и высокоуровневые", "нелинейные преобразования"],
+    "links_to_theory": [
+      {"theory_id": "theory_neural_networks", "segment_type": "definition"},
+      {"theory_id": "theory_neural_networks", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Каждый слой нейронной сети извлекает всё более абстрактные признаки. Первые слои захватывают низкоуровневые паттерны (края, текстуры), средние — более сложные (формы, объекты), последние — высокоуровневые концепции. Нелинейные активации позволяют моделировать сложные зависимости.",
+    "covers": [
+      "иерархия извлечения признаков",
+      "эволюция признаков по слоям",
+      "роль нелинейных активаций"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

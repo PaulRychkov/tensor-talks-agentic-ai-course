@@ -1,0 +1,41 @@
+{
+  "id": "theory_pca",
+  "concept": "PCA (Principal Component Analysis)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "dimensionality_reduction", "unsupervised"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "PCA — метод снижения размерности, который находит направления максимальной дисперсии в данных и проецирует их на подпространство меньшей размерности."
+    },
+    {
+      "type": "intuition",
+      "content": "Находит главные компоненты — направления, вдоль которых данные варьируются больше всего, и отбрасывает менее важные измерения."
+    },
+    {
+      "type": "formula",
+      "content": "Y = XW, где W — матрица собственных векторов ковариационной матрицы"
+    },
+    {
+      "type": "example",
+      "content": "Визуализация многомерных данных, сжатие признаков, удаление шума. Используется для предобработки перед обучением моделей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Требует стандартизации данных. Количество компонент выбирается по объясненной дисперсии (обычно 95%). Линейный метод."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_linear_regression",
+      "relation_type": "related_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_beam_search_01",
+  "theory_id": "theory_beam_search",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Когда использовать beam search вместо greedy decoding?",
+    "expected_points": ["компромисс качество/скорость", "beam width", "повторения", "length penalty"],
+    "links_to_theory": [
+      {"theory_id": "theory_beam_search", "segment_type": "definition"},
+      {"theory_id": "theory_beam_search", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Beam search используется когда нужен баланс между качеством (лучше чем greedy) и скоростью (быстрее чем exhaustive). Beam width=5-10 — типичные значения. Может генерировать повторения, поэтому используется length penalty. Nucleus sampling (top-p) — альтернатива.",
+    "covers": [
+      "баланс качество/скорость",
+      "выбор beam width",
+      "проблемы и решения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

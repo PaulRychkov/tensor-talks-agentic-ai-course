@@ -1,0 +1,45 @@
+{
+  "id": "theory_rag",
+  "concept": "RAG (Retrieval-Augmented Generation)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "rag", "retrieval"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "RAG — подход, комбинирующий извлечение релевантной информации из базы знаний с генерацией ответа языковой моделью."
+    },
+    {
+      "type": "intuition",
+      "content": "Сначала находим релевантные документы, затем используем их как контекст для генерации ответа моделью."
+    },
+    {
+      "type": "formula",
+      "content": "RAG(query) = LLM(query + retrieved_docs)"
+    },
+    {
+      "type": "example",
+      "content": "Вопросно-ответные системы, чат-боты с доступом к документации. Векторные БД для поиска, embedding модели для retrieval."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Решает проблему галлюцинаций LLM. Компоненты: retriever (dense/sparse), generator (LLM). Важна релевантность retrieved документов."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_word_embeddings",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

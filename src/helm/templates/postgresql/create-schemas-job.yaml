@@ -1,0 +1,55 @@
+{{- if .Values.postgresql.deployment.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-create-schemas
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgresql-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: create-schemas
+        image: {{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}
+        imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            echo "Waiting for PostgreSQL to be ready..."
+            until pg_isready -h {{ include "tensor-talks.fullname" . }}-postgresql -p 5432 -U {{ .Values.postgresql.user }}; do
+              echo "PostgreSQL is unavailable - sleeping"
+              sleep 2
+            done
+            echo "PostgreSQL is ready!"
+            echo "Executing schema creation script..."
+            PGPASSWORD=${POSTGRES_PASSWORD} psql -h {{ include "tensor-talks.fullname" . }}-postgresql -p 5432 -U {{ .Values.postgresql.user }} -d {{ .Values.postgresql.database }} -f /scripts/create-schemas.sql
+            echo "Schemas created successfully!"
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "tensor-talks.fullname" . }}-postgresql
+              key: password
+        volumeMounts:
+        - name: schemas-script
+          mountPath: /scripts
+          readOnly: true
+      volumes:
+      - name: schemas-script
+        configMap:
+          name: {{ include "tensor-talks.fullname" . }}-create-schemas
+{{- end }}

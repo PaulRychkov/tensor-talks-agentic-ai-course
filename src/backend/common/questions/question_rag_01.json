@@ -1,0 +1,29 @@
+{
+  "id": "question_rag_01",
+  "theory_id": "theory_rag",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "Как работает RAG и как он решает проблему галлюцинаций в LLM?",
+    "expected_points": ["retrieval + generation", "поиск релевантных документов", "контекст для генерации", "уменьшение галлюцинаций"],
+    "links_to_theory": [
+      {"theory_id": "theory_rag", "segment_type": "definition"},
+      {"theory_id": "theory_rag", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "RAG комбинирует извлечение релевантных документов из базы знаний с генерацией ответа LLM. Сначала retriever находит релевантные документы по запросу, затем generator использует их как контекст для генерации ответа. Это уменьшает галлюцинации, так как модель опирается на фактические данные.",
+    "covers": [
+      "двухэтапный процесс",
+      "роль retriever и generator",
+      "решение проблемы галлюцинаций"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

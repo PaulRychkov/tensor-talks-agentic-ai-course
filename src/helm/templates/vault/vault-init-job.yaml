@@ -1,0 +1,202 @@
+{{- if and .Values.vault.enabled .Values.vault.deployment.enabled (or (not (hasKey .Values.vault "init")) .Values.vault.init.enabled) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-vault-init
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: vault-init
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+      containers:
+      - name: vault-init
+        image: {{ .Values.vault.image.repository }}:{{ .Values.vault.image.tag }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Ожидание запуска Vault..."
+          for i in $(seq 1 60); do
+            if vault status -address=http://{{ include "tensor-talks.fullname" . }}-vault:8200 2>/dev/null; then
+              echo "Vault доступен"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "Vault не запустился за 120 секунд"
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          export VAULT_ADDR="http://{{ include "tensor-talks.fullname" . }}-vault:8200"
+          TOKEN=$(cat /vault/token/root-token)
+          
+          # Проверяем статус Vault
+          STATUS_JSON=$(vault status -format=json 2>/dev/null || echo "")
+          
+          if [ -z "$STATUS_JSON" ]; then
+            echo "Vault недоступен или не отвечает"
+            exit 1
+          fi
+          
+          # Парсим JSON статуса
+          INITIALIZED=$(echo "$STATUS_JSON" | grep -o '"initialized":[^,]*' | cut -d: -f2 | tr -d ' ' || echo "false")
+          SEALED=$(echo "$STATUS_JSON" | grep -o '"sealed":[^,]*' | cut -d: -f2 | tr -d ' ' || echo "true")
+          
+          # Инициализация если нужно
+          if [ "$INITIALIZED" = "false" ]; then
+            echo "Инициализация Vault..."
+            INIT_OUTPUT=$(vault operator init -key-shares=1 -key-threshold=1 -format=json 2>/dev/null)
+            if [ -n "$INIT_OUTPUT" ]; then
+              UNSEAL_KEY=$(echo "$INIT_OUTPUT" | grep -o '"unseal_keys_hex":\["[^"]*' | cut -d'"' -f4)
+              ROOT_TOKEN_NEW=$(echo "$INIT_OUTPUT" | grep -o '"root_token":"[^"]*' | cut -d'"' -f4)
+              if [ -n "$UNSEAL_KEY" ]; then
+                echo "$UNSEAL_KEY" > /vault/data/unseal-keys 2>/dev/null || true
+                vault operator unseal "$UNSEAL_KEY" > /dev/null 2>&1
+              fi
+              if [ -n "$ROOT_TOKEN_NEW" ]; then
+                TOKEN=$ROOT_TOKEN_NEW
+                # Обновляем Kubernetes Secret с реальным root token
+                if command -v kubectl > /dev/null 2>&1; then
+                  kubectl patch secret {{ include "tensor-talks.fullname" . }}-vault -n {{ .Values.global.namespace }} --type=json -p="[{\"op\":\"replace\",\"path\":\"/data/root-token\",\"value\":\"$(echo -n "$ROOT_TOKEN_NEW" | base64 | tr -d '\n')\"}]" > /dev/null 2>&1 || true
+                  echo "✓ Kubernetes Secret обновлен с реальным root token"
+                fi
+              fi
+            fi
+          fi
+          
+          # Unseal если sealed
+          if [ "$SEALED" = "true" ]; then
+            echo "Vault sealed, выполняется unseal..."
+            if [ -f /vault/data/unseal-keys ]; then
+              UNSEAL_KEY=$(cat /vault/data/unseal-keys | tr -d '\n\r ')
+              if [ -n "$UNSEAL_KEY" ]; then
+                vault operator unseal "$UNSEAL_KEY" > /dev/null 2>&1
+              fi
+            fi
+          fi
+          
+          # Авторизация
+          vault auth "$TOKEN" > /dev/null 2>&1 || {
+            echo "Ошибка авторизации с токеном"
+            exit 1
+          }
+          
+          echo "Проверка KV engine..."
+          if ! vault secrets list -format=json 2>/dev/null | grep -q '"kv/"'; then
+            echo "Включение KV v2 engine..."
+            vault secrets enable -version=2 -path=kv kv > /dev/null 2>&1 || true
+          fi
+          
+          echo "Восстановление секретов..."
+          
+          # PostgreSQL - создаем ТОЛЬКО если не существует
+          if ! vault kv get -field=host kv/tensor-talks/postgresql > /dev/null 2>&1; then
+            echo "Создание секрета PostgreSQL..."
+            vault kv put kv/tensor-talks/postgresql \
+              host=tensor-talks-postgresql \
+              port=5432 \
+              database=tensor_talks_db \
+              user=tensor_talks \
+              password=tensor-talks-dev-password \
+              sslmode=disable > /dev/null 2>&1 || true
+          else
+            echo "✓ PostgreSQL секрет уже существует - пропускаем"
+          fi
+          
+          # JWT - создаем ТОЛЬКО если не существует
+          if ! vault kv get -field=secret kv/tensor-talks/jwt > /dev/null 2>&1; then
+            echo "Создание секрета JWT..."
+            JWT_SECRET=$(openssl rand -hex 32)
+            vault kv put kv/tensor-talks/jwt \
+              secret=$JWT_SECRET \
+              issuer=tensor-talks-auth \
+              audience=tensor-talks-services > /dev/null 2>&1 || true
+          else
+            echo "✓ JWT секрет уже существует - пропускаем"
+          fi
+          
+          # Grafana - создаем ТОЛЬКО если не существует
+          if ! vault kv get -field=admin-user kv/tensor-talks/grafana > /dev/null 2>&1; then
+            echo "Создание секрета Grafana..."
+            vault kv put kv/tensor-talks/grafana \
+              admin-user=admin \
+              admin-password=admin > /dev/null 2>&1 || true
+          else
+            echo "✓ Grafana секрет уже существует - пропускаем"
+          fi
+          
+          # ArgoCD - создаем ТОЛЬКО если не существует
+          if ! vault kv get -field=admin-password kv/tensor-talks/argocd > /dev/null 2>&1; then
+            echo "Создание секрета ArgoCD..."
+            ARGOCD_PASSWORD=""
+            if command -v kubectl > /dev/null 2>&1; then
+              ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "")
+            fi
+            if [ -n "$ARGOCD_PASSWORD" ]; then
+              vault kv put kv/tensor-talks/argocd admin-password=$ARGOCD_PASSWORD > /dev/null 2>&1 || true
+            fi
+          else
+            echo "✓ ArgoCD секрет уже существует - пропускаем"
+          fi
+          
+          # GitHub - создаем ТОЛЬКО если не существует
+          if ! vault kv get -field=username kv/tensor-talks/github > /dev/null 2>&1; then
+            echo "Создание секрета GitHub (с placeholder токеном)..."
+            vault kv put kv/tensor-talks/github \
+              username=paulrychkov \
+              token=GITHUB_TOKEN_PLACEHOLDER > /dev/null 2>&1 || true
+            echo "⚠ GitHub token установлен в placeholder - замените на реальный токен!"
+          else
+            echo "✓ GitHub секрет уже существует - пропускаем"
+          fi
+          
+          # LLM API key - создаем ТОЛЬКО если не существует (с placeholder)
+          if ! vault kv get -field=api-key kv/tensor-talks/llm > /dev/null 2>&1; then
+            echo "Создание секрета LLM API key (с placeholder токеном)..."
+            vault kv put kv/tensor-talks/llm \
+              api-key=LLM_API_KEY_PLACEHOLDER > /dev/null 2>&1 || true
+            echo "⚠ LLM API key установлен в placeholder - замените на реальный токен!"
+          else
+            echo "✓ LLM секрет уже существует - пропускаем"
+          fi
+          
+          echo "✓ Vault инициализирован и секреты восстановлены"
+        env:
+        - name: VAULT_ADDR
+          value: "http://{{ include "tensor-talks.fullname" . }}-vault:8200"
+        volumeMounts:
+        - name: vault-token
+          mountPath: /vault/token
+          readOnly: true
+        - name: vault-data
+          mountPath: /vault/data
+      volumes:
+        - name: vault-token
+          secret:
+            secretName: {{ include "tensor-talks.fullname" . }}-vault
+            items:
+              - key: root-token
+                path: root-token
+        {{- if .Values.vault.persistence.enabled }}
+        - name: vault-data
+          persistentVolumeClaim:
+            claimName: {{ include "tensor-talks.fullname" . }}-vault
+        {{- else }}
+        - name: vault-data
+          emptyDir: {}
+        {{- end }}
+{{- end }}

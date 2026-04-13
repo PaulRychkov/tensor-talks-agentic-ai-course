@@ -1,0 +1,45 @@
+{
+  "id": "theory_instruction_tuning",
+  "concept": "Instruction Tuning",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "fine_tuning", "alignment"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Instruction Tuning — процесс дообучения языковой модели на наборе инструкций и примеров желаемого поведения, улучшающий способность модели следовать инструкциям."
+    },
+    {
+      "type": "intuition",
+      "content": "Обучает модель понимать и выполнять различные инструкции, делая её более полезной и контролируемой для пользователей."
+    },
+    {
+      "type": "formula",
+      "content": "Training на парах (instruction, expected_output) для множества задач"
+    },
+    {
+      "type": "example",
+      "content": "InstructGPT, ChatGPT используют instruction tuning. FLAN, Alpaca — открытые датасеты инструкций. Улучшает zero-shot и few-shot способности."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Требует качественных данных инструкций. Комбинируется с RLHF для alignment. Критично для создания полезных ассистентов."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "is_type_of"
+    },
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "applied_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

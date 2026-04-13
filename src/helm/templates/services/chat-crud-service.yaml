@@ -1,0 +1,21 @@
+{{- if (index .Values.services "chat-crud-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-chat-crud-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-crud-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8087
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-crud-service
+{{- end }}
+

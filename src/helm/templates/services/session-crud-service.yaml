@@ -1,0 +1,21 @@
+{{- if (index .Values.services "session-crud-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-session-crud-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: session-crud-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8085
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: session-crud-service
+{{- end }}
+

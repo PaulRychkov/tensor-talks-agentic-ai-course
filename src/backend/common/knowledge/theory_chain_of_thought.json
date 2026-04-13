@@ -1,0 +1,45 @@
+{
+  "id": "theory_chain_of_thought",
+  "concept": "Chain-of-Thought Prompting",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "prompting", "reasoning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Chain-of-Thought (CoT) — техника промптинга, которая заставляет LLM генерировать пошаговое рассуждение перед финальным ответом."
+    },
+    {
+      "type": "intuition",
+      "content": "Вместо прямого ответа модель сначала показывает ход мыслей, что улучшает качество решения сложных задач, требующих рассуждения."
+    },
+    {
+      "type": "formula",
+      "content": "Prompt: 'Давайте подумаем пошагово...' → Step 1 → Step 2 → ... → Final Answer"
+    },
+    {
+      "type": "example",
+      "content": "Математические задачи, логические головоломки. 'Решим по шагам: сначала найдем X, затем Y, и наконец Z.'"
+    },
+    {
+      "type": "practical_notes",
+      "content": "Работает лучше на больших моделях (GPT-4). Zero-shot CoT: просто добавить 'Let's think step by step'. Few-shot CoT: показать примеры с рассуждением."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_prompt_engineering",
+      "relation_type": "is_technique_of"
+    },
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "used_with"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

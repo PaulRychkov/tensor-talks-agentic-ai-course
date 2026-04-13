@@ -1,0 +1,29 @@
+{
+  "id": "question_word_embeddings_01",
+  "theory_id": "theory_word_embeddings",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое word embeddings и как они сохраняют семантические отношения?",
+    "expected_points": ["векторные представления", "близость в пространстве", "семантические аналогии"],
+    "links_to_theory": [
+      {"theory_id": "theory_word_embeddings", "segment_type": "definition"},
+      {"theory_id": "theory_word_embeddings", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Word embeddings — плотные векторные представления слов в многомерном пространстве. Слова с похожим значением имеют близкие векторы. Это позволяет моделировать семантические отношения: например, 'король' - 'мужчина' + 'женщина' ≈ 'королева'.",
+    "covers": [
+      "определение embeddings",
+      "сохранение семантики",
+      "примеры отношений"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

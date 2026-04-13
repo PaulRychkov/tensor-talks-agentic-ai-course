@@ -1,0 +1,29 @@
+{
+  "id": "question_bias_variance_01",
+  "theory_id": "theory_bias_variance",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое bias-variance tradeoff и как он связан с переобучением?",
+    "expected_points": ["баланс между bias и variance", "высокий bias — недообучение", "высокий variance — переобучение", "оптимальный баланс"],
+    "links_to_theory": [
+      {"theory_id": "theory_bias_variance", "segment_type": "definition"},
+      {"theory_id": "theory_overfitting", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Bias-variance tradeoff — баланс между ошибкой смещения и ошибкой дисперсии. Высокий bias приводит к недообучению (модель слишком простая), высокий variance — к переобучению (модель слишком сложная). Цель — найти оптимальный баланс для минимизации общей ошибки.",
+    "covers": [
+      "определение tradeoff",
+      "связь с переобучением",
+      "поиск баланса"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

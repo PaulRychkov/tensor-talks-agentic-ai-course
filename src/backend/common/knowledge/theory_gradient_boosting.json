@@ -1,0 +1,45 @@
+{
+  "id": "theory_gradient_boosting",
+  "concept": "Gradient Boosting",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["machine_learning", "ensemble", "boosting"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Gradient Boosting — ансамблевый метод, который последовательно обучает слабые модели, каждая из которых исправляет ошибки предыдущих."
+    },
+    {
+      "type": "intuition",
+      "content": "Каждая новая модель фокусируется на примерах, которые предыдущие модели предсказали неправильно, постепенно улучшая общую точность."
+    },
+    {
+      "type": "formula",
+      "content": "F_m(x) = F_{m-1}(x) + α_m * h_m(x), где h_m обучается на остатках"
+    },
+    {
+      "type": "example",
+      "content": "XGBoost, LightGBM, CatBoost — популярные реализации. Используются в соревнованиях Kaggle и продакшене."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Важные гиперпараметры: learning_rate, n_estimators, max_depth. Склонен к переобучению при большом количестве итераций."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_decision_trees",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_random_forest",
+      "relation_type": "alternative_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

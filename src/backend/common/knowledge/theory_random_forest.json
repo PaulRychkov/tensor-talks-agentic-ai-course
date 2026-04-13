@@ -1,0 +1,45 @@
+{
+  "id": "theory_random_forest",
+  "concept": "Случайный лес",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "ensemble", "classification", "regression"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Случайный лес — ансамбль деревьев решений, обученных на разных подвыборках данных с случайным выбором признаков."
+    },
+    {
+      "type": "intuition",
+      "content": "Множество деревьев 'голосуют' за финальное решение, что уменьшает переобучение и повышает обобщающую способность."
+    },
+    {
+      "type": "formula",
+      "content": "Prediction = majority vote (classification) or average (regression) of all trees"
+    },
+    {
+      "type": "example",
+      "content": "100 деревьев, каждое обучено на bootstrap выборке, финальный ответ — среднее предсказаний."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Хорошо работает из коробки, устойчив к переобучению. Важные гиперпараметры: n_estimators, max_depth, min_samples_split."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_decision_trees",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_bagging",
+      "relation_type": "implements"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

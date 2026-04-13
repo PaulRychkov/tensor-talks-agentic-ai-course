@@ -1,0 +1,123 @@
+{{- if .Values.kafka.topics.enabled }}
+# KafkaTopic манифесты для создания топиков в нашем кластере tensor-talks-kafka
+# Все топики имеют префикс tensor-talks- для изоляции
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tensor-talks-chat.events.out
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 1048576  # 1MB максимум на сообщение
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tensor-talks-chat.events.in
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 1048576  # 1MB максимум на сообщение
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tensor-talks-interview.build.request
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 1048576  # 1MB максимум на сообщение
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tensor-talks-interview.build.response
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 1048576  # 1MB максимум на сообщение
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+
+---
+# KafkaTopic для обмена сообщениями между dialogue-aggregator и agent-service
+# ВАЖНО: Имя топика БЕЗ префикса, так как в config.yaml указано "messages.full.data"
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: messages.full.data
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 5242880  # 5MB максимум на сообщение (для полных сообщений с контекстом)
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+
+---
+# KafkaTopic для ответов от agent-service к dialogue-aggregator
+# ВАЖНО: Имя топика БЕЗ префикса, так как в config.yaml указано "generated.phrases"
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: generated.phrases
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    strimzi.io/cluster: tensor-talks-kafka
+spec:
+  partitions: {{ .Values.kafka.topics.partitions | default 3 }}
+  replicas: {{ .Values.kafka.broker.replicas | default 1 }}
+  config:
+    retention.ms: {{ mul .Values.kafka.topics.retentionDays 86400000 | default 259200000 }}  # По умолчанию 3 дня
+    cleanup.policy: delete
+    max.message.bytes: 5242880  # 5MB максимум на сообщение (для полных ответов с evaluation)
+    compression.type: snappy  # Сжатие для экономии места
+    segment.ms: 3600000  # 1 час - более агрессивная очистка
+{{- end }}
+

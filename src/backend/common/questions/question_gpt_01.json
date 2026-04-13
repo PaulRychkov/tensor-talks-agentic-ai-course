@@ -1,0 +1,29 @@
+{
+  "id": "question_gpt_01",
+  "theory_id": "theory_gpt",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "Как GPT генерирует текст и что такое in-context learning?",
+    "expected_points": ["автогрессивная генерация", "предсказание следующего токена", "few-shot learning", "без дообучения"],
+    "links_to_theory": [
+      {"theory_id": "theory_gpt", "segment_type": "definition"},
+      {"theory_id": "theory_gpt", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "GPT генерирует текст токен за токеном, каждый раз предсказывая следующий на основе всего предыдущего контекста. In-context learning — способность решать задачи через примеры в промпте без дообучения, используя знания, полученные при предобучении.",
+    "covers": [
+      "механизм генерации",
+      "автогрессивный процесс",
+      "in-context learning"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

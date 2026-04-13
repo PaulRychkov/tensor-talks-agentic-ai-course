@@ -1,0 +1,20 @@
+server:
+  host: "0.0.0.0"
+  port: 8081
+
+user_store:
+  base_url: "http://user-store-service:8082"
+  timeout_seconds: 5
+
+jwt:
+  issuer: "tensor-talks-auth"
+  audience: "tensor-talks-services"
+  access_token_ttl: "15m"
+  refresh_token_ttl: "720h"
+  secret: "changeme-in-prod"
+
+redis:
+  addr: "redis-sessions:6379"  # Using redis-sessions instead of redis
+  password: ""
+  db: 0
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_elmo_01",
+  "theory_id": "theory_elmo",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "comparison",
+  "complexity": 2,
+  "content": {
+    "question": "Чем ELMo отличается от Word2Vec и почему это важно?",
+    "expected_points": ["контекстуальные vs статические", "разные векторы для одного слова", "учет контекста", "предшественник BERT"],
+    "links_to_theory": [
+      {"theory_id": "theory_elmo", "segment_type": "definition"},
+      {"theory_id": "theory_word_embeddings", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "ELMo генерирует контекстуальные embeddings — разные векторы для одного слова в разных контекстах, в отличие от статических Word2Vec. Это важно, так как значение слова зависит от контекста. ELMo был предшественником BERT и показал важность контекстуальных представлений.",
+    "covers": [
+      "различие контекстуальных и статических embeddings",
+      "важность контекста",
+      "историческое значение"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

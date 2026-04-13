@@ -1,0 +1,29 @@
+{
+  "id": "question_linear_regression_01",
+  "theory_id": "theory_linear_regression",
+  "linked_segments": ["definition", "formula"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое линейная регрессия и как она работает?",
+    "expected_points": ["линейная комбинация признаков", "предсказание числовых значений", "простота интерпретации"],
+    "links_to_theory": [
+      {"theory_id": "theory_linear_regression", "segment_type": "definition"},
+      {"theory_id": "theory_linear_regression", "segment_type": "formula"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Линейная регрессия — модель, предсказывающая целевую переменную как линейную комбинацию признаков. Формула: y = w₀ + w₁x₁ + w₂x₂ + ... + wₙxₙ. Модель находит веса, минимизирующие ошибку предсказания.",
+    "covers": [
+      "определение модели",
+      "математическая формула",
+      "принцип работы"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

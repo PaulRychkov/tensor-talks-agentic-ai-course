@@ -1,0 +1,29 @@
+{
+  "id": "question_bagging_01",
+  "theory_id": "theory_bagging",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как bagging уменьшает variance и улучшает стабильность модели?",
+    "expected_points": ["bootstrap выборки", "усреднение предсказаний", "нестабильные алгоритмы", "параллелизация"],
+    "links_to_theory": [
+      {"theory_id": "theory_bagging", "segment_type": "definition"},
+      {"theory_id": "theory_bagging", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Bagging обучает множество моделей на разных bootstrap выборках и усредняет их предсказания. Это уменьшает variance, так как ошибки разных моделей компенсируют друг друга. Особенно эффективен для нестабильных алгоритмов (деревья). Параллелизуем.",
+    "covers": [
+      "механизм уменьшения variance",
+      "bootstrap выборки",
+      "применение"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

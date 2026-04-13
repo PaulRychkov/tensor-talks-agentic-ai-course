@@ -1,0 +1,29 @@
+{
+  "id": "question_llama_01",
+  "theory_id": "theory_llama",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "comparison",
+  "complexity": 3,
+  "content": {
+    "question": "Чем LLaMA отличается от GPT и почему она популярна?",
+    "expected_points": ["open-source", "оптимизации", "эффективность", "локальное развертывание"],
+    "links_to_theory": [
+      {"theory_id": "theory_llama", "segment_type": "definition"},
+      {"theory_id": "theory_gpt", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "LLaMA — open-source альтернатива GPT с оптимизациями (RMSNorm, SwiGLU, rotary positional embeddings), делающими её более эффективной при том же качестве. Популярна для локального развертывания и fine-tuning, так как доступна в исходниках.",
+    "covers": [
+      "open-source преимущество",
+      "технические оптимизации",
+      "практические применения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

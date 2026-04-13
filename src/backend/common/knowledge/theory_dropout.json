@@ -1,0 +1,45 @@
+{
+  "id": "theory_dropout",
+  "concept": "Dropout",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "neural_networks", "regularization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Dropout — техника регуляризации, которая случайно 'отключает' часть нейронов во время обучения для предотвращения переобучения."
+    },
+    {
+      "type": "intuition",
+      "content": "Заставляет сеть не полагаться на конкретные нейроны, делая её более устойчивой и лучше обобщающейся."
+    },
+    {
+      "type": "formula",
+      "content": "Во время обучения: y = f(x * mask), где mask — бинарный вектор с вероятностью p=0.5"
+    },
+    {
+      "type": "example",
+      "content": "При dropout=0.5 каждый нейрон с вероятностью 50% отключается на каждой итерации обучения. На inference все нейроны активны."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Обычно применяется к полносвязным слоям. Dropout=0.5 — стандартное значение. Batch Normalization может частично заменить dropout."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_neural_networks",
+      "relation_type": "used_in"
+    },
+    {
+      "target_id": "theory_regularization_common",
+      "relation_type": "is_type_of"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

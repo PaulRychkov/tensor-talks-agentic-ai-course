@@ -1,0 +1,19 @@
+{{- if and .Values.vault.enabled .Values.vault.deployment.enabled .Values.vault.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-vault
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.vault.persistence.size | default "1Gi" }}
+  {{- if .Values.vault.persistence.storageClass }}
+  storageClassName: {{ .Values.vault.persistence.storageClass }}
+  {{- end }}
+{{- end }}

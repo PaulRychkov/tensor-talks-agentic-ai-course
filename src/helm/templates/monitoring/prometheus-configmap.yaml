@@ -1,0 +1,159 @@
+{{- if .Values.monitoring.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-prometheus-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: {{ .Values.monitoring.prometheus.scrapeInterval | default "15s" }}
+      evaluation_interval: {{ .Values.monitoring.prometheus.evaluationInterval | default "15s" }}
+      external_labels:
+        cluster: 'tensor-talks'
+        team: 'tensor-talks'
+        project: 'tensor-talks'
+
+    scrape_configs:
+      # Scraping через ServiceMonitor (автоматическое обнаружение)
+      - job_name: 'kubernetes-service-endpoints'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - {{ .Values.global.namespace }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: kubernetes_service_name
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+      # Статическая конфигурация для основных сервисов
+      - job_name: 'auth-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-auth-service:8081']
+            labels:
+              service: 'auth-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'bff-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-bff-service:8080']
+            labels:
+              service: 'bff-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'user-store-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-user-store-service:8082']
+            labels:
+              service: 'user-store-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'session-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-session-service:8083']
+            labels:
+              service: 'session-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'session-crud-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-session-crud-service:8085']
+            labels:
+              service: 'session-crud-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'chat-crud-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-chat-crud-service:8087']
+            labels:
+              service: 'chat-crud-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'results-crud-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-results-crud-service:8088']
+            labels:
+              service: 'results-crud-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'knowledge-base-crud-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-knowledge-base-crud-service:8090']
+            labels:
+              service: 'knowledge-base-crud-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'questions-crud-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-questions-crud-service:8091']
+            labels:
+              service: 'questions-crud-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'interview-builder-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-interview-builder-service:8089']
+            labels:
+              service: 'interview-builder-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'mock-model-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-mock-model-service:8084']
+            labels:
+              service: 'mock-model-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'agent-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-agent-service:9092']
+            labels:
+              service: 'agent-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      # Prometheus сам себя
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+            labels:
+              service: 'prometheus'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+{{- end }}
+

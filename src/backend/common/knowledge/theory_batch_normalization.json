@@ -1,0 +1,44 @@
+{
+  "id": "theory_batch_normalization",
+  "concept": "Batch Normalization",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["machine_learning", "neural_networks", "optimization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Batch Normalization — техника нормализации активаций слоя по батчу, ускоряющая обучение и стабилизирующая градиенты."
+    },
+    {
+      "type": "intuition",
+      "content": "Нормализует распределение входов каждого слоя, что позволяет использовать большие learning rates и ускоряет сходимость."
+    },
+    {
+      "type": "formula",
+      "content": "BN(x) = γ * (x - μ) / √(σ² + ε) + β, где μ и σ — среднее и дисперсия по батчу"
+    },
+    {
+      "type": "example",
+      "content": "Применяется после полносвязных или сверточных слоев, перед активацией. Критично для глубоких сетей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Уменьшает внутренний covariate shift. Позволяет использовать большие learning rates. Также работает как регуляризация."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_neural_networks",
+      "relation_type": "used_in"
+    },
+    {
+      "target_id": "theory_gradient_descent",
+      "relation_type": "improves"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "question_kmeans_01",
+  "theory_id": "theory_kmeans",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 1,
+  "content": {
+    "question": "Как выбрать оптимальное количество кластеров k в K-means?",
+    "expected_points": ["elbow method", "silhouette score", "domain knowledge", "итеративный подход"],
+    "links_to_theory": [
+      {"theory_id": "theory_kmeans", "segment_type": "definition"},
+      {"theory_id": "theory_kmeans", "segment_type": "practical_notes"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Elbow method: строим график зависимости суммы квадратов расстояний от k, ищем 'локоть'. Silhouette score: измеряет качество кластеризации, максимизируем. Domain knowledge: если известно количество групп. Итеративно пробуем разные k и сравниваем метрики.",
+    "covers": [
+      "elbow method",
+      "silhouette score",
+      "практические подходы"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_l1_l2_comparison",
+  "theory_id": "theory_l1_regularization",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "comparison",
+  "complexity": 2,
+  "content": {
+    "question": "В чём основное различие между L1 и L2 регуляризацией?",
+    "expected_points": ["L1 обнуляет веса", "L2 уменьшает веса", "L1 для feature selection", "L2 более стабильна"],
+    "links_to_theory": [
+      {"theory_id": "theory_l1_regularization", "segment_type": "definition"},
+      {"theory_id": "theory_l2_regularization", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "L1 регуляризация может обнулять веса, что делает её полезной для отбора признаков (feature selection), в то время как L2 только уменьшает веса, делая их ближе к нулю, но не обнуляя. L2 более стабильна при мультиколлинеарности.",
+    "covers": [
+      "различие в эффекте на веса",
+      "применение L1 для feature selection",
+      "стабильность L2"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

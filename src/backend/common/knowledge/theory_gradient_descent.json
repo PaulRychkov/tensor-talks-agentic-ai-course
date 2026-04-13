@@ -1,0 +1,45 @@
+{
+  "id": "theory_gradient_descent",
+  "concept": "Градиентный спуск",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "optimization", "algorithms"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Градиентный спуск — итеративный алгоритм оптимизации для нахождения минимума функции потерь."
+    },
+    {
+      "type": "intuition",
+      "content": "Алгоритм движется в направлении, противоположном градиенту, постепенно уменьшая значение функции."
+    },
+    {
+      "type": "formula",
+      "content": "w_{t+1} = w_t - α * ∇L(w_t)"
+    },
+    {
+      "type": "example",
+      "content": "В линейной регрессии градиентный спуск обновляет веса для минимизации MSE."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Важно выбрать правильный learning rate: слишком большой — расходимость, слишком маленький — медленная сходимость."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_backpropagation",
+      "relation_type": "requires"
+    },
+    {
+      "target_id": "theory_adam_optimizer",
+      "relation_type": "prerequisite_for"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,29 @@
+{
+  "id": "question_positional_encoding_01",
+  "theory_id": "theory_positional_encoding",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 2,
+  "content": {
+    "question": "Зачем нужен positional encoding в Transformer?",
+    "expected_points": ["нет информации о порядке", "параллельная обработка", "синусоидальное кодирование", "learnable embeddings"],
+    "links_to_theory": [
+      {"theory_id": "theory_positional_encoding", "segment_type": "definition"},
+      {"theory_id": "theory_transformer", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Transformer обрабатывает все токены параллельно, поэтому не имеет встроенной информации о порядке. Positional encoding явно добавляет информацию о позиции каждого токена. Оригинальный Transformer использует синусоидальное кодирование, современные модели — learnable embeddings.",
+    "covers": [
+      "проблема отсутствия порядка",
+      "решение через encoding",
+      "типы encoding"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

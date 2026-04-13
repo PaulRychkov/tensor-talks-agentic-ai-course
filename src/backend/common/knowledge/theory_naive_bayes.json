@@ -1,0 +1,41 @@
+{
+  "id": "theory_naive_bayes",
+  "concept": "Наивный Байес",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "classification", "probabilistic"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Наивный Байес — вероятностный классификатор, основанный на теореме Байеса с предположением о независимости признаков."
+    },
+    {
+      "type": "intuition",
+      "content": "Вычисляет вероятность класса при данных признаках, предполагая, что признаки независимы друг от друга (наивное предположение)."
+    },
+    {
+      "type": "formula",
+      "content": "P(y|x₁,...,xₙ) ∝ P(y) * Π P(xᵢ|y)"
+    },
+    {
+      "type": "example",
+      "content": "Классификация текста (спам/не спам), медицинская диагностика. Работает хорошо даже при нарушении предположения о независимости."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Быстрый и простой алгоритм. Хорошо работает с небольшими данными. MultinomialNB для текста, GaussianNB для непрерывных признаков."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_logistic_regression",
+      "relation_type": "alternative_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

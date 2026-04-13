@@ -1,0 +1,29 @@
+{
+  "id": "question_logistic_regression_01",
+  "theory_id": "theory_logistic_regression",
+  "linked_segments": ["definition", "formula"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Чем логистическая регрессия отличается от линейной?",
+    "expected_points": ["сигмоидная функция", "вероятности вместо значений", "бинарная классификация"],
+    "links_to_theory": [
+      {"theory_id": "theory_logistic_regression", "segment_type": "definition"},
+      {"theory_id": "theory_logistic_regression", "segment_type": "formula"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Логистическая регрессия использует сигмоидную функцию для преобразования линейной комбинации в вероятность (0-1), что делает её подходящей для бинарной классификации. Линейная регрессия предсказывает непрерывные значения.",
+    "covers": [
+      "использование сигмоиды",
+      "выход в виде вероятностей",
+      "применение для классификации"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

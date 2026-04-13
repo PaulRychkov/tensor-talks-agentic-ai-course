@@ -1,0 +1,29 @@
+{
+  "id": "question_activation_01",
+  "theory_id": "theory_activation_functions",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Почему ReLU заменила sigmoid в современных нейронных сетях?",
+    "expected_points": ["исчезающие градиенты", "простота вычисления", "sparsity", "Dying ReLU проблема"],
+    "links_to_theory": [
+      {"theory_id": "theory_activation_functions", "segment_type": "definition"},
+      {"theory_id": "theory_sigmoid", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "ReLU решает проблему исчезающих градиентов sigmoid, проще вычисляется, создает sparsity (обнуляет отрицательные значения). Однако может 'умереть' (Dying ReLU), что решается через Leaky ReLU или ELU.",
+    "covers": [
+      "решение проблемы градиентов",
+      "преимущества ReLU",
+      "проблемы и решения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

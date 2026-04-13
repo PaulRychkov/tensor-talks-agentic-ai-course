@@ -1,0 +1,45 @@
+{
+  "id": "theory_rlhf",
+  "concept": "RLHF (Reinforcement Learning from Human Feedback)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "alignment", "reinforcement_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "RLHF — метод выравнивания языковых моделей с человеческими предпочтениями через обучение с подкреплением на основе обратной связи от людей."
+    },
+    {
+      "type": "intuition",
+      "content": "Люди оценивают ответы модели, модель учится генерировать ответы, которые люди предпочитают, делая её более полезной и безопасной."
+    },
+    {
+      "type": "formula",
+      "content": "1. Supervised fine-tuning → 2. Reward model training → 3. RL optimization (PPO)"
+    },
+    {
+      "type": "example",
+      "content": "ChatGPT использует RLHF для alignment. Создает более полезные, честные и безвредные ответы. Критично для production LLM."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Требует большого количества человеческих оценок. Дорого и сложно. Альтернативы: Constitutional AI, Direct Preference Optimization (DPO)."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_instruction_tuning",
+      "relation_type": "extends"
+    },
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "applied_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

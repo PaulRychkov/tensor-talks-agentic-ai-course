@@ -1,0 +1,29 @@
+{
+  "id": "question_fine_tuning_01",
+  "theory_id": "theory_fine_tuning",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое fine-tuning и какие методы parameter-efficient fine-tuning вы знаете?",
+    "expected_points": ["дообучение предобученной модели", "LoRA", "Adapter", "меньше данных"],
+    "links_to_theory": [
+      {"theory_id": "theory_fine_tuning", "segment_type": "definition"},
+      {"theory_id": "theory_fine_tuning", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Fine-tuning — дообучение предобученной модели на специфичной задаче. Parameter-efficient методы: LoRA (обновление только низкоранговых матриц), Adapter (добавление небольших слоёв), Prompt tuning (обучение промптов без изменения весов). Это позволяет эффективно адаптировать большие модели.",
+    "covers": [
+      "определение fine-tuning",
+      "методы parameter-efficient tuning",
+      "преимущества"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

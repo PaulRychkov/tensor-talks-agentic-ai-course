@@ -1,0 +1,29 @@
+{
+  "id": "question_l2_01",
+  "theory_id": "theory_l2_regularization",
+  "linked_segments": ["definition", "formula"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Почему L2‑регуляризация уменьшает переобучение?",
+    "expected_points": ["штраф за большие веса", "λ контролирует силу регуляризации", "предотвращает запоминание шума"],
+    "links_to_theory": [
+      {"theory_id": "theory_l2_regularization", "segment_type": "definition"},
+      {"theory_id": "theory_l2_regularization", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "L2‑регуляризация добавляет штраф за большие значения весов, что предотвращает их чрезмерный рост и снижает переобучение. Коэффициент λ контролирует силу регуляризации.",
+    "covers": [
+      "основной принцип – штраф на веса",
+      "влияние на переобучение",
+      "роль коэффициента λ"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,49 @@
+{
+  "id": "theory_gpt",
+  "concept": "GPT (Generative Pre-trained Transformer)",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "gpt", "generation"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "GPT — автогрессивная языковая модель на основе Transformer decoder, предобученная на задаче предсказания следующего токена."
+    },
+    {
+      "type": "intuition",
+      "content": "Генерирует текст токен за токеном, каждый раз используя весь предыдущий контекст для предсказания следующего слова."
+    },
+    {
+      "type": "formula",
+      "content": "P(x_t | x_{<t}) — вероятность токена x_t при условии всех предыдущих"
+    },
+    {
+      "type": "example",
+      "content": "GPT-3, GPT-4, ChatGPT. Генерация текста, диалоги, код, переводы. Instruction tuning и RLHF улучшают качество."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Decoder-only архитектура. Предобучение на огромных корпусах, затем fine-tuning и alignment. In-context learning позволяет решать задачи без дообучения."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "based_on"
+    },
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_rag",
+      "relation_type": "complements"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

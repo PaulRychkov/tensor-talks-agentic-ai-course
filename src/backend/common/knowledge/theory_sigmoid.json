@@ -1,0 +1,45 @@
+{
+  "id": "theory_sigmoid",
+  "concept": "Сигмоидная функция",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["machine_learning", "activation_functions", "neural_networks"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Сигмоида — S-образная функция активации, преобразующая любое значение в диапазон (0, 1), используемая для вероятностей и бинарной классификации."
+    },
+    {
+      "type": "intuition",
+      "content": "Плавно переводит большие положительные значения в 1, большие отрицательные в 0, значения около нуля в 0.5."
+    },
+    {
+      "type": "formula",
+      "content": "σ(x) = 1 / (1 + e^(-x))"
+    },
+    {
+      "type": "example",
+      "content": "Используется в логистической регрессии для вероятностей. В нейронных сетях заменена на ReLU из-за проблемы исчезающих градиентов."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Страдает от проблемы исчезающих градиентов. Не центрирована (выход всегда > 0). В современных сетях используется только в выходном слое для вероятностей."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_logistic_regression",
+      "relation_type": "used_in"
+    },
+    {
+      "target_id": "theory_activation_functions",
+      "relation_type": "is_type_of"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

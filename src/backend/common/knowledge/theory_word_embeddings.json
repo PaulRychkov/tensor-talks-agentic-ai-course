@@ -1,0 +1,45 @@
+{
+  "id": "theory_word_embeddings",
+  "concept": "Векторные представления слов",
+  "complexity": 1,
+  "parent_id": null,
+  "tags": ["nlp", "embeddings", "word2vec"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Word embeddings — плотные векторные представления слов в непрерывном пространстве, сохраняющие семантические и синтаксические отношения."
+    },
+    {
+      "type": "intuition",
+      "content": "Слова с похожим значением имеют близкие векторы в многомерном пространстве."
+    },
+    {
+      "type": "formula",
+      "content": "word → [d₁, d₂, ..., dₙ] (обычно n=100-300)"
+    },
+    {
+      "type": "example",
+      "content": "Word2Vec, GloVe. 'король' - 'мужчина' + 'женщина' ≈ 'королева'"
+    },
+    {
+      "type": "practical_notes",
+      "content": "Предобученные embeddings (Word2Vec, GloVe) можно использовать как фичи. Современные подходы: BERT, GPT используют контекстуальные embeddings."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "prerequisite_for"
+    },
+    {
+      "target_id": "theory_tokenization",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

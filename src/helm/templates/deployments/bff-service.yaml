@@ -1,0 +1,97 @@
+{{- if (index .Values.services "bff-service").enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-bff-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bff-service
+spec:
+  replicas: {{ (index .Values.services "bff-service").replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: bff-service
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: bff-service
+        team: tensor-talks
+        project: tensor-talks
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+{{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: bff-service
+          image: {{ include "tensor-talks.image" (dict "Values" .Values "repository" (index .Values.services "bff-service").image.repository "tag" (index .Values.services "bff-service").image.tag) }}
+          imagePullPolicy: {{ (index .Values.services "bff-service").image.pullPolicy | default (include "tensor-talks.imagePullPolicy" .Values) }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: BFF_SERVER_HOST
+              value: "0.0.0.0"
+            - name: BFF_SERVER_PORT
+              value: "8080"
+            - name: BFF_AUTH_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-auth-service:8081"
+            - name: BFF_AUTH_SERVICE_TIMEOUT_SECONDS
+              value: "5"
+            - name: BFF_SESSION_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-session-service:8083"
+            - name: BFF_SESSION_SERVICE_TIMEOUT_SECONDS
+              value: "50"
+            - name: BFF_SESSION_CRUD_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-session-crud-service:8085"
+            - name: BFF_SESSION_CRUD_TIMEOUT_SECONDS
+              value: "5"
+            - name: BFF_CHAT_CRUD_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-chat-crud-service:8087"
+            - name: BFF_CHAT_CRUD_TIMEOUT_SECONDS
+              value: "5"
+            - name: BFF_RESULTS_CRUD_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-results-crud-service:8088"
+            - name: BFF_RESULTS_CRUD_TIMEOUT_SECONDS
+              value: "5"
+            - name: BFF_KAFKA_BROKERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+            - name: BFF_KAFKA_TOPIC_CHAT_OUT
+              value: "tensor-talks-chat.events.out"
+            - name: BFF_KAFKA_TOPIC_CHAT_IN
+              value: "tensor-talks-chat.events.in"
+            - name: BFF_KAFKA_CONSUMER_GROUP
+              value: "tensor-talks-bff-service-group"
+            - name: BFF_CORS_ALLOW_ORIGINS
+              value: "http://localhost:5173,http://{{ include "tensor-talks.fullname" . }}-frontend:5173"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml (index .Values.services "bff-service").resources | nindent 12 }}
+{{- end }}
+

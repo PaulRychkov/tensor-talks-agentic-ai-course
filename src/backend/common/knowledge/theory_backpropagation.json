@@ -1,0 +1,45 @@
+{
+  "id": "theory_backpropagation",
+  "concept": "Обратное распространение ошибки",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["machine_learning", "deep_learning", "optimization"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Backpropagation — алгоритм вычисления градиентов функции потерь по всем весам сети путём распространения ошибки от выходного слоя к входному."
+    },
+    {
+      "type": "intuition",
+      "content": "Цепное правило дифференцирования позволяет эффективно вычислить, как каждый вес влияет на итоговую ошибку."
+    },
+    {
+      "type": "formula",
+      "content": "∂L/∂w = ∂L/∂y · ∂y/∂z · ∂z/∂w (chain rule)"
+    },
+    {
+      "type": "example",
+      "content": "В многослойной сети градиент вычисляется слой за слоем, начиная с выходного."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Основа обучения глубоких сетей. Проблема исчезающих градиентов решается через ReLU, residual connections, нормализацию."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_neural_networks",
+      "relation_type": "trains"
+    },
+    {
+      "target_id": "theory_gradient_descent",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,44 @@
+{{- if and .Values.kafka.ui.enabled .Values.kafka.ui.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-kafdrop
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+  {{- with .Values.kafka.ui.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.kafka.ui.ingress.className }}
+  ingressClassName: {{ .Values.kafka.ui.ingress.className }}
+  {{- end }}
+  {{- if .Values.kafka.ui.ingress.tls }}
+  tls:
+    {{- range .Values.kafka.ui.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.kafka.ui.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "tensor-talks.fullname" $ }}
+                port:
+                  number: {{ $.Values.kafka.ui.port | default 9000 }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+

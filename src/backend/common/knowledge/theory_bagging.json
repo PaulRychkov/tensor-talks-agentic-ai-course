@@ -1,0 +1,44 @@
+{
+  "id": "theory_bagging",
+  "concept": "Bagging (Bootstrap Aggregating)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "ensemble", "bootstrap"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Bagging — ансамблевый метод, который обучает множество моделей на разных bootstrap выборках и усредняет их предсказания."
+    },
+    {
+      "type": "intuition",
+      "content": "Каждая модель обучается на случайной подвыборке данных, что уменьшает variance и улучшает стабильность предсказаний."
+    },
+    {
+      "type": "formula",
+      "content": "Prediction = average(prediction₁, prediction₂, ..., predictionₙ)"
+    },
+    {
+      "type": "example",
+      "content": "Random Forest использует bagging с деревьями решений. Каждое дерево обучается на bootstrap выборке с случайным выбором признаков."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Эффективен для нестабильных алгоритмов (деревья). Уменьшает variance, но не bias. Параллелизуем."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_random_forest",
+      "relation_type": "implements"
+    },
+    {
+      "target_id": "theory_decision_trees",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}

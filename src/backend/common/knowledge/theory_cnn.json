@@ -1,0 +1,45 @@
+{
+  "id": "theory_cnn",
+  "concept": "Сверточные нейронные сети (CNN)",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "neural_networks", "computer_vision"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "CNN — специализированный тип нейронных сетей для обработки данных с пространственной структурой (изображения, сигналы), использующий сверточные слои."
+    },
+    {
+      "type": "intuition",
+      "content": "Сверточные фильтры скользят по изображению, извлекая локальные паттерны (края, текстуры), которые комбинируются в более сложные признаки."
+    },
+    {
+      "type": "formula",
+      "content": "y[i,j] = Σ Σ x[i+m, j+n] * w[m, n] + b"
+    },
+    {
+      "type": "example",
+      "content": "Распознавание изображений, классификация объектов. ResNet, VGG, Inception — популярные архитектуры."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Использует параметр sharing (один фильтр для всего изображения), что уменьшает количество параметров. Pooling слои уменьшают размерность."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_neural_networks",
+      "relation_type": "specialization_of"
+    },
+    {
+      "target_id": "theory_backpropagation",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

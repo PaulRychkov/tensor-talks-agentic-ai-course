@@ -1,0 +1,96 @@
+{{- if (index .Values.services "knowledge-producer-service").enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-knowledge-producer-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: knowledge-producer-service
+spec:
+  replicas: {{ (index .Values.services "knowledge-producer-service").replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: knowledge-producer-service
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: knowledge-producer-service
+        team: tensor-talks
+        project: tensor-talks
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9092"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+{{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: knowledge-producer-service
+          image: {{ include "tensor-talks.image" (dict "Values" .Values "repository" (index .Values.services "knowledge-producer-service").image.repository "tag" (index .Values.services "knowledge-producer-service").image.tag) }}
+          imagePullPolicy: {{ (index .Values.services "knowledge-producer-service").image.pullPolicy | default (include "tensor-talks.imagePullPolicy" .Values) }}
+          ports:
+            - name: http
+              containerPort: 8092
+              protocol: TCP
+            - name: metrics
+              containerPort: 9092
+              protocol: TCP
+          env:
+            - name: SERVICE_NAME
+              value: "knowledge-producer-service"
+            - name: SERVICE_VERSION
+              value: "1.0.0"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: LOG_FORMAT
+              value: "json"
+            - name: KNOWLEDGE_BASE_CRUD_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-knowledge-base-crud-service:8090"
+            - name: QUESTIONS_CRUD_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-questions-crud-service:8091"
+            - name: KNOWLEDGE_DATA_PATH
+              value: "/app/data/knowledge"
+            - name: QUESTIONS_DATA_PATH
+              value: "/app/data/questions"
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "8092"
+            - name: METRICS_PORT
+              value: "9092"
+            - name: ENABLE_PROMETHEUS
+              value: "true"
+            - name: AUTO_LOAD_ON_STARTUP
+              value: "true"
+            - name: STARTUP_LOAD_RETRY_DELAY
+              value: "5"
+            - name: STARTUP_LOAD_MAX_RETRIES
+              value: "10"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml (index .Values.services "knowledge-producer-service").resources | nindent 12 }}
+{{- end }}
+

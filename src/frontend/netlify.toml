@@ -1,0 +1,11 @@
+[build]
+# Netlify requires this file at project root for build/deploy detection. Do not move.
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

@@ -1,0 +1,105 @@
+{{- if .Values.monitoring.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-grafana-datasources
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://{{ include "tensor-talks.fullname" . }}-prometheus:9090
+        isDefault: true
+        editable: true
+        jsonData:
+          timeInterval: "15s"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-grafana-dashboards
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  dashboard-providers.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+  tensor-talks-services.json: |
+    {
+      "dashboard": {
+        "title": "TensorTalks Services Overview",
+        "tags": ["tensor-talks"],
+        "timezone": "browser",
+        "schemaVersion": 16,
+        "version": 1,
+        "refresh": "10s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "HTTP Request Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{team=\"tensor-talks\", namespace=\"tensor-talks\"}[5m])",
+                "legendFormat": "{{ "{{service}}" }}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "HTTP Error Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{team=\"tensor-talks\", namespace=\"tensor-talks\", status=~\"5..\"}[5m])",
+                "legendFormat": "{{ "{{service}}" }}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "CPU Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{team=\"tensor-talks\", namespace=\"tensor-talks\"}[5m])",
+                "legendFormat": "{{ "{{pod}}" }}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Memory Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{team=\"tensor-talks\", namespace=\"tensor-talks\"}",
+                "legendFormat": "{{ "{{pod}}" }}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+{{- end }}
+

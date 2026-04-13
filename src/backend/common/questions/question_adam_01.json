@@ -1,0 +1,29 @@
+{
+  "id": "question_adam_01",
+  "theory_id": "theory_adam_optimizer",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 3,
+  "content": {
+    "question": "В чём преимущества Adam optimizer перед обычным градиентным спуском?",
+    "expected_points": ["адаптивный learning rate", "скользящие средние", "работа из коробки", "быстрая сходимость"],
+    "links_to_theory": [
+      {"theory_id": "theory_adam_optimizer", "segment_type": "definition"},
+      {"theory_id": "theory_gradient_descent", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Adam адаптивно настраивает learning rate для каждого параметра, используя скользящие средние градиентов и их квадратов. Это позволяет быстрее сходиться и часто работает лучше из коробки, чем SGD с ручной настройкой learning rate.",
+    "covers": [
+      "адаптивность learning rate",
+      "использование моментов",
+      "практические преимущества"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

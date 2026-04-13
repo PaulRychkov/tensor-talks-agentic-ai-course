@@ -1,0 +1,16 @@
+[
+  "auth-service",
+  "bff-service",
+  "user-store-service",
+  "session-service",
+  "session-crud-service",
+  "chat-crud-service",
+  "results-crud-service",
+  "knowledge-base-crud-service",
+  "questions-crud-service",
+  "interview-builder-service",
+  "knowledge-producer-service",
+  "mock-model-service",
+  "agent-service",
+  "frontend"
+]

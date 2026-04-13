@@ -1,0 +1,536 @@
+services:
+  # Single PostgreSQL instance with multiple schemas for local development
+  # In Kubernetes, we use shared PostgreSQL: 79.174.89.43:18809/team10_db
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/create_schemas.sql:/docker-entrypoint-initdb.d/create_schemas.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  redis-sessions:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_sessions_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  user-store-service:
+    build:
+      context: ./backend/user-store-service
+    environment:
+      USER_STORE_DATABASE_HOST: postgres
+      USER_STORE_DATABASE_PORT: "5432"
+      USER_STORE_DATABASE_USER: postgres
+      USER_STORE_DATABASE_PASSWORD: postgres
+      USER_STORE_DATABASE_NAME: postgres
+      USER_STORE_DATABASE_SSL_MODE: disable
+      USER_STORE_DATABASE_SCHEMA: user_store
+      USER_STORE_SERVER_HOST: "0.0.0.0"
+      USER_STORE_SERVER_PORT: "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    environment:
+      AUTH_SERVER_HOST: "0.0.0.0"
+      AUTH_SERVER_PORT: "8081"
+      AUTH_USER_STORE_BASE_URL: http://user-store-service:8082
+      AUTH_USER_STORE_TIMEOUT_SECONDS: "5"
+      AUTH_JWT_SECRET: supersecretjwtkey
+      AUTH_JWT_ACCESS_TOKEN_TTL: 15m
+      AUTH_JWT_REFRESH_TOKEN_TTL: 720h
+      AUTH_JWT_ISSUER: tensor-talks-auth
+      AUTH_JWT_AUDIENCE: tensor-talks-services
+    depends_on:
+      user-store-service:
+        condition: service_started
+    ports:
+      - "8081:8081"
+
+  session-crud-service:
+    build:
+      context: ./backend/session-crud-service
+    environment:
+      SESSION_CRUD_SERVER_HOST: "0.0.0.0"
+      SESSION_CRUD_SERVER_PORT: "8085"
+      SESSION_CRUD_DATABASE_HOST: postgres
+      SESSION_CRUD_DATABASE_PORT: "5432"
+      SESSION_CRUD_DATABASE_USER: postgres
+      SESSION_CRUD_DATABASE_PASSWORD: postgres
+      SESSION_CRUD_DATABASE_NAME: postgres
+      SESSION_CRUD_DATABASE_SSL_MODE: disable
+      SESSION_CRUD_DATABASE_SCHEMA: session_crud
+    depends_on:
+      postgres-sessions:
+        condition: service_healthy
+    ports:
+      - "8085:8085"
+
+  chat-crud-service:
+    build:
+      context: ./backend/chat-crud-service
+    environment:
+      CHAT_CRUD_SERVER_HOST: "0.0.0.0"
+      CHAT_CRUD_SERVER_PORT: "8087"
+      CHAT_CRUD_DATABASE_HOST: postgres
+      CHAT_CRUD_DATABASE_PORT: "5432"
+      CHAT_CRUD_DATABASE_USER: postgres
+      CHAT_CRUD_DATABASE_PASSWORD: postgres
+      CHAT_CRUD_DATABASE_NAME: postgres
+      CHAT_CRUD_DATABASE_SSL_MODE: disable
+      CHAT_CRUD_DATABASE_SCHEMA: chat_crud
+    depends_on:
+      postgres-chats:
+        condition: service_healthy
+    ports:
+      - "8087:8087"
+
+  results-crud-service:
+    build:
+      context: ./backend/results-crud-service
+    environment:
+      RESULTS_CRUD_SERVER_HOST: "0.0.0.0"
+      RESULTS_CRUD_SERVER_PORT: "8088"
+      RESULTS_CRUD_DATABASE_HOST: postgres
+      RESULTS_CRUD_DATABASE_PORT: "5432"
+      RESULTS_CRUD_DATABASE_USER: postgres
+      RESULTS_CRUD_DATABASE_PASSWORD: postgres
+      RESULTS_CRUD_DATABASE_NAME: postgres
+      RESULTS_CRUD_DATABASE_SSL_MODE: disable
+      RESULTS_CRUD_DATABASE_SCHEMA: results_crud
+    depends_on:
+      postgres-results:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+
+  knowledge-base-crud-service:
+    build:
+      context: ./backend/knowledge-base-crud-service
+    environment:
+      KNOWLEDGE_BASE_CRUD_SERVER_HOST: "0.0.0.0"
+      KNOWLEDGE_BASE_CRUD_SERVER_PORT: "8090"
+      KNOWLEDGE_BASE_CRUD_DATABASE_HOST: postgres
+      KNOWLEDGE_BASE_CRUD_DATABASE_PORT: "5432"
+      KNOWLEDGE_BASE_CRUD_DATABASE_USER: postgres
+      KNOWLEDGE_BASE_CRUD_DATABASE_PASSWORD: postgres
+      KNOWLEDGE_BASE_CRUD_DATABASE_NAME: postgres
+      KNOWLEDGE_BASE_CRUD_DATABASE_SSL_MODE: disable
+      KNOWLEDGE_BASE_CRUD_DATABASE_SCHEMA: knowledge_base_crud
+    depends_on:
+      postgres-knowledge:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+
+  questions-crud-service:
+    build:
+      context: ./backend/questions-crud-service
+    environment:
+      QUESTIONS_CRUD_SERVER_HOST: "0.0.0.0"
+      QUESTIONS_CRUD_SERVER_PORT: "8091"
+      QUESTIONS_CRUD_DATABASE_HOST: postgres
+      QUESTIONS_CRUD_DATABASE_PORT: "5432"
+      QUESTIONS_CRUD_DATABASE_USER: postgres
+      QUESTIONS_CRUD_DATABASE_PASSWORD: postgres
+      QUESTIONS_CRUD_DATABASE_NAME: postgres
+      QUESTIONS_CRUD_DATABASE_SSL_MODE: disable
+      QUESTIONS_CRUD_DATABASE_SCHEMA: questions_crud
+    depends_on:
+      postgres-questions:
+        condition: service_healthy
+    ports:
+      - "8091:8091"
+
+  knowledge-producer-service:
+    build:
+      context: ./backend/knowledge-producer-service
+    environment:
+      KNOWLEDGE_BASE_CRUD_URL: http://knowledge-base-crud-service:8090
+      QUESTIONS_CRUD_URL: http://questions-crud-service:8091
+      KNOWLEDGE_DATA_PATH: /app/data/knowledge
+      QUESTIONS_DATA_PATH: /app/data/questions
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8092"
+      AUTO_LOAD_ON_STARTUP: "true"
+      STARTUP_LOAD_RETRY_DELAY: "5"
+      STARTUP_LOAD_MAX_RETRIES: "10"
+    volumes:
+      - ./backend/common/knowledge:/app/data/knowledge:ro
+      - ./backend/common/questions:/app/data/questions:ro
+    depends_on:
+      knowledge-base-crud-service:
+        condition: service_started
+      questions-crud-service:
+        condition: service_started
+    ports:
+      - "8092:8092"
+
+  interview-builder-service:
+    build:
+      context: ./backend/interview-builder-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_REQUEST: team10-interview.build.request
+      KAFKA_TOPIC_RESPONSE: team10-interview.build.response
+      KAFKA_CONSUMER_GROUP: interview-builder-service-group
+      QUESTIONS_CRUD_URL: http://questions-crud-service:8091
+      KNOWLEDGE_BASE_CRUD_URL: http://knowledge-base-crud-service:8090
+      QUESTIONS_PER_INTERVIEW: "5"
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8089"
+    depends_on:
+      kafka:
+        condition: service_started
+      questions-crud-service:
+        condition: service_started
+      knowledge-base-crud-service:
+        condition: service_started
+    ports:
+      - "8089:8089"
+
+  session-service:
+    build:
+      context: ./backend/session-service
+    environment:
+      SESSION_SERVER_HOST: "0.0.0.0"
+      SESSION_SERVER_PORT: "8083"
+      SESSION_REDIS_ADDR: redis-sessions:6379
+      SESSION_REDIS_PASSWORD: ""
+      SESSION_REDIS_DB: "0"
+      SESSION_REDIS_TTL_HOURS: "24"
+      SESSION_SESSION_CRUD_BASE_URL: http://session-crud-service:8085
+      SESSION_SESSION_CRUD_TIMEOUT_SECONDS: "5"
+      SESSION_KAFKA_BROKERS: kafka:9092
+      SESSION_KAFKA_TOPIC_REQUEST: team10-interview.build.request
+      SESSION_KAFKA_TOPIC_RESPONSE: team10-interview.build.response
+      SESSION_KAFKA_CONSUMER_GROUP: session-manager-service-group
+      SESSION_SESSION_MANAGER_MAX_ACTIVE_SESSIONS: "100"
+      SESSION_SESSION_MANAGER_PROGRAM_TIMEOUT_SECONDS: "30"
+    depends_on:
+      redis-sessions:
+        condition: service_healthy
+      session-crud-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    ports:
+      - "8083:8083"
+
+  bff-service:
+    build:
+      context: ./backend/bff-service
+    environment:
+      BFF_SERVER_HOST: "0.0.0.0"
+      BFF_SERVER_PORT: "8080"
+      BFF_AUTH_SERVICE_BASE_URL: http://auth-service:8081
+      BFF_AUTH_SERVICE_TIMEOUT_SECONDS: "5"
+      BFF_SESSION_SERVICE_BASE_URL: http://session-service:8083
+      BFF_SESSION_SERVICE_TIMEOUT_SECONDS: "5"
+      BFF_SESSION_CRUD_BASE_URL: http://session-crud-service:8085
+      BFF_SESSION_CRUD_TIMEOUT_SECONDS: "5"
+      BFF_CHAT_CRUD_BASE_URL: http://chat-crud-service:8087
+      BFF_CHAT_CRUD_TIMEOUT_SECONDS: "5"
+      BFF_RESULTS_CRUD_BASE_URL: http://results-crud-service:8088
+      BFF_RESULTS_CRUD_TIMEOUT_SECONDS: "5"
+      BFF_KAFKA_BROKERS: kafka:9092
+      BFF_KAFKA_TOPIC_CHAT_OUT: team10-chat.events.out
+      BFF_KAFKA_TOPIC_CHAT_IN: team10-chat.events.in
+      BFF_KAFKA_CONSUMER_GROUP: bff-service-group
+      BFF_CORS_ALLOW_ORIGINS: "*"
+      BFF_CORS_ALLOW_HEADERS: Authorization,Content-Type
+    depends_on:
+      auth-service:
+        condition: service_started
+      session-service:
+        condition: service_started
+      session-crud-service:
+        condition: service_started
+      chat-crud-service:
+        condition: service_started
+      results-crud-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: /api
+    depends_on:
+      bff-service:
+        condition: service_started
+    ports:
+      - "5173:80"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - auth-service
+      - bff-service
+      - user-store-service
+      - session-service
+      - session-crud-service
+      - chat-crud-service
+      - results-crud-service
+      - knowledge-base-crud-service
+      - questions-crud-service
+      - interview-builder-service
+      - mock-model-service
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
+      SERVER_PORT: 9000
+      JVM_OPTS: "-Xms32M -Xmx64M"
+    ports:
+      - "9000:9000"
+    depends_on:
+      - kafka
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+
+  mock-model-service:
+    build:
+      context: ./backend/mock-model-service
+    environment:
+      MOCK_MODEL_SERVER_HOST: "0.0.0.0"
+      MOCK_MODEL_SERVER_PORT: "8084"
+      MOCK_MODEL_KAFKA_BROKERS: kafka:9092
+      MOCK_MODEL_KAFKA_TOPIC_CHAT_OUT: team10-chat.events.out
+      MOCK_MODEL_KAFKA_TOPIC_CHAT_IN: team10-chat.events.in
+      MOCK_MODEL_KAFKA_CONSUMER_GROUP: mock-model-service-group
+      MOCK_MODEL_MODEL_QUESTION_DELAY_SECONDS: "2"
+      MOCK_MODEL_SESSION_MANAGER_BASE_URL: http://session-service:8083
+      MOCK_MODEL_SESSION_MANAGER_TIMEOUT_SECONDS: "5"
+      MOCK_MODEL_CHAT_CRUD_BASE_URL: http://chat-crud-service:8087
+      MOCK_MODEL_CHAT_CRUD_TIMEOUT_SECONDS: "5"
+      MOCK_MODEL_RESULTS_CRUD_BASE_URL: http://results-crud-service:8088
+      MOCK_MODEL_RESULTS_CRUD_TIMEOUT_SECONDS: "5"
+    depends_on:
+      session-service:
+        condition: service_started
+      chat-crud-service:
+        condition: service_started
+      results-crud-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    ports:
+      - "8084:8084"
+
+  dialogue-aggregator:
+    build:
+      context: ./backend/dialogue-aggregator
+    environment:
+      # Kafka
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_PUBLICATION: dialogue-aggregator-publication-group
+      KAFKA_CONSUMER_GROUP_MESSAGES: dialogue-aggregator-messages-group
+      KAFKA_CONSUMER_GROUP_GENERATED: dialogue-aggregator-generated-group
+      KAFKA_TOPIC_PUBLICATION: publication.events
+      KAFKA_TOPIC_MESSAGES: messages.events
+      KAFKA_TOPIC_GENERATED: generated.phrases
+      KAFKA_TOPIC_FULL_DATA: messages.full.data
+      KAFKA_TOPIC_HISTORY: history.full.events
+      KAFKA_TOPIC_DLQ: dialogue-aggregator.dlq
+      KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+      KAFKA_CONSUMER_ENABLE_AUTO_COMMIT: "false"
+      KAFKA_CONSUMER_MAX_POLL_RECORDS: 100
+      KAFKA_PRODUCER_ACKS: all
+      KAFKA_PRODUCER_RETRIES: 3
+      KAFKA_PRODUCER_COMPRESSION_TYPE: snappy
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_PASSWORD: ""
+      REDIS_MAX_CONNECTIONS: 50
+      REDIS_DIALOGUE_TTL_SECONDS: 86400
+      REDIS_MESSAGES_CACHE_SIZE: 50
+      # Service
+      SERVICE_NAME: dialogue-aggregator
+      SERVICE_VERSION: 1.0.0
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      MAX_MESSAGES_CACHE_SIZE: 50
+      # Metrics
+      METRICS_PORT: 9091
+      ENABLE_PROMETHEUS: "true"
+    depends_on:
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    ports:
+      - "8086:8085"  # FastAPI app
+      - "9091:9091"  # Metrics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  agent-service:
+    build:
+      context: ./backend/agent-service
+    environment:
+      # Service
+      AGENT_SERVICE_NAME: agent-service
+      AGENT_SERVICE_VERSION: 1.0.0
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      # Kafka
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_MESSAGES_FULL: messages.full.data
+      KAFKA_TOPIC_GENERATED: generated.phrases
+      KAFKA_CONSUMER_GROUP: agent-service-group
+      KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+      KAFKA_CONSUMER_ENABLE_AUTO_COMMIT: "false"
+      KAFKA_CONSUMER_MAX_POLL_RECORDS: 100
+      KAFKA_PRODUCER_ACKS: all
+      KAFKA_PRODUCER_RETRIES: 3
+      KAFKA_PRODUCER_COMPRESSION_TYPE: snappy
+      # LLM
+      LLM_PROVIDER: openai
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4.1-mini}
+      LLM_TEMPERATURE: 0.7
+      LLM_MAX_TOKENS: 2000
+      LLM_TIMEOUT: 60
+      # External Services
+      SESSION_SERVICE_URL: http://session-service:8083
+      CHAT_CRUD_SERVICE_URL: http://chat-crud-service:8087
+      KNOWLEDGE_BASE_CRUD_SERVICE_URL: http://knowledge-base-crud-service:8090
+      # Redis
+      REDIS_HOST: redis-sessions
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_PASSWORD: ""
+      REDIS_MAX_CONNECTIONS: 50
+      REDIS_CONNECTION_TIMEOUT: 5
+      REDIS_SOCKET_TIMEOUT: 5
+      REDIS_RETRY_ON_TIMEOUT: "true"
+      ENABLE_REDIS_CACHE: "true"
+      # Processing
+      MAX_RETRIES: 3
+      PROCESSING_TIMEOUT: 120
+      # REST API
+      REST_API_HOST: 0.0.0.0
+      REST_API_PORT: 8093
+      ENABLE_REST_API: "true"
+      # Metrics
+      METRICS_PORT: 9092
+      ENABLE_PROMETHEUS: "true"
+    depends_on:
+      kafka:
+        condition: service_started
+      redis-sessions:
+        condition: service_healthy
+      session-service:
+        condition: service_started
+    ports:
+      - "8093:8093"  # REST API
+      - "9192:9092"  # Metrics (avoid kafka host port)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8093/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_sessions_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+

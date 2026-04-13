@@ -1,0 +1,45 @@
+{
+  "id": "theory_positional_encoding",
+  "concept": "Positional Encoding",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Positional Encoding — способ добавления информации о позиции токенов в последовательности в Transformer архитектуре, которая не имеет встроенной информации о порядке."
+    },
+    {
+      "type": "intuition",
+      "content": "Transformer обрабатывает все токены параллельно, поэтому нужно явно добавить информацию о том, какая позиция у каждого токена."
+    },
+    {
+      "type": "formula",
+      "content": "PE(pos, 2i) = sin(pos / 10000^(2i/d)), PE(pos, 2i+1) = cos(pos / 10000^(2i/d))"
+    },
+    {
+      "type": "example",
+      "content": "Синусоидальное кодирование в оригинальном Transformer. Современные модели используют learnable positional embeddings."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Добавляется к word embeddings перед входом в Transformer. Позволяет модели понимать порядок слов. Learnable embeddings часто работают лучше."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "required_by"
+    },
+    {
+      "target_id": "theory_word_embeddings",
+      "relation_type": "combines_with"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

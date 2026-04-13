@@ -1,0 +1,45 @@
+{
+  "id": "theory_optimization",
+  "concept": "Оптимизация в ML",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "optimization", "mathematics"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Оптимизация в ML — процесс нахождения параметров модели, минимизирующих функцию потерь на обучающих данных."
+    },
+    {
+      "type": "intuition",
+      "content": "Ищем оптимальные веса модели, которые дают наименьшую ошибку предсказания. Это поиск минимума функции потерь."
+    },
+    {
+      "type": "formula",
+      "content": "θ* = argmin L(θ), где L — функция потерь, θ — параметры модели"
+    },
+    {
+      "type": "example",
+      "content": "Градиентный спуск, Adam, SGD — алгоритмы оптимизации. Convex optimization для линейных моделей, non-convex для нейронных сетей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Выбор алгоритма зависит от задачи. Learning rate — критический гиперпараметр. Local minima проблема в глубоких сетях."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gradient_descent",
+      "relation_type": "includes"
+    },
+    {
+      "target_id": "theory_adam_optimizer",
+      "relation_type": "includes"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

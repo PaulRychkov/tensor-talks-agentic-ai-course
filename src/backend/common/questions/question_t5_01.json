@@ -1,0 +1,29 @@
+{
+  "id": "question_t5_01",
+  "theory_id": "theory_t5",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "В чём идея T5 и как она формулирует задачи?",
+    "expected_points": ["text-to-text", "префиксы задач", "универсальная модель", "encoder-decoder"],
+    "links_to_theory": [
+      {"theory_id": "theory_t5", "segment_type": "definition"},
+      {"theory_id": "theory_t5", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "T5 формулирует все NLP задачи как text-to-text преобразование с префиксом типа задачи. Например, 'translate English to German: Hello' → 'Hallo'. Это универсальный подход, позволяющий одной модели решать множество задач через fine-tuning с разными префиксами.",
+    "covers": [
+      "концепция text-to-text",
+      "использование префиксов",
+      "универсальность подхода"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

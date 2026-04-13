@@ -1,0 +1,23 @@
+server:
+  host: "0.0.0.0"
+  port: 8083
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+  ttl_hours: 24
+
+session_crud:
+  base_url: "http://session-crud-service:8085"
+  timeout_seconds: 5
+
+kafka:
+  brokers: ["kafka:9092"]
+  topic_request: "team10-interview.build.request"   # Prefixed for Kubernetes shared cluster
+  topic_response: "team10-interview.build.response" # Prefixed for Kubernetes shared cluster
+  consumer_group: "team10-session-manager-service-group"  # Prefixed for Kubernetes shared cluster
+
+session_manager:
+  max_active_sessions: 100
+  program_timeout_seconds: 30  # Таймаут ожидания программы интервью от builder-service (для HTTP ответа bff-service)

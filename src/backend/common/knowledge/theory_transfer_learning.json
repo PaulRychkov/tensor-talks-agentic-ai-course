@@ -1,0 +1,44 @@
+{
+  "id": "theory_transfer_learning",
+  "concept": "Transfer Learning",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["machine_learning", "nlp", "transfer_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Transfer Learning — подход, при котором знания, полученные при решении одной задачи, переносятся для решения другой, связанной задачи."
+    },
+    {
+      "type": "intuition",
+      "content": "Использование предобученной модели на больших данных и адаптация её под конкретную задачу с меньшим количеством данных."
+    },
+    {
+      "type": "formula",
+      "content": "Pre-training на большой задаче → Fine-tuning на целевой задаче"
+    },
+    {
+      "type": "example",
+      "content": "BERT предобучен на masked LM, затем дообучен на NER или classification. ImageNet предобучение для компьютерного зрения."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Эффективен когда целевая задача имеет мало данных. Feature extraction (заморозка весов) или fine-tuning (обновление весов)."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "includes"
+    },
+    {
+      "target_id": "theory_bert",
+      "relation_type": "uses"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}

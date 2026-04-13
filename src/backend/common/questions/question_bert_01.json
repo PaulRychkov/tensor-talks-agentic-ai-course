@@ -1,0 +1,29 @@
+{
+  "id": "question_bert_01",
+  "theory_id": "theory_bert",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "В чём отличие BERT от GPT и почему BERT двунаправленный?",
+    "expected_points": ["encoder vs decoder", "bidirectional context", "masked LM", "задачи применения"],
+    "links_to_theory": [
+      {"theory_id": "theory_bert", "segment_type": "definition"},
+      {"theory_id": "theory_gpt", "segment_type": "definition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "BERT использует Transformer encoder и двунаправленный контекст (видит слова слева и справа), предобучен на masked language modeling. GPT — decoder-only, автогрессивная модель для генерации. BERT лучше для понимания текста, GPT — для генерации.",
+    "covers": [
+      "архитектурные различия",
+      "направленность контекста",
+      "области применения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

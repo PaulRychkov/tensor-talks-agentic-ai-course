@@ -1,0 +1,29 @@
+{
+  "id": "question_decision_trees_01",
+  "theory_id": "theory_decision_trees",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как работает дерево решений и какие критерии используются для разбиения?",
+    "expected_points": ["последовательные правила", "Information Gain", "Gini Impurity", "склонность к переобучению"],
+    "links_to_theory": [
+      {"theory_id": "theory_decision_trees", "segment_type": "definition"},
+      {"theory_id": "theory_decision_trees", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Дерево решений разбивает пространство признаков через последовательные правила 'да/нет'. Критерии разбиения: Information Gain (энтропия), Gini Impurity или MSE для регрессии. Выбирается разбиение, максимизирующее разделение классов.",
+    "covers": [
+      "принцип работы дерева",
+      "критерии разбиения",
+      "выбор оптимального разбиения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

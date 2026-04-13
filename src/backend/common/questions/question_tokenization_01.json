@@ -1,0 +1,29 @@
+{
+  "id": "question_tokenization_01",
+  "theory_id": "theory_tokenization",
+  "linked_segments": ["definition", "example"],
+  "question_type": "practical",
+  "complexity": 1,
+  "content": {
+    "question": "Какие методы токенизации существуют и в чём их различия?",
+    "expected_points": ["word-level", "subword (BPE)", "character-level", "обработка OOV"],
+    "links_to_theory": [
+      {"theory_id": "theory_tokenization", "segment_type": "definition"},
+      {"theory_id": "theory_tokenization", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Word-level разбивает на слова, но не обрабатывает OOV (out-of-vocabulary) слова. Subword токенизация (BPE, SentencePiece) разбивает слова на подслова, что позволяет обрабатывать редкие и новые слова. Character-level работает на уровне символов, но создаёт длинные последовательности.",
+    "covers": [
+      "типы токенизации",
+      "преимущества и недостатки",
+      "обработка OOV слов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

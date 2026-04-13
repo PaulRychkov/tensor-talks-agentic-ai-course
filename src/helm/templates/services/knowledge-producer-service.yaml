@@ -1,0 +1,25 @@
+{{- if (index .Values.services "knowledge-producer-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-knowledge-producer-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: knowledge-producer-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8092
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9092
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: knowledge-producer-service
+{{- end }}
+

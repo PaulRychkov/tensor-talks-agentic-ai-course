@@ -1,0 +1,29 @@
+{
+  "id": "question_lstm_01",
+  "theory_id": "theory_lstm",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "technical",
+  "complexity": 2,
+  "content": {
+    "question": "Как LSTM решает проблему исчезающих градиентов в RNN?",
+    "expected_points": ["механизм ворот", "forget gate", "cell state", "контроль потока информации"],
+    "links_to_theory": [
+      {"theory_id": "theory_lstm", "segment_type": "definition"},
+      {"theory_id": "theory_lstm", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "LSTM решает проблему через механизм ворот (gates) и cell state. Forget gate решает, что забыть, input gate — что запомнить, output gate — что передать. Cell state позволяет информации проходить напрямую, избегая проблем с градиентами.",
+    "covers": [
+      "механизм ворот",
+      "cell state",
+      "решение проблемы градиентов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,45 @@
+{
+  "id": "theory_prompt_engineering",
+  "concept": "Prompt Engineering",
+  "complexity": 2,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "prompting", "in_context_learning"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "Prompt Engineering — искусство формулирования промптов (запросов) для языковых моделей для получения желаемых результатов без изменения весов модели."
+    },
+    {
+      "type": "intuition",
+      "content": "Правильно сформулированный промпт может заставить LLM решать задачи, на которых она не обучалась напрямую, используя in-context learning."
+    },
+    {
+      "type": "formula",
+      "content": "Few-shot: примеры в промпте. Chain-of-thought: пошаговое рассуждение. Zero-shot: только инструкция."
+    },
+    {
+      "type": "example",
+      "content": "Few-shot learning: дать несколько примеров задачи. Chain-of-thought prompting: 'Давайте подумаем пошагово...'. Role prompting: 'Ты эксперт по...'"
+    },
+    {
+      "type": "practical_notes",
+      "content": "Критично для эффективного использования LLM. Зависит от модели. Современные модели (GPT-4) лучше понимают сложные инструкции."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_gpt",
+      "relation_type": "used_with"
+    },
+    {
+      "target_id": "theory_fine_tuning",
+      "relation_type": "alternative_to"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

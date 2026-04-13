@@ -1,0 +1,29 @@
+{
+  "id": "question_naive_bayes_01",
+  "theory_id": "theory_naive_bayes",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Почему 'наивный' Байес называется 'наивным'?",
+    "expected_points": ["предположение о независимости", "реальность — признаки зависимы", "работает несмотря на предположение"],
+    "links_to_theory": [
+      {"theory_id": "theory_naive_bayes", "segment_type": "definition"},
+      {"theory_id": "theory_naive_bayes", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Называется 'наивным' из-за предположения о независимости признаков, что редко выполняется в реальности. Однако алгоритм часто работает хорошо даже при нарушении этого предположения, особенно для текстовых данных.",
+    "covers": [
+      "предположение о независимости",
+      "почему 'наивное'",
+      "практическая эффективность"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

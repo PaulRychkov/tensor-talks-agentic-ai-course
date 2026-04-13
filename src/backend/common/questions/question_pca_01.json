@@ -1,0 +1,29 @@
+{
+  "id": "question_pca_01",
+  "theory_id": "theory_pca",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Когда и зачем используется PCA?",
+    "expected_points": ["снижение размерности", "визуализация", "удаление шума", "сжатие признаков"],
+    "links_to_theory": [
+      {"theory_id": "theory_pca", "segment_type": "definition"},
+      {"theory_id": "theory_pca", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "PCA используется для снижения размерности данных, визуализации многомерных данных, удаления шума и сжатия признаков. Находит главные компоненты — направления максимальной дисперсии. Количество компонент выбирается по объясненной дисперсии (обычно 95%).",
+    "covers": [
+      "применения PCA",
+      "принцип работы",
+      "выбор количества компонент"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

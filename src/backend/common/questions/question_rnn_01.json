@@ -1,0 +1,29 @@
+{
+  "id": "question_rnn_01",
+  "theory_id": "theory_rnn",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как RNN обрабатывает последовательности и в чём её основная проблема?",
+    "expected_points": ["скрытое состояние", "контекст из предыдущих шагов", "исчезающие градиенты"],
+    "links_to_theory": [
+      {"theory_id": "theory_rnn", "segment_type": "definition"},
+      {"theory_id": "theory_rnn", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "RNN обрабатывает последовательности через скрытое состояние, которое передаёт информацию от предыдущих шагов к текущему. Основная проблема — исчезающие градиенты: при обратном распространении градиенты экспоненциально уменьшаются, что затрудняет обучение на длинных последовательностях.",
+    "covers": [
+      "механизм обработки последовательностей",
+      "роль скрытого состояния",
+      "проблема исчезающих градиентов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

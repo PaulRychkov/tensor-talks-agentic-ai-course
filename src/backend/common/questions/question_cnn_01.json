@@ -1,0 +1,29 @@
+{
+  "id": "question_cnn_01",
+  "theory_id": "theory_cnn",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Почему CNN эффективны для обработки изображений?",
+    "expected_points": ["локальные паттерны", "parameter sharing", "translation invariance", "иерархия признаков"],
+    "links_to_theory": [
+      {"theory_id": "theory_cnn", "segment_type": "definition"},
+      {"theory_id": "theory_cnn", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "CNN эффективны благодаря parameter sharing (один фильтр для всего изображения), что уменьшает количество параметров. Они извлекают локальные паттерны (края, текстуры), которые комбинируются в более сложные признаки. Translation invariance позволяет распознавать объекты независимо от их позиции.",
+    "covers": [
+      "parameter sharing",
+      "извлечение локальных паттернов",
+      "translation invariance"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

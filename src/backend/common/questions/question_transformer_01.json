@@ -1,0 +1,29 @@
+{
+  "id": "question_transformer_01",
+  "theory_id": "theory_transformer",
+  "linked_segments": ["definition", "intuition"],
+  "question_type": "conceptual",
+  "complexity": 3,
+  "content": {
+    "question": "В чём ключевое преимущество Transformer архитектуры перед RNN/LSTM?",
+    "expected_points": ["параллелизация", "self-attention", "долгосрочные зависимости", "отсутствие рекурсии"],
+    "links_to_theory": [
+      {"theory_id": "theory_transformer", "segment_type": "definition"},
+      {"theory_id": "theory_transformer", "segment_type": "intuition"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "Transformer позволяет параллельно обрабатывать всю последовательность благодаря self-attention, в отличие от RNN/LSTM, которые обрабатывают последовательно. Это ускоряет обучение и позволяет захватывать долгосрочные зависимости без проблем с градиентами.",
+    "covers": [
+      "параллелизация обработки",
+      "self-attention механизм",
+      "преимущества над RNN"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

@@ -1,0 +1,35 @@
+{{- if and (index .Values.services "bff-service").enabled (index .Values.services "bff-service").autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-bff-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bff-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tensor-talks.fullname" . }}-bff-service
+  minReplicas: {{ (index .Values.services "bff-service").autoscaling.minReplicas }}
+  maxReplicas: {{ (index .Values.services "bff-service").autoscaling.maxReplicas }}
+  metrics:
+    {{- if (index .Values.services "bff-service").autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ (index .Values.services "bff-service").autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if (index .Values.services "bff-service").autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ (index .Values.services "bff-service").autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+

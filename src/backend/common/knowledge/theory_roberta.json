@@ -1,0 +1,45 @@
+{
+  "id": "theory_roberta",
+  "concept": "RoBERTa",
+  "complexity": 3,
+  "parent_id": null,
+  "tags": ["nlp", "llm", "bert", "transformer"],
+  "segments": [
+    {
+      "type": "definition",
+      "content": "RoBERTa (Robustly Optimized BERT Pretraining Approach) — улучшенная версия BERT с оптимизированным процессом предобучения."
+    },
+    {
+      "type": "intuition",
+      "content": "Убраны некоторые ограничения BERT (next sentence prediction), увеличен размер батча и данных, улучшена стратегия обучения."
+    },
+    {
+      "type": "formula",
+      "content": "RoBERTa = BERT архитектура + оптимизированное предобучение"
+    },
+    {
+      "type": "example",
+      "content": "Показывает лучшие результаты чем BERT на большинстве задач без изменения архитектуры. Используется как база для других моделей."
+    },
+    {
+      "type": "practical_notes",
+      "content": "Убрана NSP задача. Динамическое masking вместо статического. Больше данных и больше итераций обучения. Часто лучше BERT out-of-the-box."
+    }
+  ],
+  "relations": [
+    {
+      "target_id": "theory_bert",
+      "relation_type": "improves"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "based_on"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "language": "ru",
+    "last_updated": "2025-01-27"
+  }
+}
+

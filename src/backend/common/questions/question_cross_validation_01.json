@@ -1,0 +1,29 @@
+{
+  "id": "question_cross_validation_01",
+  "theory_id": "theory_cross_validation",
+  "linked_segments": ["definition", "example"],
+  "question_type": "practical",
+  "complexity": 1,
+  "content": {
+    "question": "Объясните, как работает k-fold кросс-валидация.",
+    "expected_points": ["разбиение на k частей", "обучение на k-1 частях", "тестирование на оставшейся", "усреднение результатов"],
+    "links_to_theory": [
+      {"theory_id": "theory_cross_validation", "segment_type": "definition"},
+      {"theory_id": "theory_cross_validation", "segment_type": "example"}
+    ]
+  },
+  "ideal_answer": {
+    "text": "K-fold кросс-валидация делит данные на k равных частей (folds). Модель обучается k раз, каждый раз используя k-1 частей для обучения и одну часть для тестирования. Финальная оценка — среднее всех k результатов.",
+    "covers": [
+      "процесс разбиения данных",
+      "цикл обучения и тестирования",
+      "усреднение результатов"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "auto-generator",
+    "last_updated": "2025-01-27"
+  }
+}
+

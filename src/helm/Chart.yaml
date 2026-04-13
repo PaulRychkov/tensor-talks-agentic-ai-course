@@ -1,0 +1,7 @@
+apiVersion: v2
+name: tensor-talks
+description: Helm чарт для платформы микросервисов TensorTalks
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
