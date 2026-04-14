@@ -1,0 +1,37 @@
+{
+  "id": "question_gradient_descent_03",
+  "theory_id": "theory_gradient_descent",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое градиентный спуск? Объясните интуицию алгоритма.",
+    "expected_points": [
+      "итеративная оптимизация функции потерь",
+      "движение в направлении антиградиента",
+      "learning rate контролирует шаг",
+      "θ = θ - α * ∇L(θ)"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gradient_descent",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "θ = θ - α * ∇L(θ). Двигаемся в направлении наибольшего убывания потерь. α — learning rate. Интуиция: спуск по склону маленькими шагами.",
+    "covers": [
+      "антиградиент",
+      "learning rate",
+      "формула"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

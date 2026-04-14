@@ -12,11 +12,17 @@ import (
 	"github.com/google/uuid"
 )
 
-// SessionParams представляет параметры интервью.
+// SessionParams представляет параметры сессии.
 type SessionParams struct {
-	Topics []string `json:"topics"`
-	Level  string   `json:"level"` // junior, middle, senior
-	Type   string   `json:"type"`  // interview, training
+	Topics             []string `json:"topics"`
+	Level              string   `json:"level"`                          // junior, middle, senior
+	Mode               string   `json:"mode"`                           // interview, training, study
+	Type               string   `json:"type,omitempty"`                 // legacy; kept for backward compat
+	Source             string   `json:"source,omitempty"`               // manual, preset
+	PresetID           string   `json:"preset_id,omitempty"`
+	Subtopics          []string `json:"subtopics,omitempty"`
+	UsePreviousResults bool     `json:"use_previous_results,omitempty"` // episodic memory
+	NumQuestions       *int     `json:"num_questions,omitempty"`        // interview duration: 5/10/15
 }
 
 // SessionClient клиент для работы с session-manager-service.

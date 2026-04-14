@@ -1,0 +1,38 @@
+{
+  "id": "question_linear_regression_04",
+  "theory_id": "theory_linear_regression",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Как обнаружить и устранить мультиколлинеарность в линейной регрессии?",
+    "expected_points": [
+      "VIF > 10 — признак мультиколлинеарности",
+      "корреляционная матрица признаков",
+      "решения: удалить признак / PCA / Ridge",
+      "не влияет на предсказания, но нарушает интерпретируемость"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_linear_regression",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "VIF > 10 сигнализирует о мультиколлинеарности. Решения: удалить один из коррелирующих признаков, PCA, или Ridge (L2 стабилизирует коэффициенты).",
+    "covers": [
+      "VIF",
+      "диагностика",
+      "Ridge",
+      "PCA"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

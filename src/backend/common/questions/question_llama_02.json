@@ -1,0 +1,43 @@
+{
+  "id": "question_llama_02",
+  "theory_id": "theory_llama",
+  "linked_segments": [
+    "definition",
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Какие архитектурные улучшения есть в LLaMA по сравнению с оригинальным Transformer?",
+    "expected_points": [
+      "RoPE вместо абсолютного positional encoding",
+      "SwiGLU активация в FFN вместо ReLU",
+      "Pre-RMSNorm вместо LayerNorm",
+      "GQA (Grouped Query Attention) в LLaMA 2 для ускорения"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_llama",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_llama",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "LLaMA: 1) RoPE — позиционный энкодинг через вращение в Q и K; 2) SwiGLU: FFN=SiLU(xW1)⊗xW3·W2; 3) Pre-RMSNorm; 4) GQA (несколько Q на одну KV-голову).",
+    "covers": [
+      "RoPE",
+      "SwiGLU",
+      "RMSNorm",
+      "GQA"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

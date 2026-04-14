@@ -13,7 +13,6 @@ class QuestionsClient:
 
     def __init__(self, base_url: Optional[str] = None):
         self.base_url = base_url or settings.questions_crud_url
-        self.client = httpx.AsyncClient(timeout=30.0)
 
     async def get_questions_by_filters(
         self,
@@ -31,10 +30,11 @@ class QuestionsClient:
             if question_type:
                 params["question_type"] = question_type
 
-            response = await self.client.get(
-                f"{self.base_url}/questions",
-                params=params
-            )
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/questions",
+                    params=params
+                )
             response.raise_for_status()
             data = response.json()
             questions = data.get("questions", [])
@@ -65,6 +65,6 @@ class QuestionsClient:
             raise
 
     async def close(self):
-        """Close HTTP client"""
-        await self.client.aclose()
+        """No-op: connections are created per-request"""
+        pass
 

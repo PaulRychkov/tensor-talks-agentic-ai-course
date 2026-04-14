@@ -73,8 +73,14 @@ spec:
               value: "tensor-talks-chat.events.in"
             - name: BFF_KAFKA_CONSUMER_GROUP
               value: "tensor-talks-bff-service-group"
+            - name: BFF_REDIS_ADDR
+              value: "tensor-talks-redis:6379"
+            - name: BFF_REDIS_PASSWORD
+              value: ""
+            - name: BFF_REDIS_DB
+              value: "0"
             - name: BFF_CORS_ALLOW_ORIGINS
-              value: "http://localhost:5173,http://{{ include "tensor-talks.fullname" . }}-frontend:5173"
+              value: "http://localhost:5173,http://{{ include "tensor-talks.fullname" . }}-frontend:5173,https://tensor-talks.ru,https://www.tensor-talks.ru"
           livenessProbe:
             httpGet:
               path: /healthz

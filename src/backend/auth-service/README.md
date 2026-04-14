@@ -2,7 +2,7 @@
 
 `auth-service` отвечает за регистрацию, логин и работу с JWT-токенами для пользователей TensorTalks.
 Сервис не имеет прямого доступа к базе данных и общается с хранилищем пользователей только
-через HTTP-микросервис `user-store-service`.
+через HTTP-микросервис `user-crud-service`.
 
 ### Архитектура (общая схема)
 
@@ -22,7 +22,7 @@
      JWT (HS256)  |       |  HTTP /users...
    (access/refresh)|       v
                   |  +----+----------------+
-                  |  | user-store-service  |
+                  |  | user-crud-service  |
                   |  |   (PostgreSQL)      |
                   |  +---------------------+
                   |
@@ -39,15 +39,18 @@
 - `internal/config`  
   Загрузка конфигурации через Viper из `config/config.yaml` и переменных окружения `AUTH_*`:
   - `server.host`, `server.port` — адрес HTTP-сервера;
-  - `user_store.base_url`, `user_store.timeout_seconds` — параметры подключения к `user-store-service`;
+  - `user_store.base_url`, `user_store.timeout_seconds` — параметры подключения к `user-crud-service`;
   - `jwt.issuer`, `jwt.audience`, `jwt.access_token_ttl`, `jwt.refresh_token_ttl`, `jwt.secret`;
   - `redis.addr`, `redis.password`, `redis.db`, `redis.session_ttl_hours` — параметры подключения к Redis для управления логин-сессиями.
 
 - `internal/client`  
-  HTTP-клиент для взаимодействия с `user-store-service`:
+  HTTP-клиент для взаимодействия с `user-crud-service`:
   - `CreateUser(login, passwordHash)` — создание пользователя с уже захешированным паролем;
   - `GetUserByLogin(login)` — получение пользователя по логину;
-  - `GetUserByID(id)` — получение пользователя по внешнему GUID.
+  - `GetUserByID(id)` — получение пользователя по внешнему GUID;
+  - `SetRecoveryKeyHash(externalID, hash)` — сохранение bcrypt-хеша ключа восстановления;
+  - `UpdatePasswordHash(externalID, hash)` — обновление хеша пароля (при смене пароля);
+  - `DeleteUser(externalID)` — удаление пользователя.
 
 - `internal/tokens`  
   Менеджер JWT-токенов:
@@ -57,19 +60,27 @@
 
 - `internal/service`  
   Бизнес-логика аутентификации:
-  - регистрация: валидация логина/пароля, хеширование через bcrypt, создание пользователя в `user-store-service`, выпуск токенов, сохранение сессии в Redis;
+  - регистрация: валидация логина/пароля, хеширование через bcrypt, создание пользователя в `user-crud-service`, генерация одноразового ключа восстановления (`XXXX-XXXX-...-XXXX`, 8 групп hex), сохранение bcrypt-хеша ключа, выпуск токенов, сохранение сессии в Redis;
   - логин: поиск пользователя по логину, проверка пароля, выпуск токенов, сохранение сессии в Redis;
   - refresh: валидация refresh-токена, получение пользователя по GUID, выпуск новой пары токенов, обновление сессии в Redis;
   - logout: удаление сессии из Redis (отзыв токена);
-  - проверка access-токена: валидация подписи и срока действия, проверка наличия активной сессии в Redis, получение пользователя по GUID.
+  - проверка access-токена: валидация подписи и срока действия, проверка наличия активной сессии в Redis, получение пользователя по GUID;
+  - восстановление пароля: проверка ключа восстановления по bcrypt-хешу, обновление хеша пароля;
+  - смена пароля: проверка текущего пароля, обновление хеша нового пароля;
+  - перегенерация ключа восстановления: проверка текущего пароля, генерация нового ключа, сохранение хеша;
+  - удаление аккаунта: проверка пароля, удаление пользователя из `user-crud-service`, удаление сессии из Redis.
 
 - `internal/handler`  
   HTTP-слой на Gin:
-  - `POST /auth/register` — регистрация (login, password);
+  - `POST /auth/register` — регистрация (login, password); ответ включает `recovery_key` (показывается один раз);
   - `POST /auth/login` — логин (login, password);
   - `POST /auth/refresh` — обновление токенов по refresh-токену;
   - `POST /auth/logout` — выход пользователя (удаление сессии из Redis);
-  - `GET /auth/me` — информация о текущем пользователе по access-токену.
+  - `GET /auth/me` — информация о текущем пользователе по access-токену;
+  - `POST /auth/recover` — сброс пароля по ключу восстановления (login, recovery_key, new_password);
+  - `POST /auth/change-password` — смена пароля (требует Bearer-токен; current_password, new_password);
+  - `POST /auth/regenerate-recovery-key` — перегенерация ключа восстановления (требует Bearer-токен; password);
+  - `DELETE /auth/account` — удаление аккаунта (требует Bearer-токен; password).
 
 - `internal/server`  
   Сборка зависимостей, настройка Gin-роутера и запуск HTTP-сервера, хелсчек `GET /healthz`. Инициализация Redis для управления сессиями.
@@ -83,8 +94,8 @@
 ### Поток данных при регистрации
 
 1. Клиент (через BFF) вызывает `POST /auth/register` с логином и паролем.
-2. `auth-service` валидирует данные, хеширует пароль и вызывает `user-store-service /users` с полями `login` и `password_hash`.
-3. `user-store-service` создаёт запись в PostgreSQL, возвращает пользователя с GUID.
+2. `auth-service` валидирует данные, хеширует пароль и вызывает `user-crud-service /users` с полями `login` и `password_hash`.
+3. `user-crud-service` создаёт запись в PostgreSQL, возвращает пользователя с GUID.
 4. `auth-service` создаёт пару JWT-токенов (access + refresh).
 5. `auth-service` сохраняет информацию о сессии в Redis (с TTL равным TTL access токена).
 6. `auth-service` возвращает токены клиенту.
@@ -92,7 +103,7 @@
 ### Поток данных при логине
 
 1. Клиент отправляет `POST /auth/login`.
-2. `auth-service` запрашивает пользователя по логину в `user-store-service`.
+2. `auth-service` запрашивает пользователя по логину в `user-crud-service`.
 3. Сравнивает bcrypt-хеш и пароль, при успехе создаёт новую пару токенов.
 4. `auth-service` сохраняет информацию о сессии в Redis (с TTL равным TTL access токена).
 5. `auth-service` возвращает токены клиенту.
@@ -103,7 +114,7 @@
   - **access-токен** — `subject = "access"`, короткий TTL (например, 15 минут), используется для авторизации в API.
   - **refresh-токен** — `subject = "refresh"`, длинный TTL (например, 30 дней), используется только для получения новой пары токенов.
 - Поля claims (`tokens.Claims`):
-  - `uid` — GUID пользователя (external_id из `user-store-service`);
+  - `uid` — GUID пользователя (external_id из `user-crud-service`);
   - `login` — нормализованный логин пользователя;
   - `jti` — JWT ID (уникальный идентификатор токена для управления сессиями в Redis);
   - стандартные поля JWT: `iss` (issuer), `aud` (audience), `iat`, `exp`, `sub`.
@@ -121,7 +132,7 @@
 ### Безопасность
 
 - Пароли никогда не хранятся в открытом виде — только bcrypt-хеш.
-- Все операции с пользователями проходят только через `user-store-service`.
+- Все операции с пользователями проходят только через `user-crud-service`.
 - JWT подписываются общим секретом, настраиваемым через конфигурацию.
 - Логин нормализуется (lowercase + trim) для предотвращения дубликатов с разным регистром.
 - **Требования к паролям:**
@@ -134,3 +145,4 @@
   - Управлять сессиями пользователей (мульти-девайс поддержка).
 
 **Примечание:** Предупреждения Google о скомпрометированных паролях появляются в браузере пользователя, а не в нашей системе. Это функция безопасности Google Chrome, которая проверяет пароли по базе утечек Have I Been Pwned. Мы не можем отключить это предупреждение, так как оно является частью браузера.
+

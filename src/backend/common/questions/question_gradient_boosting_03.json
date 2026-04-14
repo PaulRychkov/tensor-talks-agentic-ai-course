@@ -1,0 +1,38 @@
+{
+  "id": "question_gradient_boosting_03",
+  "theory_id": "theory_gradient_boosting",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Как работает Gradient Boosting? В чём отличие от Random Forest?",
+    "expected_points": [
+      "деревья последовательно на псевдо-остатках",
+      "каждое дерево предсказывает отрицательный градиент",
+      "RF параллельный (variance↓), GB последовательный (bias↓)",
+      "GB точнее, RF менее склонен к переобучению"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gradient_boosting",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "GB: F_m=F_{m-1}+η·h_m(псевдо-остатки). Каждое дерево исправляет ошибки предыдущего. RF — параллельный (variance). GB — последовательный (bias+variance).",
+    "covers": [
+      "последовательность",
+      "псевдо-остатки",
+      "GB vs RF",
+      "bias-variance"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

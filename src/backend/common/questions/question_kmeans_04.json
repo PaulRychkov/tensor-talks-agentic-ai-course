@@ -1,0 +1,39 @@
+{
+  "id": "question_kmeans_04",
+  "theory_id": "theory_kmeans",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Каковы ограничения K-means? В каких случаях он не подходит?",
+    "expected_points": [
+      "предполагает сферические кластеры одинакового размера",
+      "чувствителен к выбросам",
+      "нужно задавать k заранее",
+      "не работает с нелинейными формами",
+      "альтернативы: DBSCAN, GMM"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_kmeans",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "K-means: сферические равные кластеры (евклидово). Не справляется с нелинейными формами (кольца — DBSCAN). Чувствителен к выбросам, нужно знать k. GMM для мягкой кластеризации.",
+    "covers": [
+      "ограничения",
+      "DBSCAN",
+      "GMM",
+      "нелинейные формы"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

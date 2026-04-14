@@ -1,14 +1,19 @@
 # Core
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.10.0
+pydantic-settings==2.6.0
+
+# LLM + agent graph (§9 p.1, §8 stage 2)
+openai==2.15.0
+langgraph==1.0.6
+langchain-core==1.2.7
 
 # Kafka
 confluent-kafka==2.3.0
 
 # HTTP client
-httpx==0.25.1
+httpx>=0.25.0,<0.28
 
 # Logging
 structlog==23.2.0

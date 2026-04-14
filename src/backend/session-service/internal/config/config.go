@@ -99,10 +99,10 @@ func Load() (Config, error) {
 		cfg.SessionCRUD.TimeoutSeconds = 5
 	}
 	if cfg.Kafka.TopicRequest == "" {
-		cfg.Kafka.TopicRequest = "team10-interview.build.request" // Prefixed for Kubernetes shared cluster
+		cfg.Kafka.TopicRequest = "tensor-talks-interview.build.request"
 	}
 	if cfg.Kafka.TopicResponse == "" {
-		cfg.Kafka.TopicResponse = "team10-interview.build.response" // Prefixed for Kubernetes shared cluster
+		cfg.Kafka.TopicResponse = "tensor-talks-interview.build.response"
 	}
 	if cfg.SessionManager.MaxActiveSessions == 0 {
 		cfg.SessionManager.MaxActiveSessions = 100

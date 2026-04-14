@@ -1,0 +1,43 @@
+{
+  "id": "question_gradient_boosting_02",
+  "theory_id": "theory_gradient_boosting",
+  "linked_segments": [
+    "formula",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Чем XGBoost отличается от классического Gradient Boosting?",
+    "expected_points": [
+      "явная регуляризация: γT + 0.5λ||w||² в objective",
+      "column/row subsampling как в RF",
+      "weighted quantile sketch для быстрого разбиения",
+      "cache-aware, out-of-core вычисления"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gradient_boosting",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_gradient_boosting",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "XGBoost: регуляризация Ω(f)=γT+λ||w||², weighted quantile sketch (быстрее точного поиска), column/row subsampling. LightGBM: leaf-wise рост, histogram binning.",
+    "covers": [
+      "регуляризация",
+      "quantile sketch",
+      "subsampling",
+      "LightGBM"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

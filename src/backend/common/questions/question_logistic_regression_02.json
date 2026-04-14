@@ -1,0 +1,42 @@
+{
+  "id": "question_logistic_regression_02",
+  "theory_id": "theory_logistic_regression",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как логистическая регрессия принимает решение о классификации? Какой порог по умолчанию и как его менять?",
+    "expected_points": [
+      "порог 0.5 по умолчанию",
+      "вероятность через сигмоиду",
+      "порог снижают при высокой цене FN",
+      "ROC-кривая для выбора порога"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_logistic_regression",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_logistic_regression",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "P(y=1|x)=σ(wᵀx). По умолчанию класс 1 если P>0.5. Порог снижают для уменьшения FN (медицина). Оптимум — по ROC-кривой.",
+    "covers": [
+      "сигмоида",
+      "порог классификации",
+      "ROC"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

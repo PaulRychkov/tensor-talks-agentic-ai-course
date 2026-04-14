@@ -1,0 +1,38 @@
+{
+  "id": "question_rnn_02",
+  "theory_id": "theory_rnn",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое vanishing gradient в RNN и почему это проблема для длинных последовательностей?",
+    "expected_points": [
+      "градиент затухает при BPTT",
+      "умножение матриц: |W|<1 → экспоненциальное затухание",
+      "нет памяти далее 10-20 шагов",
+      "решение: LSTM/GRU, gradient clipping"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_rnn",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "BPTT умножает якобианы Π W. При |λ_max(W)|<1 градиент→0 экспоненциально. LSTM решает через cell state с аддитивными обновлениями.",
+    "covers": [
+      "BPTT",
+      "экспоненциальное затухание",
+      "LSTM",
+      "gradient clipping"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

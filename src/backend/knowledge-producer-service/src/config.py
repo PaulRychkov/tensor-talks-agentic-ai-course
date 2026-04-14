@@ -45,6 +45,48 @@ class Settings(BaseSettings):
     startup_load_retry_delay: int = Field(default=5, alias="STARTUP_LOAD_RETRY_DELAY")
     startup_load_max_retries: int = Field(default=10, alias="STARTUP_LOAD_MAX_RETRIES")
 
+    # Dedup settings
+    similarity_threshold: float = Field(default=0.8, alias="SIMILARITY_THRESHOLD")
+    dedup_max_candidates: int = Field(default=10, alias="DEDUP_MAX_CANDIDATES")
+
+    # LLM pipeline (§9 p.5.6)
+    llm_base_url: Optional[str] = Field(default=None, alias="LLM_BASE_URL")
+    llm_api_key: Optional[str] = Field(default=None, alias="LLM_API_KEY")
+    llm_model: str = Field(default="gpt-5.4", alias="LLM_MODEL")
+    llm_model_mini: str = Field(default="gpt-5.4-mini", alias="LLM_MODEL_MINI")
+    llm_model_nano: str = Field(default="gpt-5.4-nano", alias="LLM_MODEL_NANO")
+    llm_temperature: float = Field(default=0.3, alias="LLM_TEMPERATURE")
+    llm_max_tokens: int = Field(default=4000, alias="LLM_MAX_TOKENS")
+    llm_timeout: int = Field(default=60, alias="LLM_TIMEOUT")
+    max_llm_calls_per_job: int = Field(default=5, alias="MAX_LLM_CALLS_PER_JOB")
+
+    # Ingestion (§9 p.5.8)
+    max_ingest_file_bytes: int = Field(default=10_000_000, alias="MAX_INGEST_FILE_BYTES")
+    max_fetch_url_bytes: int = Field(default=5_000_000, alias="MAX_FETCH_URL_BYTES")
+    fetch_url_timeout: int = Field(default=15, alias="FETCH_URL_TIMEOUT")
+
+    # Web search (§9 p.5.9)
+    web_search_provider: str = Field(default="none", alias="WEB_SEARCH_PROVIDER")
+    web_search_api_key: Optional[str] = Field(default=None, alias="WEB_SEARCH_API_KEY")
+    max_web_search_per_job: int = Field(default=3, alias="MAX_WEB_SEARCH_PER_JOB")
+    max_fetch_url_per_job: int = Field(default=5, alias="MAX_FETCH_URL_PER_JOB")
+    trusted_domain_patterns: str = Field(
+        default="arxiv.org,pytorch.org,scikit-learn.org,tensorflow.org,huggingface.co,docs.python.org",
+        alias="TRUSTED_DOMAIN_PATTERNS",
+    )
+    denied_domain_patterns: str = Field(default="", alias="DENIED_DOMAIN_PATTERNS")
+    web_search_rate_limit_per_minute: int = Field(default=10, alias="WEB_SEARCH_RATE_LIMIT_PER_MINUTE")
+
+    # Content types
+    allowed_segment_types: str = Field(
+        default="definition,intuition,example,proof,algorithm,comparison,application",
+        alias="ALLOWED_SEGMENT_TYPES",
+    )
+    allowed_question_types: str = Field(
+        default="open,coding,case,practical,applied,multiple_choice,theoretical",
+        alias="ALLOWED_QUESTION_TYPES",
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = False

@@ -3,7 +3,7 @@ server:
   port: 8081
 
 user_store:
-  base_url: "http://user-store-service:8082"
+  base_url: "http://user-crud-service:8082"
   timeout_seconds: 5
 
 jwt:

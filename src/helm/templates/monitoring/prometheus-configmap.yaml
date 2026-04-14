@@ -67,11 +67,11 @@ data:
               team: 'tensor-talks'
               project: 'tensor-talks'
 
-      - job_name: 'user-store-service'
+      - job_name: 'user-crud-service'
         static_configs:
-          - targets: ['{{ include "tensor-talks.fullname" . }}-user-store-service:8082']
+          - targets: ['{{ include "tensor-talks.fullname" . }}-user-crud-service:8082']
             labels:
-              service: 'user-store-service'
+              service: 'user-crud-service'
               team: 'tensor-talks'
               project: 'tensor-talks'
 
@@ -131,19 +131,27 @@ data:
               team: 'tensor-talks'
               project: 'tensor-talks'
 
-      - job_name: 'mock-model-service'
+      - job_name: 'dialogue-aggregator'
         static_configs:
-          - targets: ['{{ include "tensor-talks.fullname" . }}-mock-model-service:8084']
+          - targets: ['{{ include "tensor-talks.fullname" . }}-dialogue-aggregator:8084']
             labels:
-              service: 'mock-model-service'
+              service: 'dialogue-aggregator'
               team: 'tensor-talks'
               project: 'tensor-talks'
 
-      - job_name: 'agent-service'
+      - job_name: 'interviewer-agent-service'
         static_configs:
-          - targets: ['{{ include "tensor-talks.fullname" . }}-agent-service:9092']
+          - targets: ['{{ include "tensor-talks.fullname" . }}-interviewer-agent-service:9092']
             labels:
-              service: 'agent-service'
+              service: 'interviewer-agent-service'
+              team: 'tensor-talks'
+              project: 'tensor-talks'
+
+      - job_name: 'analyst-agent-service'
+        static_configs:
+          - targets: ['{{ include "tensor-talks.fullname" . }}-analyst-agent-service:9094']
+            labels:
+              service: 'analyst-agent-service'
               team: 'tensor-talks'
               project: 'tensor-talks'
 

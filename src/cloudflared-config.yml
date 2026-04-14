@@ -1,0 +1,39 @@
+# Конфигурация Cloudflared Tunnel для TensorTalks
+# Этот файл настраивает проксирование трафика с Cloudflare на локальный minikube ingress
+#
+# ВАЖНО: Перед использованием этого файла:
+# 1. Замените {tunnel-id} на реальный ID вашего tunnel (получите через: cloudflared tunnel list)
+# 2. Выберите один из вариантов ниже в зависимости от вашей настройки minikube
+
+tunnel: tensor-talks-new
+# Tunnel ID: f1b90f1c-9510-4c0a-8930-635e12d011ec
+# Файл credentials создан автоматически при создании tunnel
+credentials-file: C:\Users\pavel\.cloudflared\f1b90f1c-9510-4c0a-8930-635e12d011ec.json
+
+# Настройки ingress для проксирования трафика
+# Порт 8080 = ingress (frontend) - перенаправлен через kubectl port-forward
+ingress:
+  - hostname: tensor-talks.ru
+    service: http://127.0.0.1:8080
+  - hostname: www.tensor-talks.ru
+    service: http://127.0.0.1:8080
+  - service: http_status:404
+
+# Принудительно использовать HTTP/2 (TCP) вместо QUIC (UDP)
+protocol: http2
+
+# Настройки для стабильности соединения
+originRequest:
+  connectTimeout: 60s
+  tcpKeepAlive: 60s
+  keepAliveConnections: 100
+  keepAliveTimeout: 300s
+  httpHostHeader: tensor-talks.ru
+  noTLSVerify: false
+  disableChunkedEncoding: false
+  retries: 5
+  gracePeriod: 30s
+
+# Логирование
+loglevel: info
+logfile: C:\Users\pavel\tensor_talks\cloudflared.log

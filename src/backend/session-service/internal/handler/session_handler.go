@@ -71,7 +71,7 @@ func (h *SessionHandler) GetInterviewProgram(c *gin.Context) {
 		return
 	}
 
-	program, err := h.svc.GetInterviewProgram(c.Request.Context(), sessionID)
+	resp, err := h.svc.GetInterviewProgram(c.Request.Context(), sessionID)
 	if err != nil {
 		metrics.BusinessSessionsOperationsTotal.WithLabelValues("session-service", "get_program", "error").Inc()
 		h.logger.Error("GetInterviewProgram failed", zap.Error(err))
@@ -86,7 +86,17 @@ func (h *SessionHandler) GetInterviewProgram(c *gin.Context) {
 	}
 
 	metrics.BusinessSessionsOperationsTotal.WithLabelValues("session-service", "get_program", "success").Inc()
-	c.JSON(http.StatusOK, gin.H{"program": program})
+	result := gin.H{
+		"program":        resp.Program,
+		"program_status": resp.Status,
+		"session_mode":   resp.SessionMode,
+		"topics":         resp.Topics,
+		"level":          resp.Level,
+	}
+	if resp.Meta != nil {
+		result["program_meta"] = resp.Meta
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // CloseSession закрывает сессию.

@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "tensor-talks.labels" . | nindent 4 }}
     app.kubernetes.io/component: vault
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     - ReadWriteOnce

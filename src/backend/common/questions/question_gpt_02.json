@@ -1,0 +1,43 @@
+{
+  "id": "question_gpt_02",
+  "theory_id": "theory_gpt",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как GPT генерирует текст? Что такое temperature и top-p sampling?",
+    "expected_points": [
+      "autoregressive: токен за токеном",
+      "temperature>1 — случайнее, <1 — детерминированнее",
+      "top-p: набор токенов с суммарной вероятностью p",
+      "greedy = temperature 0"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gpt",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_gpt",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "GPT: P(token|все предыдущие). Temperature T масштабирует логиты. Top-p: отбираем токены до суммы p, затем сэмплируем. Greedy=top-1.",
+    "covers": [
+      "autoregressive",
+      "temperature",
+      "top-p",
+      "greedy"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

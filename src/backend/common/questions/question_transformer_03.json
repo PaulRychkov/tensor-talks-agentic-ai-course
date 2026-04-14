@@ -1,0 +1,38 @@
+{
+  "id": "question_transformer_03",
+  "theory_id": "theory_transformer",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Из каких основных компонентов состоит Transformer-блок?",
+    "expected_points": [
+      "Multi-Head Self-Attention: агрегация контекста",
+      "Feed-Forward Network: нелинейное преобразование",
+      "Layer Normalization: стабилизация",
+      "Residual connections: предотвращение vanishing gradient"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_transformer",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Transformer-блок: 1) MHSA + Add&Norm; 2) FFN (2 линейных + GELU/ReLU) + Add&Norm. Декодер добавляет cross-attention.",
+    "covers": [
+      "self-attention",
+      "FFN",
+      "LayerNorm",
+      "residual"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

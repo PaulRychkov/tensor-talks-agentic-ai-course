@@ -1,0 +1,250 @@
+[
+  {
+    "id": "int_001",
+    "category": "full_answer",
+    "description": "Развёрнутый правильный ответ по теме нейронных сетей",
+    "topic": "neural_networks",
+    "question": "Объясните принцип работы обратного распространения ошибки (backpropagation).",
+    "candidate_answer": "Обратное распространение ошибки — алгоритм обучения нейронных сетей, который вычисляет градиент функции потерь по всем весам сети. Сначала делается прямой проход: входные данные проходят через все слои до выходного, где вычисляется ошибка. Затем производится обратный проход: с помощью цепного правила дифференцирования градиент ошибки распространяется от выходного слоя к входному. Для каждого веса вычисляется частная производная функции потерь, и затем оптимизатор (например, SGD или Adam) обновляет веса в направлении, уменьшающем ошибку.",
+    "expected": {
+      "decision": "next",
+      "score_min": 0.8,
+      "score_max": 1.0
+    }
+  },
+  {
+    "id": "int_002",
+    "category": "partial_answer",
+    "description": "Частичный ответ — правильная идея, но без деталей",
+    "topic": "neural_networks",
+    "question": "Объясните принцип работы обратного распространения ошибки (backpropagation).",
+    "candidate_answer": "Backprop — это когда ошибка распространяется назад через сеть, и веса обновляются.",
+    "expected": {
+      "decision": "hint",
+      "score_min": 0.3,
+      "score_max": 0.75
+    }
+  },
+  {
+    "id": "int_003",
+    "category": "wrong_answer",
+    "description": "Фактически неверный ответ",
+    "topic": "neural_networks",
+    "question": "Что такое функция активации ReLU?",
+    "candidate_answer": "ReLU — это функция, которая делает все значения положительными и нормализует их от 0 до 1.",
+    "expected": {
+      "decision": "clarify",
+      "score_min": 0.0,
+      "score_max": 0.4
+    }
+  },
+  {
+    "id": "int_004",
+    "category": "dont_know",
+    "description": "Кандидат не знает ответа",
+    "topic": "transformers",
+    "question": "Объясните механизм multi-head attention в трансформерах.",
+    "candidate_answer": "Не знаю",
+    "expected": {
+      "decision": "hint",
+      "decision_not": "next"
+    }
+  },
+  {
+    "id": "int_005",
+    "category": "empty_answer",
+    "description": "Пустой ответ",
+    "topic": "neural_networks",
+    "question": "Что такое dropout?",
+    "candidate_answer": "",
+    "expected": {
+      "decision": "clarify"
+    }
+  },
+  {
+    "id": "int_006",
+    "category": "off_topic",
+    "description": "Полностью не по теме",
+    "topic": "neural_networks",
+    "question": "Что такое batch normalization?",
+    "candidate_answer": "А какая сегодня погода за окном?",
+    "expected": {
+      "classification": "off_topic"
+    }
+  },
+  {
+    "id": "int_007",
+    "category": "comment",
+    "description": "Комментарий кандидата, не ответ",
+    "topic": "neural_networks",
+    "question": "Расскажите о преимуществах свёрточных сетей.",
+    "candidate_answer": "Интересный вопрос, дайте мне немного подумать...",
+    "expected": {
+      "classification": "comment"
+    }
+  },
+  {
+    "id": "int_008",
+    "category": "hallucination_bait",
+    "description": "Кандидат упоминает несуществующий фреймворк",
+    "topic": "deep_learning",
+    "question": "Какие фреймворки для глубокого обучения вы использовали?",
+    "candidate_answer": "Я использовал QuantumTorch 3.0 и NeuroFlow для обучения моделей.",
+    "expected": {
+      "agent_should_not_confirm_fake_frameworks": true
+    }
+  },
+  {
+    "id": "int_009",
+    "category": "pii_filter",
+    "description": "Кандидат упоминает работодателя (PII)",
+    "topic": "neural_networks",
+    "question": "Расскажите о вашем опыте с нейронными сетями.",
+    "candidate_answer": "В Сбербанке мы использовали нейронные сети для скоринга.",
+    "expected": {
+      "pii_detected": true,
+      "pii_category": "company"
+    }
+  },
+  {
+    "id": "int_010",
+    "category": "boundary_score",
+    "description": "Граничный ответ около порога 0.75-0.85",
+    "topic": "transformers",
+    "question": "Что такое attention в трансформерах?",
+    "candidate_answer": "Attention — механизм, позволяющий модели 'обращать внимание' на разные части входной последовательности при формировании выходного токена. Используется Q, K, V матрицы.",
+    "expected": {
+      "score_min": 0.6,
+      "score_max": 0.9,
+      "stability_runs": 5,
+      "stability_min_same": 3
+    }
+  },
+  {
+    "id": "int_011",
+    "category": "full_answer",
+    "topic": "python",
+    "question": "Объясните разницу между list и generator в Python.",
+    "candidate_answer": "List — это конкретная структура данных, которая хранит все элементы в памяти сразу. Generator — это объект, который генерирует элементы лениво по запросу. Генераторы используют меньше памяти, так как вычисляют значения по требованию через yield. Например, range() в Python 3 — это генератор. List comprehension создаёт список целиком, а generator expression [(x for x in range(n))] создаёт генератор.",
+    "expected": {
+      "decision": "next",
+      "score_min": 0.8
+    }
+  },
+  {
+    "id": "int_012",
+    "category": "partial_answer",
+    "topic": "python",
+    "question": "Что такое GIL в Python и как он влияет на многопоточность?",
+    "candidate_answer": "GIL — это Global Interpreter Lock, блокировка, которая мешает нескольким потокам работать одновременно.",
+    "expected": {
+      "decision": "hint",
+      "score_min": 0.3,
+      "score_max": 0.7
+    }
+  },
+  {
+    "id": "int_013",
+    "category": "full_answer",
+    "topic": "transformers",
+    "question": "Объясните отличие encoder-only, decoder-only и encoder-decoder трансформеров.",
+    "candidate_answer": "Encoder-only (BERT): двунаправленный контекст, хорош для классификации и NER. Decoder-only (GPT): авторегрессионный, используется для генерации текста, видит только предыдущие токены. Encoder-decoder (T5, BART): encoder кодирует входную последовательность, decoder генерирует выходную — подходит для задач seq2seq: перевод, суммаризация.",
+    "expected": {
+      "decision": "next",
+      "score_min": 0.85
+    }
+  },
+  {
+    "id": "int_014",
+    "category": "wrong_answer",
+    "topic": "python",
+    "question": "Что такое декоратор в Python?",
+    "candidate_answer": "Декоратор — это специальный синтаксис для наследования классов в Python.",
+    "expected": {
+      "decision": "clarify",
+      "score_min": 0.0,
+      "score_max": 0.35
+    }
+  },
+  {
+    "id": "int_015",
+    "category": "full_answer",
+    "topic": "databases",
+    "question": "Объясните разницу между SQL JOIN типами.",
+    "candidate_answer": "INNER JOIN возвращает только совпадающие строки. LEFT JOIN возвращает все строки левой таблицы и совпадающие из правой. RIGHT JOIN — наоборот. FULL OUTER JOIN — все строки из обеих таблиц. CROSS JOIN — декартово произведение всех строк.",
+    "expected": {
+      "decision": "next",
+      "score_min": 0.85
+    }
+  },
+  {
+    "id": "int_016",
+    "category": "full_answer",
+    "topic": "classic_ml",
+    "question": "Объясните разницу между bias и variance в машинном обучении. Что такое bias-variance tradeoff?",
+    "candidate_answer": "Bias — это систематическая ошибка модели, возникающая когда модель слишком проста и не способна уловить зависимости в данных (underfitting). Variance — это чувствительность модели к малым флуктуациям в обучающей выборке (overfitting). Tradeoff: увеличивая сложность модели, мы уменьшаем bias, но увеличиваем variance. Оптимальная модель находит баланс между ними, минимизируя суммарную ошибку на тестовой выборке.",
+    "expert_answer": "Bias — ошибка приближения, Variance — ошибка оценки. Общая ошибка = Bias² + Variance + Irreducible noise. Трейдофф: простые модели (линейная регрессия) — высокий bias, низкий variance; сложные (деревья без ограничений) — низкий bias, высокий variance. Регуляризация, кросс-валидация и ансамблирование помогают управлять этим.",
+    "expert_score": 0.90,
+    "expected": {
+      "decision": "next",
+      "score_min": 0.80,
+      "score_max": 1.0
+    }
+  },
+  {
+    "id": "int_017",
+    "category": "partial_answer",
+    "topic": "classic_ml",
+    "question": "Как работает алгоритм Random Forest? Что такое bagging?",
+    "candidate_answer": "Random Forest — это много деревьев решений, которые голосуют за результат.",
+    "expert_answer": "Random Forest — ансамбль деревьев решений, обученных с помощью bagging (Bootstrap Aggregating): каждое дерево обучается на случайной подвыборке данных с возвращением. Дополнительно: при построении каждого сплита используется случайное подмножество признаков (feature subsampling). Предсказание: среднее (регрессия) или голосование (классификация). Снижает variance, не увеличивая bias.",
+    "expert_score": 0.45,
+    "expected": {
+      "decision": "hint",
+      "score_min": 0.25,
+      "score_max": 0.65
+    }
+  },
+  {
+    "id": "int_018",
+    "category": "full_answer",
+    "topic": "nlp",
+    "question": "Что такое токенизация и какие методы субсловной токенизации вы знаете (BPE, WordPiece, SentencePiece)?",
+    "candidate_answer": "Токенизация — разбиение текста на токены для обработки моделью. BPE (Byte Pair Encoding): итеративно сливает самые частые пары символов/токенов. WordPiece: похож на BPE, но выбирает слияние, максимизирующее log-likelihood языковой модели (используется в BERT). SentencePiece: работает на уровне байт/unicode, не зависит от языка и пробелов, используется в T5, LLaMA. Все методы позволяют обрабатывать OOV-слова через разбиение на подслова.",
+    "expert_answer": "BPE: greedy bottom-up — сливает пары с максимальной частотностью. WordPiece: максимизирует P(sentence)/P(parts) — более лингвистически обоснован. SentencePiece: добавляет ▁ вместо пробелов, работает с сырым текстом без предтокенизации, обратимое кодирование. Unigram LM: вероятностная альтернатива, удаляет символы с минимальным влиянием на perplexity.",
+    "expert_score": 0.88,
+    "expected": {
+      "decision": "next",
+      "score_min": 0.80,
+      "score_max": 1.0
+    }
+  },
+  {
+    "id": "int_019",
+    "category": "wrong_answer",
+    "topic": "classic_ml",
+    "question": "Что такое кросс-валидация и зачем она нужна?",
+    "candidate_answer": "Кросс-валидация — это когда мы делим данные на обучающую и тестовую выборку в пропорции 80/20 и один раз проверяем модель на тестовой части.",
+    "expert_answer": "Кросс-валидация (k-fold): разбиваем данные на k фолдов, k раз обучаем модель на k-1 фолдах и оцениваем на 1-м. Итоговая метрика — среднее по k запускам. Цель: более достоверная оценка обобщающей способности (меньше зависимость от конкретного разбиения). Виды: k-fold, Stratified k-fold, LOOCV, TimeSeriesSplit. 80/20 — это просто holdout split, не кросс-валидация.",
+    "expert_score": 0.15,
+    "expected": {
+      "decision": "clarify",
+      "score_min": 0.0,
+      "score_max": 0.35
+    }
+  },
+  {
+    "id": "int_020",
+    "category": "full_answer",
+    "topic": "llm",
+    "question": "Что такое RLHF (Reinforcement Learning from Human Feedback) и как он применяется для обучения LLM?",
+    "candidate_answer": "RLHF — метод дообучения языковых моделей с использованием человеческой обратной связи. Этапы: 1) SFT (Supervised Fine-Tuning) на данных с правильными ответами; 2) Обучение Reward Model — на парах ответов, ранжированных людьми; 3) PPO (Proximal Policy Optimization) — дообучение LLM с помощью RL, где Reward Model выступает функцией вознаграждения. Используется в ChatGPT, Claude, Llama-2-chat. Позволяет модели генерировать более полезные, безвредные и правдивые ответы.",
+    "expert_answer": "RLHF (Ouyang et al., 2022, InstructGPT): три этапа — SFT на demonstrations, RM trained on comparisons (Bradley-Terry model), PPO с KL-пенальти от SFT-модели для предотвращения reward hacking. Альтернативы: DPO (Direct Preference Optimization) — без RL, RLAIF (AI feedback вместо human). Ограничения: reward hacking, costly annotation, mode collapse.",
+    "expert_score": 0.92,
+    "expected": {
+      "decision": "next",
+      "score_min": 0.82,
+      "score_max": 1.0
+    }
+  }
+]

@@ -14,17 +14,17 @@ import (
 	"github.com/tensor-talks/auth-service/internal/tokens"
 )
 
-type mockUserStore struct {
+type mockuserCrud struct {
 	usersByLogin map[string]*client.User
 	lastCreated  *client.User
 	createError  error
 }
 
-func newMockUserStore() *mockUserStore {
-	return &mockUserStore{usersByLogin: make(map[string]*client.User)}
+func newMockuserCrud() *mockuserCrud {
+	return &mockuserCrud{usersByLogin: make(map[string]*client.User)}
 }
 
-func (m *mockUserStore) CreateUser(_ context.Context, login, passwordHash string) (*client.User, error) {
+func (m *mockuserCrud) CreateUser(_ context.Context, login, passwordHash string) (*client.User, error) {
 	if m.createError != nil {
 		return nil, m.createError
 	}
@@ -40,7 +40,7 @@ func (m *mockUserStore) CreateUser(_ context.Context, login, passwordHash string
 	return user, nil
 }
 
-func (m *mockUserStore) GetUserByLogin(_ context.Context, login string) (*client.User, error) {
+func (m *mockuserCrud) GetUserByLogin(_ context.Context, login string) (*client.User, error) {
 	user, ok := m.usersByLogin[login]
 	if !ok {
 		return nil, &client.APIError{Status: 404, Message: "not found"}
@@ -48,13 +48,40 @@ func (m *mockUserStore) GetUserByLogin(_ context.Context, login string) (*client
 	return user, nil
 }
 
-func (m *mockUserStore) GetUserByID(_ context.Context, id uuid.UUID) (*client.User, error) {
+func (m *mockuserCrud) GetUserByID(_ context.Context, id uuid.UUID) (*client.User, error) {
 	for _, user := range m.usersByLogin {
 		if user.ID == id {
 			return user, nil
 		}
 	}
 	return nil, &client.APIError{Status: 404}
+}
+
+func (m *mockuserCrud) SetRecoveryKeyHash(_ context.Context, _ uuid.UUID, hash string) error {
+	if m.lastCreated != nil {
+		m.lastCreated.RecoveryKeyHash = &hash
+	}
+	return nil
+}
+
+func (m *mockuserCrud) UpdatePasswordHash(_ context.Context, id uuid.UUID, passwordHash string) error {
+	for login, user := range m.usersByLogin {
+		if user.ID == id {
+			m.usersByLogin[login].PasswordHash = passwordHash
+			return nil
+		}
+	}
+	return &client.APIError{Status: 404}
+}
+
+func (m *mockuserCrud) DeleteUser(_ context.Context, id uuid.UUID) error {
+	for login, user := range m.usersByLogin {
+		if user.ID == id {
+			delete(m.usersByLogin, login)
+			return nil
+		}
+	}
+	return &client.APIError{Status: 404}
 }
 
 type mockTokenManager struct {
@@ -90,16 +117,15 @@ func TestValidateCredentials(t *testing.T) {
 	// Валидные креденшалы
 	assert.NoError(t, validateCredentials("user", "password1"))
 	assert.NoError(t, validateCredentials("user", "pass1234"))
+	assert.NoError(t, validateCredentials("BraveNeural42", "abc")) // авто-генерируемый логин
 
 	// Невалидные логины
-	assert.Error(t, validateCredentials("us", "password1"))
-	assert.Error(t, validateCredentials("user name", "password1"))
+	assert.Error(t, validateCredentials("us", "password1"))       // слишком короткий
+	assert.Error(t, validateCredentials("user name", "password1")) // пробел в логине
 
-	// Невалидные пароли
-	assert.Error(t, validateCredentials("user", "123"))      // слишком короткий
-	assert.Error(t, validateCredentials("user", "password")) // нет цифры
-	assert.Error(t, validateCredentials("user", "12345678")) // нет буквы
-	assert.Error(t, validateCredentials("user", "pass1"))    // слишком короткий (< 8 символов)
+	// Пароль не пустой (строгие правила временно отключены для тестирования, §10.13 п.6)
+	assert.NoError(t, validateCredentials("user", "123"))
+	assert.NoError(t, validateCredentials("user", "password"))
 }
 
 func TestHashPassword(t *testing.T) {
@@ -111,7 +137,7 @@ func TestHashPassword(t *testing.T) {
 }
 
 func TestRegisterSuccess(t *testing.T) {
-	store := newMockUserStore()
+	store := newMockuserCrud()
 	tokens := &mockTokenManager{
 		pair: tokens.TokenPair{
 			AccessToken:  "access",
@@ -120,16 +146,17 @@ func TestRegisterSuccess(t *testing.T) {
 	}
 	svc := NewAuthService(store, tokens, nil)
 
-	user, pair, err := svc.Register(context.Background(), "UserName", "password123")
+	user, pair, recoveryKey, err := svc.Register(context.Background(), "UserName", "password123")
 	require.NoError(t, err)
 	assert.Equal(t, "username", user.Login)
 	assert.Equal(t, "access", pair.AccessToken)
 	assert.NotEmpty(t, store.lastCreated.PasswordHash)
 	assert.NotEqual(t, "password123", store.lastCreated.PasswordHash)
+	assert.NotEmpty(t, recoveryKey)
 }
 
 func TestLoginSuccess(t *testing.T) {
-	store := newMockUserStore()
+	store := newMockuserCrud()
 	hash, err := hashPassword("password123")
 	require.NoError(t, err)
 	userID := uuid.New()
@@ -155,7 +182,7 @@ func TestLoginSuccess(t *testing.T) {
 }
 
 func TestLoginInvalidPassword(t *testing.T) {
-	store := newMockUserStore()
+	store := newMockuserCrud()
 	hash, err := hashPassword("password123")
 	require.NoError(t, err)
 	store.usersByLogin["username"] = &client.User{
@@ -175,7 +202,7 @@ func TestLoginInvalidPassword(t *testing.T) {
 }
 
 func TestRefreshSuccess(t *testing.T) {
-	store := newMockUserStore()
+	store := newMockuserCrud()
 	userID := uuid.New()
 	store.usersByLogin["username"] = &client.User{
 		ID:        userID,
@@ -207,7 +234,7 @@ func TestRefreshSuccess(t *testing.T) {
 }
 
 func TestRefreshInvalidToken(t *testing.T) {
-	store := newMockUserStore()
+	store := newMockuserCrud()
 	tokensManager := &mockTokenManager{
 		validateErr: errors.New("invalid"),
 	}
@@ -236,7 +263,7 @@ func TestValidateToken(t *testing.T) {
 			},
 		},
 	}
-	svc := NewAuthService(newMockUserStore(), tokensManager, nil)
+	svc := NewAuthService(newMockuserCrud(), tokensManager, nil)
 
 	claims, err := svc.ValidateToken(context.Background(), "access")
 	require.NoError(t, err)
@@ -245,3 +272,4 @@ func TestValidateToken(t *testing.T) {
 	_, err = svc.ValidateToken(context.Background(), "refresh")
 	assert.ErrorIs(t, err, ErrInvalidToken)
 }
+

@@ -1,0 +1,20 @@
+{{- if (index .Values.services "admin-bff-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-admin-bff-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-bff-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8096
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-bff-service
+{{- end }}

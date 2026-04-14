@@ -1,0 +1,80 @@
+[
+  {
+    "id": "bld_001",
+    "category": "interview_mode",
+    "description": "Стандартный запрос интервью по теме нейронных сетей",
+    "request": {
+      "mode": "interview",
+      "topics": ["neural_networks", "python"],
+      "level": "middle",
+      "question_count": 5
+    },
+    "expected": {
+      "questions_count": 5,
+      "all_topics_covered": ["neural_networks", "python"],
+      "no_duplicate_questions": true
+    }
+  },
+  {
+    "id": "bld_002",
+    "category": "training_mode",
+    "description": "Тренировка по слабым темам из пресета",
+    "request": {
+      "mode": "training",
+      "topics": ["transformers"],
+      "level": "junior",
+      "weak_topics": ["transformers"],
+      "question_count": 5
+    },
+    "expected": {
+      "questions_count": 5,
+      "topic_focus": "transformers",
+      "practice_ratio_min": 0.6
+    }
+  },
+  {
+    "id": "bld_003",
+    "category": "study_mode",
+    "description": "Изучение теории по нескольким темам",
+    "request": {
+      "mode": "study",
+      "topics": ["databases", "python"],
+      "level": "senior",
+      "question_count": 5
+    },
+    "expected": {
+      "questions_count": 5,
+      "theory_ratio_min": 0.6
+    }
+  },
+  {
+    "id": "bld_004",
+    "category": "coverage_check",
+    "description": "Проверка покрытия тем при нескольких топиках",
+    "request": {
+      "mode": "interview",
+      "topics": ["neural_networks", "transformers", "python", "databases"],
+      "level": "middle",
+      "question_count": 8
+    },
+    "expected": {
+      "max_same_topic_ratio": 0.6,
+      "coverage_ratio_min": 0.7
+    }
+  },
+  {
+    "id": "bld_005",
+    "category": "single_topic",
+    "description": "Только один топик — все вопросы по нему",
+    "request": {
+      "mode": "interview",
+      "topics": ["python"],
+      "level": "middle",
+      "question_count": 5
+    },
+    "expected": {
+      "questions_count": 5,
+      "all_from_single_topic": "python"
+    }
+  }
+]

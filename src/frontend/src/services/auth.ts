@@ -10,6 +10,7 @@ type AuthResponse = {
     access_token: string;
     refresh_token: string;
   };
+  recovery_key?: string; // §10.10: returned once on registration
 };
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {

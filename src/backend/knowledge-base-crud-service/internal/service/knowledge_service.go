@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/tensor-talks/knowledge-base-crud-service/internal/models"
@@ -71,4 +72,37 @@ func (s *KnowledgeService) DeleteKnowledge(ctx context.Context, id string) error
 // GetKnowledgeByFilters возвращает знания по фильтрам.
 func (s *KnowledgeService) GetKnowledgeByFilters(ctx context.Context, filters repository.KnowledgeFilters) ([]models.Knowledge, error) {
 	return s.repo.GetKnowledgeByFilters(ctx, filters)
+}
+
+// SemanticSearchResult represents a single result from semantic search (§10.3).
+type SemanticSearchResult struct {
+	ID         string  `json:"segment_id"`
+	Content    string  `json:"content"`
+	Topic      string  `json:"topic"`
+	Similarity float64 `json:"similarity"`
+}
+
+// SearchSemantic performs cosine similarity search using pgvector (§10.3).
+// Currently returns a stub response; requires pgvector migration and embedding client.
+// Full implementation: query → embedding API → pgvector ORDER BY cosine distance.
+func (s *KnowledgeService) SearchSemantic(
+	ctx context.Context,
+	query, topic string,
+	limit int,
+	threshold float64,
+) ([]SemanticSearchResult, error) {
+	// TODO (§10.3): Call embedding API to get query vector, then:
+	// SELECT id, content, topic, (1 - (embedding <=> $1)) AS similarity
+	// FROM knowledge_segments
+	// WHERE status = 'published'
+	//   AND ($2 = '' OR topic = $2)
+	//   AND (1 - (embedding <=> $1)) >= $3
+	// ORDER BY embedding <=> $1
+	// LIMIT $4
+	//
+	// For now, return empty list to indicate semantic search is configured
+	// but the embedding pipeline hasn't been set up yet.
+	return []SemanticSearchResult{}, fmt.Errorf(
+		"semantic search requires pgvector migration and embedding API configuration (§10.3)",
+	)
 }

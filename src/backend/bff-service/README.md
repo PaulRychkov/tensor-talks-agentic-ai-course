@@ -47,7 +47,12 @@
     - `Register(login, password)` — регистрация;
     - `Login(login, password)` — логин;
     - `Refresh(refreshToken)` — обновление токенов;
-    - `Me(accessToken)` — получение текущего пользователя.
+    - `Me(accessToken)` — получение текущего пользователя;
+    - `Logout(accessToken)` — инвалидация сессии в Redis;
+    - `Recover(login, recoveryKey, newPassword)` — сброс пароля;
+    - `ChangePassword(accessToken, currentPassword, newPassword)` — смена пароля;
+    - `RegenerateRecoveryKey(accessToken, password)` — перегенерация ключа восстановления;
+    - `DeleteAccount(accessToken, password)` — удаление аккаунта.
   - `SessionClient` — клиент к `session-service`:
     - `CreateSession(userID, params)` — создание новой сессии чата с параметрами интервью.
   - `SessionCRUDClient` — клиент к `session-crud-service`:
@@ -63,7 +68,7 @@
   Бизнес-слой BFF:
   - `AuthService` — для аутентификации:
     - оборачивает ошибки из `auth-service` в доменные ошибки `ErrInvalidCredentials`, `ErrConflict`, `ErrBadRequest`;
-    - предоставляет методы `Register`, `Login`, `Refresh`, `CurrentUser` для HTTP-слоя.
+    - предоставляет методы `Register`, `Login`, `Refresh`, `CurrentUser`, `Logout`, `Recover`, `ChangePassword`, `RegenerateRecoveryKey`, `DeleteAccount` для HTTP-слоя.
   - `ChatService` — для управления чатами:
     - создаёт сессии через `session-service`;
     - отправляет события в Kafka (`chat.events.out`);
@@ -72,11 +77,17 @@
 
 - `internal/handler`  
   HTTP-слой на Gin, маршруты под `/api`:
-  - `POST /api/auth/register` — регистрация;
+  - `POST /api/auth/register` — регистрация; ответ включает `recovery_key` (показывается один раз);
   - `POST /api/auth/login` — логин;
   - `POST /api/auth/refresh` — обновление токенов;
   - `GET /api/auth/me` — информация о текущем пользователе по access-токену;
-  - `POST /api/chat/start` — начать новый чат (с параметрами интервью: topics, level, type);
+  - `POST /api/auth/logout` — инвалидация сессии (требует Bearer-токен);
+  - `POST /api/auth/recover` — сброс пароля по ключу восстановления (login, recovery_key, new_password);
+  - `POST /api/auth/change-password` — смена пароля (требует Bearer-токен);
+  - `POST /api/auth/regenerate-recovery-key` — перегенерация ключа восстановления (требует Bearer-токен);
+  - `DELETE /api/auth/account` — удаление аккаунта (требует Bearer-токен);
+  - `GET /api/users/generate-random-login` — генерация случайного логина (проксирует в `user-crud-service`);
+  - `POST /api/chat/start` — начать новый чат (с параметрами: topics, level, type, mode);
   - `POST /api/chat/message` — отправить сообщение в чат;
   - `GET /api/chat/:session_id/question` — получить следующий вопрос (polling);
   - `GET /api/chat/:session_id/results` — получить результаты чата;
@@ -107,18 +118,18 @@
 ### Работа с чатами
 
 BFF управляет чатами через:
-- `session-service` — для создания сессий с параметрами интервью (topics, level, type);
+- `session-service` — для создания сессий с параметрами (topics, level, type, mode);
 - `session-crud-service` — для получения списка сессий пользователя;
 - `chat-crud-service` — для получения истории чатов;
 - `results-crud-service` — для получения результатов интервью;
 - Kafka — для асинхронной обработки событий чатов;
-- `mock-model-service` — обрабатывает события и генерирует вопросы/результаты.
+- `dialogue-aggregator` — агрегирует события диалога между BFF и agent-service.
 
 Подробнее см. [WORKFLOW.md](../WORKFLOW.md) и [KAFKA.md](../KAFKA.md).
 
 ### Ограничения
 
-- BFF **не** обращается напрямую к `user-store-service` и не работает с базой данных.
+- BFF **не** обращается напрямую к `user-crud-service` и не работает с базой данных.
 - Любой доступ к учётным записям идёт через `auth-service`.
 - Любые внутренние или отладочные эндпоинты других микросервисов (например, `/debug/users`) 
   не должны проксироваться через BFF во внешний мир.

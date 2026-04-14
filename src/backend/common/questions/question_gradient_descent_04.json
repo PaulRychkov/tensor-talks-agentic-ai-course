@@ -1,0 +1,38 @@
+{
+  "id": "question_gradient_descent_04",
+  "theory_id": "theory_gradient_descent",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Какие проблемы возникают при выборе learning rate и как их диагностировать?",
+    "expected_points": [
+      "большой LR: loss расходится или осциллирует",
+      "малый LR: медленная сходимость",
+      "LR scheduling: cosine annealing, step decay",
+      "warmup в трансформерах"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gradient_descent",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Большой LR: loss нестабилен/растёт. Малый: очень медленно. Диагностика: loss/epoch графики. Решения: cosine annealing, linear warmup, Adam.",
+    "covers": [
+      "диагностика",
+      "scheduling",
+      "warmup",
+      "adaptive optimizers"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

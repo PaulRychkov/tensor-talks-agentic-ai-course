@@ -35,7 +35,7 @@ spec:
               service:
                 name: {{ include "tensor-talks.fullname" $ }}-frontend
                 port:
-                  number: 80
+                  number: 8080
           {{- end }}
     {{- end }}
 {{- end }}

@@ -1,0 +1,15 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: interviewer-agent-service-cb
+  namespace: {{ .Values.global.namespace }}
+spec:
+  host: {{ include "tensor-talks.fullname" . }}-interviewer-agent-service
+  trafficPolicy:
+    outlierDetection:
+      consecutive5xxErrors: 10
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+{{- end }}

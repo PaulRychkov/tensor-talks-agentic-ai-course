@@ -1,0 +1,38 @@
+{
+  "id": "question_decision_trees_03",
+  "theory_id": "theory_decision_trees",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Как регуляризуют дерево решений? Pre-pruning и post-pruning.",
+    "expected_points": [
+      "pre-pruning: max_depth, min_samples_split, min_samples_leaf",
+      "post-pruning: обрезка по валидационному множеству",
+      "Cost Complexity Pruning (ccp_alpha) в sklearn",
+      "без регуляризации: запоминание каждого примера"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_decision_trees",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Pre-pruning: max_depth, min_samples_split — ограничиваем рост. Post-pruning: удаляем листья не улучшающие val_accuracy. CCP: min R(T)+α|T|, α через CV.",
+    "covers": [
+      "pre-pruning",
+      "post-pruning",
+      "CCP",
+      "max_depth"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

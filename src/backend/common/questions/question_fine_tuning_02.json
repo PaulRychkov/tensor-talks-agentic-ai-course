@@ -1,0 +1,43 @@
+{
+  "id": "question_fine_tuning_02",
+  "theory_id": "theory_fine_tuning",
+  "linked_segments": [
+    "formula",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Что такое LoRA и как она позволяет эффективно дообучать большие модели?",
+    "expected_points": [
+      "Low-Rank Adaptation: добавляет матрицы B и A низкого ранга",
+      "W'=W+BA, r<<d, обучаются только B и A",
+      "0.1-1% параметров, базовая модель заморожена",
+      "QLoRA = LoRA + 4bit квантизация"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_fine_tuning",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_fine_tuning",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "LoRA: замораживаем W, добавляем ΔW=B·A (ранг r=4-64). При r=8, d=4096: 64k вместо 16M параметров. QLoRA + 4bit квантизация — экономия памяти в 4x.",
+    "covers": [
+      "Low-Rank",
+      "замороженные веса",
+      "параметры",
+      "QLoRA"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

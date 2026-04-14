@@ -1,0 +1,38 @@
+{
+  "id": "question_attention_02",
+  "theory_id": "theory_attention",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "Объясните формулу scaled dot-product attention. Зачем нужен масштабирующий коэффициент √d_k?",
+    "expected_points": [
+      "Attention(Q,K,V)=softmax(QKᵀ/√d_k)V",
+      "QKᵀ — сходство запроса с ключами",
+      "без масштабирования softmax насыщается",
+      "√d_k нормирует дисперсию скалярного произведения"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_attention",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Attention(Q,K,V)=softmax(QKᵀ/√d_k)·V. Без √d_k при d_k=512 скалярные произведения растут как O(d_k), softmax насыщается — нулевые градиенты.",
+    "covers": [
+      "формула",
+      "QKᵀ",
+      "softmax насыщение",
+      "√d_k"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

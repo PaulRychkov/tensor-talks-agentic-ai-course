@@ -4,13 +4,19 @@
 
 ### Функциональность
 
-- Слушает Kafka топик `interview.build.request`
-- Получает параметры интервью (topics, level, type)
-- Запрашивает вопросы из questions-crud-service по фильтрам
-- Запрашивает знания из knowledge-base-crud-service для каждого вопроса
-- Собирает программу интервью (5 вопросов по умолчанию)
-- Упорядочивает вопросы по логике (связанные вопросы рядом)
-- Отправляет программу в Kafka топик `interview.build.response`
+- Слушает Kafka топик `interview.build.request`.
+- Получает параметры (`topics`, `level`, `type`, `mode` ∈ `interview` | `training` | `study`).
+- Запрашивает вопросы из `questions-crud-service` и теорию из `knowledge-base-crud-service`.
+- Прогоняет программу через пайплайн `filter → dedup → coverage → balance → mode_profile → sort → enrich`.
+- Возвращает программу + `program_meta` (`validation_passed`, `coverage`, `fallback_reason`, `generator_version`) в `interview.build.response`.
+
+### Режимы (`mode`)
+
+- `interview` — стандартное собеседование, баланс по сложности и темам.
+- `training` — режим тренировки, расширенный набор вопросов одной темы.
+- `study` — обучающий режим, акцент на теории и постепенном усложнении.
+
+Профиль режима применяется на шаге `mode_profile` (количество вопросов, распределение complexity, минимальное покрытие тем).
 
 ### Маппинг параметров
 
@@ -40,13 +46,22 @@
 
 ```json
 {
-  "questions": [
-    {
-      "question": "Почему L2‑регуляризация уменьшает переобучение?",
-      "theory": "L2‑регуляризация добавляет штраф за квадрат нормы весов...",
-      "order": 1
-    }
-  ]
+  "program": {
+    "questions": [
+      {
+        "id": "q-001",
+        "question": "Почему L2‑регуляризация уменьшает переобучение?",
+        "theory": "L2‑регуляризация добавляет штраф за квадрат нормы весов...",
+        "order": 1
+      }
+    ]
+  },
+  "program_meta": {
+    "validation_passed": true,
+    "coverage": {"nlp": 3, "llm": 2},
+    "fallback_reason": null,
+    "generator_version": "1.2.0"
+  }
 }
 ```
 

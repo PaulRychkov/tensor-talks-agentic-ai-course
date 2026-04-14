@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,13 +30,18 @@ func NewResultsCRUDClient(baseURL string, timeoutSeconds int) *ResultsCRUDClient
 
 // Result представляет результат интервью.
 type Result struct {
-	ID              uint      `json:"id"`
-	SessionID       uuid.UUID `json:"session_id"`
-	Score           int       `json:"score"`
-	Feedback        string    `json:"feedback"`
-	TerminatedEarly bool      `json:"terminated_early"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                  uint            `json:"id"`
+	SessionID           uuid.UUID       `json:"session_id"`
+	Score               int             `json:"score"`
+	Feedback            string          `json:"feedback"`
+	TerminatedEarly     bool            `json:"terminated_early"`
+	ReportJSON          json.RawMessage `json:"report_json,omitempty"`
+	PresetTraining      json.RawMessage `json:"preset_training,omitempty"`
+	Evaluations         json.RawMessage `json:"evaluations,omitempty"`
+	ResultFormatVersion int             `json:"result_format_version"`
+	SessionKind         string          `json:"session_kind,omitempty"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
 // GetResultResponse ответ с результатом.
@@ -85,6 +91,37 @@ func (c *ResultsCRUDClient) GetResult(ctx context.Context, sessionID uuid.UUID) 
 	}
 
 	return &resultResp.Result, nil
+}
+
+// SubmitRating отправляет оценку пользователя (1-5) для сессии.
+func (c *ResultsCRUDClient) SubmitRating(ctx context.Context, sessionID uuid.UUID, rating int, comment string) error {
+	payload, _ := json.Marshal(map[string]any{"rating": rating, "comment": comment})
+	req, err := http.NewRequestWithContext(ctx, "PATCH",
+		c.baseURL+"/results/"+sessionID.String()+"/rating",
+		bytes.NewReader(payload),
+	)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
+			return fmt.Errorf("%s", errResp.Error)
+		}
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // GetResults получает результаты по списку session_id.

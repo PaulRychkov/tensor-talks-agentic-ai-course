@@ -1,0 +1,13 @@
+server:
+  host: "0.0.0.0"
+  port: 8082
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "user_crud"
+  password: "user_crud_password"
+  name: "user_crud_db"
+  ssl_mode: "disable"
+  schema: ""  # Empty for local dev (separate DB), set to "user_crud" for Kubernetes
+

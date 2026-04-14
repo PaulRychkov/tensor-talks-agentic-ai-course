@@ -29,9 +29,10 @@ func NewChatCRUDClient(baseURL string, timeoutSeconds int) *ChatCRUDClient {
 
 // ChatMessage представляет сообщение в чате.
 type ChatMessage struct {
-	Type      string    `json:"type"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
+	Type      string                 `json:"type"`
+	Content   string                 `json:"content"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
 }
 
 // GetMessagesResponse ответ с сообщениями.

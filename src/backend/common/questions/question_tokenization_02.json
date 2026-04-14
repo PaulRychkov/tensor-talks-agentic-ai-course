@@ -1,0 +1,42 @@
+{
+  "id": "question_tokenization_02",
+  "theory_id": "theory_tokenization",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Объясните алгоритм BPE (Byte Pair Encoding). Как строится словарь токенизатора?",
+    "expected_points": [
+      "начало: символьный словарь",
+      "на каждом шаге: самая частая пара → новый токен",
+      "до достижения желаемого размера словаря",
+      "используется в GPT-2, LLaMA"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_tokenization",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_tokenization",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "BPE: 1) Начальный словарь = символы; 2) Частоты пар; 3) Самая частая пара → новый токен; 4) Повторяем до размера V. Применяется в GPT-2, Llama.",
+    "covers": [
+      "алгоритм",
+      "частоты пар",
+      "размер словаря"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

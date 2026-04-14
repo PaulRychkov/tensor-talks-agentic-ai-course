@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -18,12 +20,12 @@ import (
 Пакет service содержит бизнес-логику микросервиса аутентификации.
 
 Основные обязанности:
-  - регистрация пользователей (валидация логина/пароля, хеширование пароля, создание записи в user-store-service);
+  - регистрация пользователей (валидация логина/пароля, хеширование пароля, создание записи в user-crud-service);
   - аутентификация по логину и паролю;
   - выпуск и валидация JWT-токенов (доступ + обновление);
-  - получение информации о пользователе через user-store-service.
+  - получение информации о пользователе через user-crud-service.
 
-Все операции с базой выполняются только через user-store-service, прямого доступа к БД у auth-service нет.
+Все операции с базой выполняются только через user-crud-service, прямого доступа к БД у auth-service нет.
 */
 
 // ErrInvalidInput возвращается при некорректном логине или пароле.
@@ -38,11 +40,17 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 // ErrInvalidToken означает, что токен не прошёл проверку (подпись/срок/тип).
 var ErrInvalidToken = errors.New("invalid token")
 
-// UserStoreAPI описывает операции, которые auth-service ожидает от user-store-service.
-type UserStoreAPI interface {
+// ErrInvalidRecoveryKey означает, что ключ восстановления не совпадает с сохранённым хешем.
+var ErrInvalidRecoveryKey = errors.New("invalid recovery key")
+
+// UserCrudAPI описывает операции, которые auth-service ожидает от user-crud-service.
+type UserCrudAPI interface {
 	CreateUser(ctx context.Context, login, passwordHash string) (*client.User, error)
 	GetUserByLogin(ctx context.Context, login string) (*client.User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*client.User, error)
+	SetRecoveryKeyHash(ctx context.Context, id uuid.UUID, hash string) error
+	UpdatePasswordHash(ctx context.Context, id uuid.UUID, passwordHash string) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
 }
 
 // TokenManager описывает интерфейс менеджера JWT-токенов.
@@ -62,70 +70,194 @@ type SessionStore interface {
 
 // AuthService оркестрирует операции регистрации, логина и работы с токенами.
 type AuthService struct {
-	userStore    UserStoreAPI
+	userCrud    UserCrudAPI
 	tokens       TokenManager
 	sessionStore SessionStore
 }
 
 // NewAuthService создаёт новый экземпляр сервиса аутентификации.
-func NewAuthService(userStore UserStoreAPI, tokens TokenManager, sessionStore SessionStore) *AuthService {
+func NewAuthService(userCrud UserCrudAPI, tokens TokenManager, sessionStore SessionStore) *AuthService {
 	return &AuthService{
-		userStore:    userStore,
+		userCrud:    userCrud,
 		tokens:       tokens,
 		sessionStore: sessionStore,
 	}
 }
 
-// Register выполняет регистрацию нового пользователя и возвращает пару токенов.
+// Register выполняет регистрацию нового пользователя и возвращает пару токенов и ключ восстановления.
 // Внутри:
 //   - нормализует логин;
 //   - валидирует логин и пароль;
 //   - хеширует пароль с помощью bcrypt;
-//   - создаёт пользователя в user-store-service;
+//   - создаёт пользователя в user-crud-service;
+//   - генерирует ключ восстановления, сохраняет его bcrypt-хеш;
 //   - выпускает пару access/refresh токенов.
-func (s *AuthService) Register(ctx context.Context, login, password string) (*client.User, tokens.TokenPair, error) {
+//
+// Возвращает raw recovery key (показывается пользователю один раз).
+func (s *AuthService) Register(ctx context.Context, login, password string) (*client.User, tokens.TokenPair, string, error) {
 	login = normalizeLogin(login)
 	if err := validateCredentials(login, password); err != nil {
-		return nil, tokens.TokenPair{}, err
+		return nil, tokens.TokenPair{}, "", err
 	}
 
 	hashed, err := hashPassword(password)
 	if err != nil {
-		return nil, tokens.TokenPair{}, fmt.Errorf("hash password: %w", err)
+		return nil, tokens.TokenPair{}, "", fmt.Errorf("hash password: %w", err)
 	}
 
-	user, err := s.userStore.CreateUser(ctx, login, hashed)
+	user, err := s.userCrud.CreateUser(ctx, login, hashed)
 	if err != nil {
 		var apiErr *client.APIError
 		if errors.As(err, &apiErr) && apiErr.Status == http.StatusConflict {
-			return nil, tokens.TokenPair{}, ErrLoginTaken
+			return nil, tokens.TokenPair{}, "", ErrLoginTaken
 		}
-		return nil, tokens.TokenPair{}, fmt.Errorf("create user: %w", err)
+		return nil, tokens.TokenPair{}, "", fmt.Errorf("create user: %w", err)
+	}
+
+	// Генерируем ключ восстановления и сохраняем его хеш (§10.10).
+	rawKey, keyHash, err := generateRecoveryKey()
+	if err != nil {
+		return nil, tokens.TokenPair{}, "", fmt.Errorf("generate recovery key: %w", err)
+	}
+	if err := s.userCrud.SetRecoveryKeyHash(ctx, user.ID, keyHash); err != nil {
+		// Не прерываем регистрацию — ключ можно будет перегенерировать
+		rawKey = ""
 	}
 
 	pair, err := s.tokens.GenerateTokens(user)
 	if err != nil {
-		return nil, tokens.TokenPair{}, fmt.Errorf("generate tokens: %w", err)
+		return nil, tokens.TokenPair{}, "", fmt.Errorf("generate tokens: %w", err)
 	}
 
-	// Получаем claims из access токена для извлечения session ID (jti)
-	accessClaims, err := s.tokens.Validate(pair.AccessToken)
-	if err != nil {
-		return nil, tokens.TokenPair{}, fmt.Errorf("validate generated token: %w", err)
-	}
-
-	// Создаём сессию в Redis
+	// Создаём сессию в Redis (если sessionStore настроен)
 	if s.sessionStore != nil {
-		sessionID := accessClaims.ID
-		if sessionID == "" {
-			sessionID = fmt.Sprintf("%s-%d", user.ID.String(), time.Now().Unix())
-		}
-		if err := s.sessionStore.CreateSession(ctx, user.ID, sessionID, pair.AccessToken); err != nil {
-			// Логируем ошибку, но не прерываем регистрацию
+		accessClaims, err := s.tokens.Validate(pair.AccessToken)
+		if err == nil {
+			sessionID := accessClaims.ID
+			if sessionID == "" {
+				sessionID = fmt.Sprintf("%s-%d", user.ID.String(), time.Now().Unix())
+			}
+			_ = s.sessionStore.CreateSession(ctx, user.ID, sessionID, pair.AccessToken)
 		}
 	}
 
-	return user, pair, nil
+	return user, pair, rawKey, nil
+}
+
+// RecoverPassword сбрасывает пароль пользователя по ключу восстановления (§10.10).
+func (s *AuthService) RecoverPassword(ctx context.Context, login, recoveryKey, newPassword string) error {
+	login = normalizeLogin(login)
+	if login == "" || recoveryKey == "" || newPassword == "" {
+		return ErrInvalidInput
+	}
+
+	user, err := s.userCrud.GetUserByLogin(ctx, login)
+	if err != nil {
+		var apiErr *client.APIError
+		if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
+			return ErrInvalidRecoveryKey // не раскрываем, существует ли логин
+		}
+		return fmt.Errorf("fetch user: %w", err)
+	}
+
+	if user.RecoveryKeyHash == nil || *user.RecoveryKeyHash == "" {
+		return ErrInvalidRecoveryKey
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.RecoveryKeyHash), []byte(recoveryKey)); err != nil {
+		return ErrInvalidRecoveryKey
+	}
+
+	newHash, err := hashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash new password: %w", err)
+	}
+
+	return s.userCrud.UpdatePasswordHash(ctx, user.ID, newHash)
+}
+
+// ChangePassword меняет пароль пользователя с проверкой текущего (§10.14/6).
+func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+	if currentPassword == "" || newPassword == "" {
+		return ErrInvalidInput
+	}
+	user, err := s.userCrud.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("fetch user: %w", err)
+	}
+	if err := compareHashAndPassword(user.PasswordHash, currentPassword); err != nil {
+		return ErrInvalidCredentials
+	}
+	newHash, err := hashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash new password: %w", err)
+	}
+	return s.userCrud.UpdatePasswordHash(ctx, userID, newHash)
+}
+
+// RegenerateRecoveryKey перегенерирует ключ восстановления с проверкой пароля (§10.14/6).
+// Возвращает новый raw recovery key.
+func (s *AuthService) RegenerateRecoveryKey(ctx context.Context, userID uuid.UUID, password string) (string, error) {
+	if password == "" {
+		return "", ErrInvalidInput
+	}
+	user, err := s.userCrud.GetUserByID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("fetch user: %w", err)
+	}
+	if err := compareHashAndPassword(user.PasswordHash, password); err != nil {
+		return "", ErrInvalidCredentials
+	}
+	rawKey, keyHash, err := generateRecoveryKey()
+	if err != nil {
+		return "", fmt.Errorf("generate recovery key: %w", err)
+	}
+	if err := s.userCrud.SetRecoveryKeyHash(ctx, userID, keyHash); err != nil {
+		return "", fmt.Errorf("save recovery key: %w", err)
+	}
+	return rawKey, nil
+}
+
+// DeleteAccount удаляет аккаунт пользователя с проверкой пароля (§10.14/6).
+func (s *AuthService) DeleteAccount(ctx context.Context, userID uuid.UUID, password string) error {
+	if password == "" {
+		return ErrInvalidInput
+	}
+	user, err := s.userCrud.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("fetch user: %w", err)
+	}
+	if err := compareHashAndPassword(user.PasswordHash, password); err != nil {
+		return ErrInvalidCredentials
+	}
+	if err := s.userCrud.DeleteUser(ctx, userID); err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	if s.sessionStore != nil {
+		_ = s.sessionStore.DeleteAllUserSessions(ctx, userID)
+	}
+	return nil
+}
+
+// generateRecoveryKey генерирует случайный ключ восстановления (hex, 32 байта = 64 символа)
+// и возвращает (rawKey, bcryptHash, error).
+func generateRecoveryKey() (string, string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", "", err
+	}
+	raw := strings.ToUpper(hex.EncodeToString(buf))
+	// Форматируем как XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
+	parts := make([]string, 0, 8)
+	for i := 0; i < len(raw); i += 4 {
+		parts = append(parts, raw[i:i+4])
+	}
+	formatted := strings.Join(parts, "-")
+	hashed, err := bcrypt.GenerateFromPassword([]byte(formatted), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+	return formatted, string(hashed), nil
 }
 
 // Login аутентифицирует пользователя по логину и паролю.
@@ -136,7 +268,7 @@ func (s *AuthService) Login(ctx context.Context, login, password string) (*clien
 		return nil, tokens.TokenPair{}, ErrInvalidCredentials
 	}
 
-	user, err := s.userStore.GetUserByLogin(ctx, login)
+	user, err := s.userCrud.GetUserByLogin(ctx, login)
 	if err != nil {
 		var apiErr *client.APIError
 		if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
@@ -154,20 +286,15 @@ func (s *AuthService) Login(ctx context.Context, login, password string) (*clien
 		return nil, tokens.TokenPair{}, fmt.Errorf("generate tokens: %w", err)
 	}
 
-	// Получаем claims из access токена для извлечения session ID (jti)
-	accessClaims, err := s.tokens.Validate(pair.AccessToken)
-	if err != nil {
-		return nil, tokens.TokenPair{}, fmt.Errorf("validate generated token: %w", err)
-	}
-
-	// Создаём сессию в Redis
+	// Создаём сессию в Redis (если sessionStore настроен)
 	if s.sessionStore != nil {
-		sessionID := accessClaims.ID
-		if sessionID == "" {
-			sessionID = fmt.Sprintf("%s-%d", user.ID.String(), time.Now().Unix())
-		}
-		if err := s.sessionStore.CreateSession(ctx, user.ID, sessionID, pair.AccessToken); err != nil {
-			// Логируем ошибку, но не прерываем логин
+		accessClaims, err := s.tokens.Validate(pair.AccessToken)
+		if err == nil {
+			sessionID := accessClaims.ID
+			if sessionID == "" {
+				sessionID = fmt.Sprintf("%s-%d", user.ID.String(), time.Now().Unix())
+			}
+			_ = s.sessionStore.CreateSession(ctx, user.ID, sessionID, pair.AccessToken)
 		}
 	}
 
@@ -175,7 +302,7 @@ func (s *AuthService) Login(ctx context.Context, login, password string) (*clien
 }
 
 // Refresh принимает refresh-токен, валидирует его и по userID внутри токена
-// запрашивает пользователя в user-store-service, после чего выпускает новую пару токенов.
+// запрашивает пользователя в user-crud-service, после чего выпускает новую пару токенов.
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*client.User, tokens.TokenPair, error) {
 	claims, err := s.tokens.Validate(refreshToken)
 	if err != nil {
@@ -185,7 +312,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*client
 		return nil, tokens.TokenPair{}, ErrInvalidToken
 	}
 
-	user, err := s.userStore.GetUserByID(ctx, claims.UserID)
+	user, err := s.userCrud.GetUserByID(ctx, claims.UserID)
 	if err != nil {
 		return nil, tokens.TokenPair{}, fmt.Errorf("fetch user: %w", err)
 	}
@@ -231,9 +358,9 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*tokens.
 	return claims, nil
 }
 
-// GetUserByID запрашивает информацию о пользователе по GUID во внешнем user-store-service.
+// GetUserByID запрашивает информацию о пользователе по GUID во внешнем user-crud-service.
 func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*client.User, error) {
-	return s.userStore.GetUserByID(ctx, id)
+	return s.userCrud.GetUserByID(ctx, id)
 }
 
 // Logout удаляет сессию пользователя из Redis.
@@ -252,7 +379,7 @@ func normalizeLogin(login string) string {
 // validateCredentials проверяет базовые требования к логину и паролю.
 // Для пароля: минимальная длина 8 символов, требуется хотя бы одна цифра и одна буква.
 func validateCredentials(login, password string) error {
-	if len(login) < 3 || len(login) > 30 {
+	if len(login) < 3 || len(login) > 64 {
 		return ErrInvalidInput
 	}
 	if strings.Contains(login, " ") {
@@ -301,3 +428,4 @@ func hashPassword(password string) (string, error) {
 func compareHashAndPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
+

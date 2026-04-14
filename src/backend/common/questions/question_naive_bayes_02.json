@@ -1,0 +1,37 @@
+{
+  "id": "question_naive_bayes_02",
+  "theory_id": "theory_naive_bayes",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Почему наивный байесовский классификатор называется 'наивным'? Где хорошо работает?",
+    "expected_points": [
+      "наивное допущение: признаки условно независимы",
+      "в реальности обычно коррелируют",
+      "хорошо: спам, text classification",
+      "даже при нарушении независимости ранжирование корректно"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_naive_bayes",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Наивность: P(x1..xn|y)=ΠP(xi|y). Нарушается в реальности, но для text classification/spam ранжирование классов остаётся корректным.",
+    "covers": [
+      "независимость признаков",
+      "применения",
+      "почему работает"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

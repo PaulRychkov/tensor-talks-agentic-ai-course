@@ -36,6 +36,15 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
       throw error;
     }
     
+    // 422 — PII detected (передаём детали для отображения предупреждения)
+    if (response.status === 422 && data?.pii_detected) {
+      const error = new Error(data.error ?? message);
+      (error as any).status = 422;
+      (error as any).pii_detected = true;
+      (error as any).error = data.error;
+      throw error;
+    }
+
     // Для остальных ошибок - обычная обработка
     const error = new Error(message);
     if (response.status === 404) {
@@ -47,10 +56,18 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+export type SessionMode = 'interview' | 'training' | 'study';
+
 export interface SessionParams {
-  topics: string[]; // classic_ml, nlp, llm
-  level: string; // junior, middle, senior
-  type: string;  // interview, training
+  topics: string[];
+  level: string;
+  mode: SessionMode;
+  type?: string;
+  source?: 'manual' | 'preset';
+  preset_id?: string;
+  subtopics?: string[];
+  use_previous_results?: boolean;
+  num_questions?: number;
 }
 
 export interface StartChatResponse {
@@ -103,30 +120,51 @@ export interface QuestionResponse {
   question: string;
   question_id: string;
   timestamp: string;
+  question_number: number;
+  total_questions: number;
+  pii_masked_content?: string;
 }
 
-export async function getNextQuestion(sessionId: string): Promise<QuestionResponse | null> {
+export interface PollResult {
+  question: QuestionResponse | null;
+  processingStep: string; // '' when idle, 'processing' when agent is working
+}
+
+export async function pollQuestion(sessionId: string): Promise<PollResult> {
   try {
     const response = await request<any>(`/chat/${sessionId}/question`, {
       method: 'GET',
     });
-    // Проверяем новый формат (200 с available: false)
     if (response.available === false || response.question === null) {
-      return null;
+      return { question: null, processingStep: response.processing_step ?? '' };
     }
-    // Проверяем старый формат (прямой QuestionResponse)
     if (response.question && response.question_id && response.timestamp) {
-      return response as QuestionResponse;
+      return { question: response as QuestionResponse, processingStep: '' };
     }
-    return null;
+    return { question: null, processingStep: '' };
   } catch (error: any) {
-    // Обрабатываем старый формат (404) для обратной совместимости
     if (error.message?.includes('no new questions') || error.message?.includes('404') || error.message?.includes('chat not completed')) {
-      return null;
+      return { question: null, processingStep: '' };
     }
-    // Только реальные ошибки логируем
-    console.error('getNextQuestion error:', error);
+    console.error('pollQuestion error:', error);
     throw error;
+  }
+}
+
+/** @deprecated use pollQuestion */
+export async function getNextQuestion(sessionId: string): Promise<QuestionResponse | null> {
+  const result = await pollQuestion(sessionId);
+  return result.question;
+}
+
+export async function submitMessageFeedback(sessionId: string, questionId: string, rating: number): Promise<void> {
+  try {
+    await request<void>(`/chat/${sessionId}/message-feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ question_id: questionId, rating }),
+    });
+  } catch {
+    // non-critical, ignore errors
   }
 }
 
@@ -135,6 +173,8 @@ export interface ResultsResponse {
   feedback: string;
   recommendations: string[];
   completed_at: string;
+  /** True when the interview is done but the analyst report is still being generated */
+  pending?: boolean;
 }
 
 export async function getResults(sessionId: string): Promise<ResultsResponse | null> {
@@ -142,12 +182,16 @@ export async function getResults(sessionId: string): Promise<ResultsResponse | n
     const response = await request<any>(`/chat/${sessionId}/results`, {
       method: 'GET',
     });
-    // Проверяем новый формат (200 с available: false)
+    // Interview completed, analyst still processing — return pending sentinel
+    if (response.completed === true && response.pending === true) {
+      return { score: 0, feedback: '', recommendations: [], completed_at: '', pending: true };
+    }
+    // Not completed yet
     if (response.available === false || response.results === null) {
       return null;
     }
-    // Проверяем старый формат (прямой ResultsResponse)
-    if (response.score !== undefined && response.feedback && response.recommendations) {
+    // Full results available
+    if (response.score !== undefined && response.feedback !== undefined && response.recommendations) {
       return response as ResultsResponse;
     }
     return null;
@@ -211,6 +255,44 @@ export async function getInterviewChat(sessionId: string): Promise<ChatMessage[]
   }
 }
 
+export interface ErrorEntry {
+  question: string;
+  error: string;
+  correction: string;
+}
+
+export interface StudyTheoryEntry {
+  topic?: string;
+  question: string;
+  theory: string;
+  order: number;
+}
+
+export interface ReportJSON {
+  summary: string;
+  errors_by_topic: Record<string, ErrorEntry[]>;
+  strengths: string[];
+  preparation_plan: string[];
+  materials: string[];
+  study_plan?: string[];
+  theory_reviewed?: StudyTheoryEntry[];
+  unmastered_topics?: string[];
+}
+
+export interface PresetTraining {
+  weak_topics: string[];
+  recommended_materials: string[];
+  preset_id: string;
+  follow_up_kind?: 'training' | 'study';
+}
+
+export interface QuestionEvaluation {
+  question_id: string;
+  score: number;
+  decision: string;
+  topic?: string;
+}
+
 export interface InterviewResult {
   id: number;
   session_id: string;
@@ -219,10 +301,48 @@ export interface InterviewResult {
   terminated_early: boolean;
   created_at: string;
   updated_at: string;
+  report_json?: ReportJSON;
+  preset_training?: PresetTraining;
+  evaluations?: QuestionEvaluation[];
+  result_format_version?: number;
+  session_kind?: SessionMode;
 }
 
 export interface InterviewResultResponse {
   result: InterviewResult;
+}
+
+export type ChatEventType =
+  | 'chat.model_question'
+  | 'chat.model_hint'
+  | 'chat.model_summary'
+  | 'chat.completed';
+
+export interface ChatEventPayload {
+  message: string;
+  decision: string;
+  question_index: number;
+}
+
+export interface ChatEvent {
+  session_id: string;
+  message_id: string;
+  event_type: ChatEventType;
+  timestamp: string;
+  payload: ChatEventPayload;
+}
+
+export interface RecommendationItem {
+  topic_id: string;
+  title: string;
+  level: string;
+  eta_minutes: number;
+  study_completed: boolean;
+  training_unlocked: boolean;
+}
+
+export interface RecommendationsResponse {
+  items: RecommendationItem[];
 }
 
 export async function getInterviewResult(sessionId: string): Promise<InterviewResult | null> {
@@ -238,4 +358,11 @@ export async function getInterviewResult(sessionId: string): Promise<InterviewRe
     console.error('getInterviewResult error:', error);
     throw error;
   }
+}
+
+export async function submitSessionRating(sessionId: string, rating: number, comment: string): Promise<void> {
+  await request<{ ok: boolean }>(`/interviews/${sessionId}/rating`, {
+    method: 'POST',
+    body: JSON.stringify({ rating, comment }),
+  });
 }

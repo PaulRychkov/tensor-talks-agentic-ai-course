@@ -1,0 +1,43 @@
+{
+  "id": "question_transformer_02",
+  "theory_id": "theory_transformer",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Как работает multi-head attention? Зачем несколько голов вместо одной?",
+    "expected_points": [
+      "каждая голова проецирует Q,K,V в подпространство dim/h",
+      "разные головы фокусируются на разных паттернах",
+      "выходы конкатенируются и проецируются обратно",
+      "мощность без линейного роста параметров"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_transformer",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_transformer",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "h голов независимо: Attention(Qi,Ki,Vi) в dim/h подпространствах. MultiHead=Concat(head1..h)W^O. Разные головы: синтаксические, семантические, позиционные зависимости.",
+    "covers": [
+      "проекции QKV",
+      "параллельные головы",
+      "конкатенация",
+      "специализация"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

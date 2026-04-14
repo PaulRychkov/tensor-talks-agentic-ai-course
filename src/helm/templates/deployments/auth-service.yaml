@@ -46,7 +46,7 @@ spec:
             - name: AUTH_SERVER_PORT
               value: "8081"
             - name: AUTH_USER_STORE_BASE_URL
-              value: "http://{{ include "tensor-talks.fullname" . }}-user-store-service:8082"
+              value: "http://{{ include "tensor-talks.fullname" . }}-user-crud-service:8082"
             - name: AUTH_USER_STORE_TIMEOUT_SECONDS
               value: "5"
             - name: AUTH_JWT_SECRET

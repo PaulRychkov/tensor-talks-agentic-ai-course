@@ -1,0 +1,81 @@
+# Agent Service Environment Variables Example
+# Copy this file to .env and update with your actual values
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+AGENT_SERVICE_NAME=interviewer-agent-service
+AGENT_SERVICE_VERSION=1.0.0
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+# =============================================================================
+# Kafka Configuration
+# =============================================================================
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC_MESSAGES_FULL=tensor-talks-messages.full.data
+KAFKA_TOPIC_GENERATED=tensor-talks-generated.phrases
+KAFKA_CONSUMER_GROUP=tensor-talks-agent-service-group
+KAFKA_CONSUMER_AUTO_OFFSET_RESET=earliest
+KAFKA_CONSUMER_ENABLE_AUTO_COMMIT=false
+KAFKA_CONSUMER_MAX_POLL_RECORDS=100
+KAFKA_CONSUMER_SESSION_TIMEOUT_MS=30000
+KAFKA_CONSUMER_HEARTBEAT_INTERVAL_MS=10000
+KAFKA_PRODUCER_ACKS=all
+KAFKA_PRODUCER_RETRIES=3
+KAFKA_PRODUCER_COMPRESSION_TYPE=snappy
+
+# =============================================================================
+# LLM Configuration
+# =============================================================================
+# Provider: openai, anthropic, local
+LLM_PROVIDER=local
+# For OpenAI: leave empty or set to https://api.openai.com/v1
+# For local models (Ollama, vLLM): set to http://localhost:11434/v1 or your local endpoint
+LLM_BASE_URL=https://api.proxyapi.ru/openai/v1
+# Required for OpenAI/Anthropic, not needed for local models
+LLM_API_KEY=
+# Model name (e.g., gpt-4, gpt-3.5-turbo, claude-3-opus, etc.)
+LLM_MODEL=gpt-4
+LLM_TEMPERATURE=0.7
+LLM_MAX_TOKENS=2000
+LLM_TIMEOUT=60
+
+# =============================================================================
+# External Services URLs
+# =============================================================================
+SESSION_SERVICE_URL=http://session-service:8083
+CHAT_CRUD_SERVICE_URL=http://chat-crud-service:8087
+KNOWLEDGE_BASE_CRUD_SERVICE_URL=http://knowledge-base-crud-service:8090
+
+# =============================================================================
+# Redis Configuration
+# =============================================================================
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_PASSWORD=
+REDIS_MAX_CONNECTIONS=50
+REDIS_CONNECTION_TIMEOUT=5
+REDIS_SOCKET_TIMEOUT=5
+REDIS_RETRY_ON_TIMEOUT=true
+ENABLE_REDIS_CACHE=true
+
+# =============================================================================
+# Processing Configuration
+# =============================================================================
+MAX_RETRIES=3
+PROCESSING_TIMEOUT=120
+
+# =============================================================================
+# REST API Configuration
+# =============================================================================
+REST_API_HOST=0.0.0.0
+REST_API_PORT=8093
+ENABLE_REST_API=true
+
+# =============================================================================
+# Metrics Configuration
+# =============================================================================
+METRICS_PORT=9092
+ENABLE_PROMETHEUS=true

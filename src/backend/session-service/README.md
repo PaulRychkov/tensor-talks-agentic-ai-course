@@ -5,7 +5,7 @@
 ### Функциональность
 
 - **POST /sessions** — создание новой сессии с параметрами интервью
-  - Request: `{ "user_id": "uuid", "params": { "topics": [...], "level": "...", "type": "..." } }`
+  - Request: `{ "user_id": "uuid", "params": { "topics": [...], "level": "junior|middle|senior", "type": "ml|nlp|llm|cv|ds", "mode": "interview|training|study" } }`
   - Response: `{ "session_id": "uuid", "ready": true }`
   - Проверяет лимит активных сессий в Redis
   - Создаёт сессию в session-crud-service
@@ -13,9 +13,10 @@
   - Ожидает готовую программу (таймаут 30 секунд)
   - Сохраняет программу в CRUD и Redis
 
-- **GET /sessions/:id/program** — получение программы интервью
-  - Response: `{ "program": { "questions": [...] } }`
+- **GET /sessions/:id/program** — получение программы интервью + метаданных сессии
+  - Response: `{ "program": { "questions": [...] }, "program_status": "ready", "program_meta": {...}, "session_mode": "interview|training|study", "topics": ["nlp", "llm"], "level": "middle" }`
   - Сначала проверяет Redis кэш, если нет — загружает из session-crud-service
+  - `topics`/`level`/`session_mode` отдаются для downstream-сервисов (dialogue-aggregator кладёт их в `session.completed`, чтобы analyst-agent корректно роутился по ветке `interview` / `training` / `study`)
 
 - **PUT /sessions/:id/close** — закрытие сессии
   - Удаляет сессию из Redis кэша

@@ -1,0 +1,38 @@
+{
+  "id": "question_cot_03",
+  "theory_id": "theory_chain_of_thought",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое Chain-of-Thought prompting и почему он улучшает результаты LLM?",
+    "expected_points": [
+      "просим LLM рассуждать пошагово перед ответом",
+      "'Let's think step by step' — zero-shot CoT",
+      "улучшает арифметику, логику, многошаговые задачи",
+      "декомпозиция на посильные шаги"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_chain_of_thought",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "CoT: 'Let's think step by step' разворачивает промежуточные шаги. Декомпозиция сложной задачи на простые шаги. Эффект усиливается с размером модели.",
+    "covers": [
+      "определение",
+      "zero-shot CoT",
+      "почему работает",
+      "размер модели"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

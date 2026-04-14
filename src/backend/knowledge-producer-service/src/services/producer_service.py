@@ -2,6 +2,9 @@
 
 import json
 import os
+import uuid
+from difflib import SequenceMatcher
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from ..clients import KnowledgeClient, QuestionsClient
@@ -11,6 +14,16 @@ from ..metrics import get_metrics_collector
 import time
 
 logger = get_logger(__name__)
+
+VALID_DRAFT_TYPES = {"knowledge", "question"}
+VALID_REVIEW_STATUSES = {"pending", "approved", "rejected"}
+
+
+def _text_similarity(a: str, b: str) -> float:
+    """Compute similarity ratio between two strings using SequenceMatcher."""
+    if not a or not b:
+        return 0.0
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
 class ProducerService:
@@ -24,6 +37,7 @@ class ProducerService:
         self.knowledge_client = knowledge_client or KnowledgeClient()
         self.questions_client = questions_client or QuestionsClient()
         self.metrics = get_metrics_collector()
+        self._drafts: Dict[str, Dict[str, Any]] = {}
 
     async def load_knowledge_from_files(self) -> List[Dict[str, Any]]:
         """Load all knowledge JSON files from directory"""
@@ -291,4 +305,175 @@ class ProducerService:
         """Close clients"""
         await self.knowledge_client.close()
         await self.questions_client.close()
+
+    # ── Draft lifecycle ──────────────────────────────────────────────
+
+    def _make_draft(
+        self,
+        draft_type: str,
+        title: str,
+        content: str,
+        topic: str,
+        source: str = "",
+    ) -> Dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
+        return {
+            "draft_id": str(uuid.uuid4()),
+            "draft_type": draft_type,
+            "title": title,
+            "content": content,
+            "topic": topic,
+            "source": source,
+            "review_status": "pending",
+            "review_comment": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "published_at": None,
+            "duplicate_candidate": False,
+            "created_at": now,
+        }
+
+    def _find_similar_drafts(self, draft: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Find existing drafts similar to the given one by title+content."""
+        candidates = []
+        incoming_text = f"{draft['title']} {draft['content']}"
+
+        for existing in self._drafts.values():
+            if existing["draft_id"] == draft["draft_id"]:
+                continue
+            if existing["draft_type"] != draft["draft_type"]:
+                continue
+            if existing["topic"] != draft["topic"]:
+                continue
+
+            existing_text = f"{existing['title']} {existing['content']}"
+            score = _text_similarity(incoming_text, existing_text)
+            if score >= settings.similarity_threshold:
+                candidates.append({**existing, "_similarity": round(score, 4)})
+
+        candidates.sort(key=lambda c: c["_similarity"], reverse=True)
+        return candidates[: settings.dedup_max_candidates]
+
+    async def create_draft(
+        self,
+        draft_type: str,
+        title: str,
+        content: str,
+        topic: str,
+        source: str = "",
+    ) -> Dict[str, Any]:
+        if draft_type not in VALID_DRAFT_TYPES:
+            raise ValueError(f"draft_type must be one of {VALID_DRAFT_TYPES}")
+
+        draft = self._make_draft(draft_type, title, content, topic, source)
+
+        similar = self._find_similar_drafts(draft)
+        if similar:
+            draft["duplicate_candidate"] = True
+            logger.warning(
+                "Duplicate candidate detected",
+                draft_id=draft["draft_id"],
+                similar_count=len(similar),
+                top_similarity=similar[0]["_similarity"],
+            )
+
+        self._drafts[draft["draft_id"]] = draft
+        logger.info("Draft created", draft_id=draft["draft_id"], draft_type=draft_type)
+        return draft
+
+    def get_draft(self, draft_id: str) -> Optional[Dict[str, Any]]:
+        return self._drafts.get(draft_id)
+
+    def list_drafts(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        drafts = list(self._drafts.values())
+        if status:
+            drafts = [d for d in drafts if d["review_status"] == status]
+        drafts.sort(key=lambda d: d["created_at"], reverse=True)
+        return drafts
+
+    def review_draft(
+        self,
+        draft_id: str,
+        review_status: str,
+        reviewed_by: str,
+        review_comment: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        draft = self._drafts.get(draft_id)
+        if draft is None:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if review_status not in {"approved", "rejected"}:
+            raise ValueError("review_status must be 'approved' or 'rejected'")
+
+        now = datetime.now(timezone.utc).isoformat()
+        draft["review_status"] = review_status
+        draft["reviewed_by"] = reviewed_by
+        draft["reviewed_at"] = now
+        draft["review_comment"] = review_comment
+
+        logger.info(
+            "Draft reviewed",
+            draft_id=draft_id,
+            review_status=review_status,
+            reviewed_by=reviewed_by,
+        )
+        return draft
+
+    async def publish_draft(
+        self,
+        draft_id: str,
+        override_duplicate: bool = False,
+    ) -> Dict[str, Any]:
+        draft = self._drafts.get(draft_id)
+        if draft is None:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        logger.info(
+            "Publish attempt",
+            draft_id=draft_id,
+            review_status=draft["review_status"],
+            reviewed_by=draft.get("reviewed_by"),
+        )
+
+        if draft["review_status"] == "rejected":
+            raise PermissionError(
+                f"Draft rejected: {draft.get('review_comment', 'no comment')}"
+            )
+
+        if draft["review_status"] != "approved":
+            raise PermissionError(
+                f"Cannot publish draft with status '{draft['review_status']}'. "
+                "Only approved drafts can be published."
+            )
+
+        if draft["duplicate_candidate"] and not override_duplicate:
+            raise PermissionError(
+                "Draft is flagged as duplicate candidate. "
+                "Set override_duplicate=true to publish anyway."
+            )
+
+        if draft["draft_type"] == "knowledge":
+            payload = {
+                "id": draft["draft_id"],
+                "title": draft["title"],
+                "content": draft["content"],
+                "topic": draft["topic"],
+                "source": draft["source"],
+                "metadata": {"created_via": "draft", "draft_id": draft["draft_id"]},
+            }
+            result = await self.knowledge_client.create_knowledge(payload)
+        else:
+            payload = {
+                "id": draft["draft_id"],
+                "title": draft["title"],
+                "content": draft["content"],
+                "topic": draft["topic"],
+                "source": draft["source"],
+                "metadata": {"created_via": "draft", "draft_id": draft["draft_id"]},
+            }
+            result = await self.questions_client.create_question(payload)
+
+        draft["published_at"] = datetime.now(timezone.utc).isoformat()
+        logger.info("Draft published", draft_id=draft_id, draft_type=draft["draft_type"])
+        return {"draft": draft, "published": result}
 

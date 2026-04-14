@@ -30,6 +30,41 @@ func (h *KnowledgeHandler) RegisterRoutes(router gin.IRouter) {
 	router.PUT("/knowledge/:id", h.UpdateKnowledge)
 	router.DELETE("/knowledge/:id", h.DeleteKnowledge)
 	router.GET("/knowledge", h.GetKnowledgeByFilters)
+	// Semantic search endpoint (§10.3) — requires pgvector + embedding API
+	router.POST("/knowledge/search-semantic", h.SearchSemantic)
+}
+
+type semanticSearchRequest struct {
+	Query     string  `json:"query" binding:"required"`
+	Limit     int     `json:"limit"`
+	Threshold float64 `json:"threshold"`
+	Topic     string  `json:"topic,omitempty"`
+}
+
+// SearchSemantic performs semantic similarity search in the knowledge base (§10.3).
+// Returns segments ordered by cosine similarity to the query embedding.
+// Requires the embedding model to be configured (EMBEDDING_API_URL env var).
+func (h *KnowledgeHandler) SearchSemantic(c *gin.Context) {
+	var req semanticSearchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query is required"})
+		return
+	}
+	if req.Limit <= 0 {
+		req.Limit = 5
+	}
+	if req.Threshold <= 0 {
+		req.Threshold = 0.7
+	}
+
+	results, err := h.svc.SearchSemantic(c.Request.Context(), req.Query, req.Topic, req.Limit, req.Threshold)
+	if err != nil {
+		h.logger.Error("SearchSemantic failed", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "semantic search unavailable: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, results)
 }
 
 // CreateKnowledge создаёт новое знание.

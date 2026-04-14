@@ -19,7 +19,7 @@ type Consumer struct {
 
 // EventHandler обрабатывает события создания программы интервью.
 type EventHandler interface {
-	HandleInterviewBuildResponse(ctx context.Context, sessionID string, program map[string]interface{}) error
+	HandleInterviewBuildResponse(ctx context.Context, sessionID string, program map[string]interface{}, programMeta map[string]interface{}) error
 }
 
 // NewConsumer создаёт новый Kafka consumer.
@@ -132,20 +132,31 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				continue
 			}
 
-			program, ok := event.Payload["program"].(map[string]interface{})
+			// Support both "program" (legacy) and "interview_program" (new format)
+			program, ok := event.Payload["interview_program"].(map[string]interface{})
 			if !ok {
-				h.logger.Error("Invalid program type in payload")
-				session.MarkMessage(message, "")
-				continue
+				program, ok = event.Payload["program"].(map[string]interface{})
+				if !ok {
+					h.logger.Error("Invalid program type in payload")
+					session.MarkMessage(message, "")
+					continue
+				}
+			}
+
+			// Extract program_meta (optional, new field)
+			var programMeta map[string]interface{}
+			if meta, ok := event.Payload["program_meta"].(map[string]interface{}); ok {
+				programMeta = meta
 			}
 
 			h.logger.Info("Received interview build response",
 				zap.String("session_id", sessionID),
+				zap.Bool("has_program_meta", programMeta != nil),
 			)
 
 			if h.consumer.eventHandler != nil {
 				ctx := context.Background()
-				if err := h.consumer.eventHandler.HandleInterviewBuildResponse(ctx, sessionID, program); err != nil {
+				if err := h.consumer.eventHandler.HandleInterviewBuildResponse(ctx, sessionID, program, programMeta); err != nil {
 					h.logger.Error("Failed to handle interview build response",
 						zap.Error(err),
 						zap.String("session_id", sessionID),

@@ -114,7 +114,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .localDevelopment -}}
 {{- "Never" -}}
 {{- else -}}
-{{- "Always" -}}
+{{- "IfNotPresent" -}}
 {{- end -}}
 {{- end -}}
 

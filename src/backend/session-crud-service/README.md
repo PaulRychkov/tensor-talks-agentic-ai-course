@@ -5,7 +5,7 @@
 ### Функциональность
 
 - **POST /sessions** — создание новой сессии
-  - Request: `{ "user_id": "uuid", "params": { "topics": [...], "level": "...", "type": "..." } }`
+  - Request: `{ "user_id": "uuid", "params": { "topics": [...], "level": "junior|middle|senior", "type": "ml|nlp|llm|cv|ds", "mode": "interview|training|study" } }`
   - Response: `{ "session": {...} }`
 
 - **GET /sessions/:id** — получение сессии по ID
@@ -26,7 +26,7 @@
 - `user_id` (UUID, indexed)
 - `start_time` (timestamp)
 - `end_time` (timestamp, nullable)
-- `params` (JSONB) — параметры интервьюируемого (topics, level, type)
+- `params` (JSONB) — параметры интервьюируемого (`topics`, `level`, `type`, `mode`)
 - `interview_program` (JSONB) — программа интервью
 - `created_at`, `updated_at` (timestamps)
 

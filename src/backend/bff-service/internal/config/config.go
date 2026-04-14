@@ -29,8 +29,23 @@ type Config struct {
 	SessionCRUD    SessionCRUDConfig    `mapstructure:"session_crud"`
 	ChatCRUD       ChatCRUDConfig       `mapstructure:"chat_crud"`
 	ResultsCRUD    ResultsCRUDConfig    `mapstructure:"results_crud"`
+	UserCRUD       UserCRUDConfig       `mapstructure:"user_crud"`
 	Kafka          KafkaConfig          `mapstructure:"kafka"`
 	CORS           CORSConfig           `mapstructure:"cors"`
+	Redis          RedisConfig          `mapstructure:"redis"`
+}
+
+// RedisConfig содержит параметры подключения к Redis (для чтения шагов агента).
+type RedisConfig struct {
+	Addr     string `mapstructure:"addr"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
+// UserCRUDConfig содержит параметры подключения к user-crud-service.
+type UserCRUDConfig struct {
+	BaseURL        string `mapstructure:"base_url"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
 }
 
 // SessionCRUDConfig содержит параметры подключения к session-crud-service.
@@ -149,6 +164,12 @@ func Load() (Config, error) {
 	}
 
 	// Значения по умолчанию для новых сервисов
+	if cfg.UserCRUD.BaseURL == "" {
+		cfg.UserCRUD.BaseURL = "http://tensor-talks-user-crud-service:8082"
+	}
+	if cfg.UserCRUD.TimeoutSeconds == 0 {
+		cfg.UserCRUD.TimeoutSeconds = 5
+	}
 	if cfg.SessionCRUD.BaseURL == "" {
 		cfg.SessionCRUD.BaseURL = "http://session-crud-service:8085"
 	}

@@ -1,0 +1,37 @@
+{
+  "id": "question_gpt_03",
+  "theory_id": "theory_gpt",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 2,
+  "content": {
+    "question": "В чём ключевое архитектурное отличие GPT от BERT?",
+    "expected_points": [
+      "GPT: decoder-only, causal/unidirectional attention",
+      "BERT: encoder-only, bidirectional",
+      "GPT: предсказывает следующий токен; BERT: маскированные",
+      "GPT — генерация, BERT — понимание"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gpt",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "GPT — decoder-only, causal masking (только предыдущие токены). BERT — encoder-only, bidirectional. GPT: language modeling. BERT: MLM+NSP.",
+    "covers": [
+      "decoder vs encoder",
+      "causal vs bidirectional",
+      "генерация vs понимание"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

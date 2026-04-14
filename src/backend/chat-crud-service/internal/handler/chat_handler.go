@@ -27,6 +27,7 @@ func NewChatHandler(svc *service.ChatService, logger *zap.Logger) *ChatHandler {
 func (h *ChatHandler) RegisterRoutes(router gin.IRouter) {
 	router.POST("/messages", h.SaveMessage)
 	router.GET("/messages/:session_id", h.GetMessages)
+	router.PATCH("/messages/:message_id/mask", h.MaskMessage)
 	router.GET("/chat-active/:session_id", h.GetActiveChatJSON)
 	router.GET("/chat-dumps/:session_id", h.GetChatDump)
 	router.POST("/chat-dumps/:session_id", h.CreateChatDump)
@@ -126,6 +127,38 @@ func (h *ChatHandler) GetChatDump(c *gin.Context) {
 
 	metrics.BusinessChatOperationsTotal.WithLabelValues("chat-crud-service", "get_dump", "success").Inc()
 	c.JSON(http.StatusOK, gin.H{"dump": dump})
+}
+
+// MaskMessage заменяет содержимое сообщения плейсхолдером (PII-маскирование).
+// Принимает Kafka message_id (UUID) из пути — ищет по metadata->>'message_id'.
+func (h *ChatHandler) MaskMessage(c *gin.Context) {
+	kafkaMessageID := c.Param("message_id")
+	if kafkaMessageID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "message_id required"})
+		return
+	}
+
+	var req struct {
+		Placeholder string `json:"placeholder" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("MaskMessage: invalid payload", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	if err := h.svc.MaskMessageByKafkaID(c.Request.Context(), kafkaMessageID, req.Placeholder); err != nil {
+		if err == repository.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		} else {
+			h.logger.Error("MaskMessage failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	metrics.BusinessChatOperationsTotal.WithLabelValues("chat-crud-service", "mask_message", "success").Inc()
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 // CreateChatDump создаёт дамп чата из сообщений.

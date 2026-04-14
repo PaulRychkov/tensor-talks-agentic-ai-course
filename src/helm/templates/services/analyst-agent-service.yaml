@@ -1,0 +1,24 @@
+{{- if (index .Values.services "analyst-agent-service").enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-analyst-agent-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: analyst-agent-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8094
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9094
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "tensor-talks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: analyst-agent-service
+{{- end }}

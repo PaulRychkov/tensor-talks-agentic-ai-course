@@ -1,0 +1,38 @@
+{
+  "id": "question_lstm_03",
+  "theory_id": "theory_lstm",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "В чём разница между LSTM и GRU? Когда предпочтительнее использовать GRU?",
+    "expected_points": [
+      "GRU: 2 гейта (reset, update) вместо 3 в LSTM",
+      "GRU нет отдельного cell state",
+      "GRU быстрее, на ~25% меньше параметров",
+      "на малых датасетах GRU часто не хуже LSTM"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_lstm",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "GRU: 2 гейта (update z, reset r), нет cell state, меньше параметров. На небольших датасетах GRU≈LSTM по качеству, но быстрее. LSTM надёжнее для очень длинных последовательностей.",
+    "covers": [
+      "архитектурное отличие",
+      "гейты",
+      "параметры",
+      "применимость"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

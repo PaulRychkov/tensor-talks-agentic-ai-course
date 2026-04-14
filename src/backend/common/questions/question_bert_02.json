@@ -1,0 +1,43 @@
+{
+  "id": "question_bert_02",
+  "theory_id": "theory_bert",
+  "linked_segments": [
+    "definition",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Какие задачи предобучения используются в BERT и как они формируют двунаправленное понимание?",
+    "expected_points": [
+      "MLM: предсказание 15% замаскированных токенов",
+      "NSP: следует ли предложение B за A",
+      "MLM даёт доступ к левому И правому контексту",
+      "NSP улучшает понимание связей между предложениями"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_bert",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_bert",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "BERT: 1) MLM — 15% токенов маскируется, модель предсказывает имея левый И правый контекст; 2) NSP — бинарная классификация пар. MLM — ключ к bidirectional representations.",
+    "covers": [
+      "MLM",
+      "NSP",
+      "bidirectional",
+      "маскирование"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

@@ -39,6 +39,16 @@ func (s *ChatService) GetMessagesBySessionID(ctx context.Context, sessionID uuid
 	return s.repo.GetMessagesBySessionID(ctx, sessionID)
 }
 
+// MaskMessage заменяет содержимое сообщения плейсхолдером (PII-маскирование, 152-ФЗ).
+func (s *ChatService) MaskMessage(ctx context.Context, messageID uint, placeholder string) error {
+	return s.repo.MaskMessageContent(ctx, messageID, placeholder)
+}
+
+// MaskMessageByKafkaID заменяет содержимое сообщения по Kafka message_id из metadata.
+func (s *ChatService) MaskMessageByKafkaID(ctx context.Context, kafkaMessageID string, placeholder string) error {
+	return s.repo.MaskMessageContentByKafkaID(ctx, kafkaMessageID, placeholder)
+}
+
 // GetChatDump возвращает дамп чата по session_id.
 func (s *ChatService) GetChatDump(ctx context.Context, sessionID uuid.UUID) (*models.ChatDump, error) {
 	return s.repo.GetChatDumpBySessionID(ctx, sessionID)

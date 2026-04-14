@@ -1,0 +1,42 @@
+{
+  "id": "question_logistic_regression_03",
+  "theory_id": "theory_logistic_regression",
+  "linked_segments": [
+    "definition",
+    "intuition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "В чём принципиальное отличие логистической регрессии от линейной?",
+    "expected_points": [
+      "логистическая — задача классификации",
+      "выход — вероятность через сигмоиду",
+      "функция потерь Log Loss, не MSE",
+      "граница решения линейная"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_logistic_regression",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_logistic_regression",
+        "segment_type": "intuition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Линейная регрессия: непрерывное y (MSE). Логистическая: вероятность через сигмоиду, бинарная классификация, лосс — Log Loss.",
+    "covers": [
+      "задача классификации",
+      "сигмоида",
+      "Log Loss"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

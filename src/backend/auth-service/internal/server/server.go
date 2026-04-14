@@ -37,11 +37,11 @@ type Server struct {
 
 // New создаёт новый экземпляр Server, собирая все зависимости.
 // На этом этапе:
-//   - создаётся HTTP-клиент к user-store-service;
+//   - создаётся HTTP-клиент к user-crud-service;
 //   - инициализируется менеджер токенов и сервис аутентификации;
 //   - настраивается Gin-роутер, health-check и HTTP-сервер с таймаутом заголовков.
 func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
-	userStoreClient, err := client.NewUserStoreClient(cfg.UserStore)
+	UserCrudClient, err := client.NewUserCrudClient(cfg.UserCrud)
 	if err != nil {
 		return nil, fmt.Errorf("init user store client: %w", err)
 	}
@@ -69,7 +69,7 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 		}
 	}
 
-	authService := service.NewAuthService(userStoreClient, tokenManager, sessionStore)
+	authService := service.NewAuthService(UserCrudClient, tokenManager, sessionStore)
 	authHandler := handler.NewAuthHandler(authService, logger)
 
 	engine := gin.Default()
@@ -216,3 +216,4 @@ func metricsHandler() gin.HandlerFunc {
 		h.ServeHTTP(c.Writer, c.Request)
 	}
 }
+

@@ -92,26 +92,26 @@ tensortalks_business_token_validation_errors_total{service="auth-service", error
 
 ```prometheus
 # Количество запросов к БД
-tensortalks_db_queries_total{service="user-store-service", operation="select", status="success"}
+tensortalks_db_queries_total{service="user-crud-service", operation="select", status="success"}
 
 # Длительность запросов к БД
-tensortalks_db_query_duration_seconds{service="user-store-service", operation="select"}
+tensortalks_db_query_duration_seconds{service="user-crud-service", operation="select"}
 
 # Количество активных соединений
-tensortalks_db_connections_active{service="user-store-service"}
+tensortalks_db_connections_active{service="user-crud-service"}
 
 # Количество ошибок БД
-tensortalks_db_errors_total{service="user-store-service", error_type="connection_timeout"}
+tensortalks_db_errors_total{service="user-crud-service", error_type="connection_timeout"}
 ```
 
 ### Метрики внешних вызовов
 
 ```prometheus
 # Количество вызовов внешних сервисов
-tensortalks_external_requests_total{service="auth-service", target_service="user-store-service", status="success"}
+tensortalks_external_requests_total{service="auth-service", target_service="user-crud-service", status="success"}
 
 # Длительность внешних вызовов
-tensortalks_external_request_duration_seconds{service="auth-service", target_service="user-store-service"}
+tensortalks_external_request_duration_seconds{service="auth-service", target_service="user-crud-service"}
 ```
 
 ### Системные метрики
@@ -397,11 +397,11 @@ scrape_configs:
           service: 'bff-service'
           environment: 'development'
 
-  - job_name: 'user-store-service'
+  - job_name: 'user-crud-service'
     static_configs:
-      - targets: ['user-store-service:8082']
+      - targets: ['user-crud-service:8082']
         labels:
-          service: 'user-store-service'
+          service: 'user-crud-service'
           environment: 'development'
 
   - job_name: 'session-service'
@@ -411,11 +411,81 @@ scrape_configs:
           service: 'session-service'
           environment: 'development'
 
-  - job_name: 'mock-model-service'
+  - job_name: 'dialogue-aggregator'
     static_configs:
-      - targets: ['mock-model-service:8084']
+      - targets: ['dialogue-aggregator:8084']
         labels:
-          service: 'mock-model-service'
+          service: 'dialogue-aggregator'
+          environment: 'development'
+
+  - job_name: 'session-crud-service'
+    static_configs:
+      - targets: ['session-crud-service:8085']
+        labels:
+          service: 'session-crud-service'
+          environment: 'development'
+
+  - job_name: 'chat-crud-service'
+    static_configs:
+      - targets: ['chat-crud-service:8087']
+        labels:
+          service: 'chat-crud-service'
+          environment: 'development'
+
+  - job_name: 'results-crud-service'
+    static_configs:
+      - targets: ['results-crud-service:8088']
+        labels:
+          service: 'results-crud-service'
+          environment: 'development'
+
+  - job_name: 'interview-builder-service'
+    static_configs:
+      - targets: ['interview-builder-service:8089']
+        labels:
+          service: 'interview-builder-service'
+          environment: 'development'
+
+  - job_name: 'knowledge-producer-service'
+    static_configs:
+      - targets: ['knowledge-producer-service:8092']
+        labels:
+          service: 'knowledge-producer-service'
+          environment: 'development'
+
+  - job_name: 'knowledge-base-crud-service'
+    static_configs:
+      - targets: ['knowledge-base-crud-service:8090']
+        labels:
+          service: 'knowledge-base-crud-service'
+          environment: 'development'
+
+  - job_name: 'questions-crud-service'
+    static_configs:
+      - targets: ['questions-crud-service:8091']
+        labels:
+          service: 'questions-crud-service'
+          environment: 'development'
+
+  - job_name: 'interviewer-agent-service'
+    static_configs:
+      - targets: ['interviewer-agent-service:9092']
+        labels:
+          service: 'interviewer-agent-service'
+          environment: 'development'
+
+  - job_name: 'analyst-agent-service'
+    static_configs:
+      - targets: ['analyst-agent-service:9094']
+        labels:
+          service: 'analyst-agent-service'
+          environment: 'development'
+
+  - job_name: 'admin-bff-service'
+    static_configs:
+      - targets: ['admin-bff-service:8096']
+        labels:
+          service: 'admin-bff-service'
           environment: 'development'
 ```
 
@@ -434,7 +504,7 @@ groups:
           summary: "High error rate in {{ $labels.service }}"
       
       - alert: ServiceDown
-        expr: up{job=~"auth-service|bff-service|user-store-service|session-service|mock-model-service"} == 0
+        expr: up{job=~"auth-service|bff-service|user-crud-service|session-service|dialogue-aggregator|interviewer-agent-service|analyst-agent-service|interview-builder-service"} == 0
         for: 1m
         annotations:
           summary: "Service {{ $labels.job }} is down"
@@ -480,6 +550,69 @@ groups:
 1. Убедитесь, что Prometheus добавлен как источник данных
 2. Проверьте правильность PromQL запросов
 3. Убедитесь, что временной диапазон выбран правильно
+
+---
+
+## Фактически реализованные метрики (2026-04-10)
+
+### Технические (Go-сервисы)
+
+| Метрика | Сервис | Описание |
+|---------|--------|----------|
+| `tensortalks_http_requests_total` | все Go | Счётчик HTTP-запросов по method/endpoint/status |
+| `tensortalks_http_request_duration_seconds` | все Go | Гистограмма latency |
+| `tensortalks_message_feedback_total{rating}` | bff-service | Оценки сообщений агента (1-5 звёзд) |
+
+### AI-метрики (interviewer-agent-service)
+
+| Метрика | Описание |
+|---------|----------|
+| `agent_llm_calls_total{model,status}` | Вызовы LLM |
+| `agent_messages_processed_total{decision}` | Решения агента (next_question, give_hint, blocked_pii) |
+| `agent_processing_duration_seconds` | Время обработки сообщения (гистограмма) |
+| `agent_decision_confidence` | Уверенность агента в решении (гистограмма) |
+| `agent_low_confidence_decisions_total` | Решения с confidence < 0.5 |
+| `pii_filter_triggered_total{level,category}` | Срабатывания PII-фильтра |
+| `agent_active_dialogues` | Gauge: активные диалоги |
+| `agent_kafka_consumer_lag` | Kafka consumer lag |
+| `agent_kafka_producer_duration_seconds` | Время публикации в Kafka |
+| `agent_redis_operation_duration_seconds` | Время Redis-операций |
+
+### Продуктовые (results-crud-service)
+
+| Метрика | Описание |
+|---------|----------|
+| `session_completed_total{kind,completed_naturally}` | Сессии по типу и результату |
+| `session_user_rating{kind}` | Гистограмма пользовательских оценок (1-5) |
+| `session_ratings_total{kind}` | Количество оценок |
+
+### REST API для продуктовых метрик (results-crud-service)
+
+`GET /results/metrics/product` — агрегированная статистика:
+```json
+{
+  "metrics": {
+    "total_sessions": 47,
+    "completed_naturally": 39,
+    "terminated_early": 8,
+    "completion_rate": 82.97,
+    "avg_score": 71.3,
+    "avg_rating": 4.2,
+    "rated_sessions": 15,
+    "by_kind": {"interview": 30, "training": 12, "study": 5}
+  }
+}
+```
+
+### Admin Dashboard (admin-bff-service)
+
+| Endpoint | Источник | Описание |
+|----------|---------|----------|
+| `GET /admin/api/metrics/product` | results-crud | Продуктовые метрики из БД |
+| `GET /admin/api/metrics/technical` | Prometheus | RPS, latency, статус сервисов |
+| `GET /admin/api/metrics/ai` | Prometheus | LLM вызовы, PII, уверенность агента |
+
+---
 
 ## Дополнительные ресурсы
 

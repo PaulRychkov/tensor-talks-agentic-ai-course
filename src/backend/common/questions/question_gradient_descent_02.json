@@ -1,0 +1,43 @@
+{
+  "id": "question_gradient_descent_02",
+  "theory_id": "theory_gradient_descent",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "В чём разница между SGD, Mini-batch GD и Batch GD? Когда применять каждый?",
+    "expected_points": [
+      "Batch GD: весь датасет — стабильно но медленно",
+      "SGD: один пример — быстро но шумно",
+      "Mini-batch: 32-512 примеров — оптимален для GPU",
+      "практика: Mini-batch GD"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_gradient_descent",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_gradient_descent",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Batch GD: точно, дорого. SGD: быстро, шумно. Mini-batch: векторизация GPU + достаточная точность. Стандарт: batch_size 32-256.",
+    "covers": [
+      "batch",
+      "stochastic",
+      "mini-batch",
+      "практика"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

@@ -1,0 +1,33 @@
+server:
+  host: "0.0.0.0"
+  port: 8084
+
+kafka:
+  brokers: "kafka:9092"
+  topic_chat_out: "tensor-talks-chat.events.out"
+  topic_chat_in: "tensor-talks-chat.events.in"
+  consumer_group: "tensor-talks-dialogue-aggregator-group"
+  topic_messages_full: "tensor-talks-messages.full.data"
+  topic_generated_phrases: "tensor-talks-generated.phrases"
+  agent_consumer_group: "tensor-talks-dialogue-aggregator-agent-group"
+  topic_session_completed: "tensor-talks-session.completed"
+
+model:
+  question_delay_seconds: 2
+
+session_manager:
+  base_url: "http://session-service:8083"
+  timeout_seconds: 5
+
+chat_crud:
+  base_url: "http://chat-crud-service:8087"
+  timeout_seconds: 5
+
+results_crud:
+  base_url: "http://results-crud-service:8088"
+  timeout_seconds: 5
+
+redis:
+  addr: "redis-sessions:6379"
+  password: ""
+  db: 0

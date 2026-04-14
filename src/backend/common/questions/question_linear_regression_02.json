@@ -1,0 +1,41 @@
+{
+  "id": "question_linear_regression_02",
+  "theory_id": "theory_linear_regression",
+  "linked_segments": [
+    "formula",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как интерпретируются коэффициенты линейной регрессии? Что происходит, если признаки не нормализованы?",
+    "expected_points": [
+      "коэффициент — изменение y на 1 единицу xi при фиксированных остальных",
+      "без нормализации коэффициенты несопоставимы",
+      "стандартизация делает важность признаков сравнимой"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_linear_regression",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_linear_regression",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "β_i: насколько изменится y при увеличении x_i на 1. Без нормализации коэффициенты отражают масштаб признаков. Стандартизация (μ=0,σ=1) делает их сопоставимыми.",
+    "covers": [
+      "интерпретация коэффициентов",
+      "масштаб признаков",
+      "стандартизация"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

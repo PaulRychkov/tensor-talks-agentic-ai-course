@@ -31,19 +31,20 @@ services:
       timeout: 3s
       retries: 5
 
-  user-store-service:
+  user-crud-service:
     build:
-      context: ./backend/user-store-service
+      context: ./backend/user-crud-service
+      network: host
     environment:
-      USER_STORE_DATABASE_HOST: postgres
-      USER_STORE_DATABASE_PORT: "5432"
-      USER_STORE_DATABASE_USER: postgres
-      USER_STORE_DATABASE_PASSWORD: postgres
-      USER_STORE_DATABASE_NAME: postgres
-      USER_STORE_DATABASE_SSL_MODE: disable
-      USER_STORE_DATABASE_SCHEMA: user_store
-      USER_STORE_SERVER_HOST: "0.0.0.0"
-      USER_STORE_SERVER_PORT: "8082"
+      USER_CRUD_DATABASE_HOST: postgres
+      USER_CRUD_DATABASE_PORT: "5432"
+      USER_CRUD_DATABASE_USER: postgres
+      USER_CRUD_DATABASE_PASSWORD: postgres
+      USER_CRUD_DATABASE_NAME: postgres
+      USER_CRUD_DATABASE_SSL_MODE: disable
+      USER_CRUD_DATABASE_SCHEMA: user_crud
+      USER_CRUD_SERVER_HOST: "0.0.0.0"
+      USER_CRUD_SERVER_PORT: "8082"
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,10 +54,11 @@ services:
   auth-service:
     build:
       context: ./backend/auth-service
+      network: host
     environment:
       AUTH_SERVER_HOST: "0.0.0.0"
       AUTH_SERVER_PORT: "8081"
-      AUTH_USER_STORE_BASE_URL: http://user-store-service:8082
+      AUTH_USER_STORE_BASE_URL: http://user-crud-service:8082
       AUTH_USER_STORE_TIMEOUT_SECONDS: "5"
       AUTH_JWT_SECRET: supersecretjwtkey
       AUTH_JWT_ACCESS_TOKEN_TTL: 15m
@@ -64,14 +66,48 @@ services:
       AUTH_JWT_ISSUER: tensor-talks-auth
       AUTH_JWT_AUDIENCE: tensor-talks-services
     depends_on:
-      user-store-service:
+      user-crud-service:
         condition: service_started
     ports:
       - "8081:8081"
 
+  admin-bff-service:
+    build:
+      context: ./backend/admin-bff-service
+      network: host
+    environment:
+      ADMIN_BFF_SERVER_HOST: "0.0.0.0"
+      ADMIN_BFF_SERVER_PORT: "8096"
+      ADMIN_BFF_JWT_SECRET: supersecretjwtkey
+      ADMIN_BFF_AUTH_SERVICE_BASE_URL: http://auth-service:8081
+      ADMIN_BFF_USER_CRUD_SERVICE_BASE_URL: http://user-crud-service:8082
+      ADMIN_BFF_KNOWLEDGE_PRODUCER_SERVICE_BASE_URL: http://knowledge-producer-service:8092
+      ADMIN_BFF_KNOWLEDGE_BASE_CRUD_SERVICE_BASE_URL: http://knowledge-base-crud-service:8090
+      ADMIN_BFF_QUESTIONS_CRUD_SERVICE_BASE_URL: http://questions-crud-service:8091
+      ADMIN_BFF_RESULTS_CRUD_SERVICE_BASE_URL: http://results-crud-service:8088
+      ADMIN_BFF_PROMETHEUS_URL: http://prometheus:9090
+      ADMIN_BFF_ADMIN_SECRET: "tt-admin-secret-2026"
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-crud-service:
+        condition: service_started
+    ports:
+      - "8096:8096"
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      network: host
+    ports:
+      - "8097:80"
+    depends_on:
+      - admin-bff-service
+
   session-crud-service:
     build:
       context: ./backend/session-crud-service
+      network: host
     environment:
       SESSION_CRUD_SERVER_HOST: "0.0.0.0"
       SESSION_CRUD_SERVER_PORT: "8085"
@@ -83,7 +119,7 @@ services:
       SESSION_CRUD_DATABASE_SSL_MODE: disable
       SESSION_CRUD_DATABASE_SCHEMA: session_crud
     depends_on:
-      postgres-sessions:
+      postgres:
         condition: service_healthy
     ports:
       - "8085:8085"
@@ -91,6 +127,7 @@ services:
   chat-crud-service:
     build:
       context: ./backend/chat-crud-service
+      network: host
     environment:
       CHAT_CRUD_SERVER_HOST: "0.0.0.0"
       CHAT_CRUD_SERVER_PORT: "8087"
@@ -102,7 +139,7 @@ services:
       CHAT_CRUD_DATABASE_SSL_MODE: disable
       CHAT_CRUD_DATABASE_SCHEMA: chat_crud
     depends_on:
-      postgres-chats:
+      postgres:
         condition: service_healthy
     ports:
       - "8087:8087"
@@ -110,6 +147,7 @@ services:
   results-crud-service:
     build:
       context: ./backend/results-crud-service
+      network: host
     environment:
       RESULTS_CRUD_SERVER_HOST: "0.0.0.0"
       RESULTS_CRUD_SERVER_PORT: "8088"
@@ -121,7 +159,7 @@ services:
       RESULTS_CRUD_DATABASE_SSL_MODE: disable
       RESULTS_CRUD_DATABASE_SCHEMA: results_crud
     depends_on:
-      postgres-results:
+      postgres:
         condition: service_healthy
     ports:
       - "8088:8088"
@@ -129,6 +167,7 @@ services:
   knowledge-base-crud-service:
     build:
       context: ./backend/knowledge-base-crud-service
+      network: host
     environment:
       KNOWLEDGE_BASE_CRUD_SERVER_HOST: "0.0.0.0"
       KNOWLEDGE_BASE_CRUD_SERVER_PORT: "8090"
@@ -140,7 +179,7 @@ services:
       KNOWLEDGE_BASE_CRUD_DATABASE_SSL_MODE: disable
       KNOWLEDGE_BASE_CRUD_DATABASE_SCHEMA: knowledge_base_crud
     depends_on:
-      postgres-knowledge:
+      postgres:
         condition: service_healthy
     ports:
       - "8090:8090"
@@ -148,6 +187,7 @@ services:
   questions-crud-service:
     build:
       context: ./backend/questions-crud-service
+      network: host
     environment:
       QUESTIONS_CRUD_SERVER_HOST: "0.0.0.0"
       QUESTIONS_CRUD_SERVER_PORT: "8091"
@@ -159,14 +199,16 @@ services:
       QUESTIONS_CRUD_DATABASE_SSL_MODE: disable
       QUESTIONS_CRUD_DATABASE_SCHEMA: questions_crud
     depends_on:
-      postgres-questions:
+      postgres:
         condition: service_healthy
     ports:
       - "8091:8091"
 
   knowledge-producer-service:
     build:
-      context: ./backend/knowledge-producer-service
+      context: .
+      dockerfile: backend/knowledge-producer-service/Dockerfile
+      network: host
     environment:
       KNOWLEDGE_BASE_CRUD_URL: http://knowledge-base-crud-service:8090
       QUESTIONS_CRUD_URL: http://questions-crud-service:8091
@@ -177,6 +219,12 @@ services:
       AUTO_LOAD_ON_STARTUP: "true"
       STARTUP_LOAD_RETRY_DELAY: "5"
       STARTUP_LOAD_MAX_RETRIES: "10"
+      # LLM (knowledge-producer: GPT-5.4 heavy, GPT-5.4-mini standard, GPT-5.4-nano simple)
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${KNOWLEDGE_PRODUCER_LLM_MODEL:-gpt-5.4}
+      LLM_MODEL_MINI: ${KNOWLEDGE_PRODUCER_LLM_MODEL_MINI:-gpt-5.4-mini}
+      LLM_MODEL_NANO: ${KNOWLEDGE_PRODUCER_LLM_MODEL_NANO:-gpt-5.4-nano}
     volumes:
       - ./backend/common/knowledge:/app/data/knowledge:ro
       - ./backend/common/questions:/app/data/questions:ro
@@ -191,14 +239,21 @@ services:
   interview-builder-service:
     build:
       context: ./backend/interview-builder-service
+      network: host
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_TOPIC_REQUEST: team10-interview.build.request
-      KAFKA_TOPIC_RESPONSE: team10-interview.build.response
-      KAFKA_CONSUMER_GROUP: interview-builder-service-group
+      KAFKA_TOPIC_REQUEST: tensor-talks-interview.build.request
+      KAFKA_TOPIC_RESPONSE: tensor-talks-interview.build.response
+      KAFKA_CONSUMER_GROUP: tensor-talks-interview-builder-service-group
       QUESTIONS_CRUD_URL: http://questions-crud-service:8091
       KNOWLEDGE_BASE_CRUD_URL: http://knowledge-base-crud-service:8090
+      RESULTS_CRUD_URL: http://results-crud-service:8088
       QUESTIONS_PER_INTERVIEW: "5"
+      # LLM (interview-builder: GPT-5.4-mini main, GPT-5.4-nano light)
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${INTERVIEW_BUILDER_LLM_MODEL:-gpt-5.4-mini}
+      LLM_MODEL_NANO: ${INTERVIEW_BUILDER_LLM_MODEL_NANO:-gpt-5.4-nano}
       SERVER_HOST: "0.0.0.0"
       SERVER_PORT: "8089"
     depends_on:
@@ -214,6 +269,7 @@ services:
   session-service:
     build:
       context: ./backend/session-service
+      network: host
     environment:
       SESSION_SERVER_HOST: "0.0.0.0"
       SESSION_SERVER_PORT: "8083"
@@ -224,9 +280,9 @@ services:
       SESSION_SESSION_CRUD_BASE_URL: http://session-crud-service:8085
       SESSION_SESSION_CRUD_TIMEOUT_SECONDS: "5"
       SESSION_KAFKA_BROKERS: kafka:9092
-      SESSION_KAFKA_TOPIC_REQUEST: team10-interview.build.request
-      SESSION_KAFKA_TOPIC_RESPONSE: team10-interview.build.response
-      SESSION_KAFKA_CONSUMER_GROUP: session-manager-service-group
+      SESSION_KAFKA_TOPIC_REQUEST: tensor-talks-interview.build.request
+      SESSION_KAFKA_TOPIC_RESPONSE: tensor-talks-interview.build.response
+      SESSION_KAFKA_CONSUMER_GROUP: tensor-talks-session-manager-service-group
       SESSION_SESSION_MANAGER_MAX_ACTIVE_SESSIONS: "100"
       SESSION_SESSION_MANAGER_PROGRAM_TIMEOUT_SECONDS: "30"
     depends_on:
@@ -242,6 +298,7 @@ services:
   bff-service:
     build:
       context: ./backend/bff-service
+      network: host
     environment:
       BFF_SERVER_HOST: "0.0.0.0"
       BFF_SERVER_PORT: "8080"
@@ -256,9 +313,12 @@ services:
       BFF_RESULTS_CRUD_BASE_URL: http://results-crud-service:8088
       BFF_RESULTS_CRUD_TIMEOUT_SECONDS: "5"
       BFF_KAFKA_BROKERS: kafka:9092
-      BFF_KAFKA_TOPIC_CHAT_OUT: team10-chat.events.out
-      BFF_KAFKA_TOPIC_CHAT_IN: team10-chat.events.in
-      BFF_KAFKA_CONSUMER_GROUP: bff-service-group
+      BFF_KAFKA_TOPIC_CHAT_OUT: tensor-talks-chat.events.out
+      BFF_KAFKA_TOPIC_CHAT_IN: tensor-talks-chat.events.in
+      BFF_KAFKA_CONSUMER_GROUP: tensor-talks-bff-service-group
+      BFF_REDIS_ADDR: "redis:6379"
+      BFF_REDIS_PASSWORD: ""
+      BFF_REDIS_DB: "0"
       BFF_CORS_ALLOW_ORIGINS: "*"
       BFF_CORS_ALLOW_HEADERS: Authorization,Content-Type
     depends_on:
@@ -280,6 +340,7 @@ services:
   frontend:
     build:
       context: ./frontend
+      network: host
     environment:
       VITE_API_BASE_URL: /api
     depends_on:
@@ -301,7 +362,7 @@ services:
     depends_on:
       - auth-service
       - bff-service
-      - user-store-service
+      - user-crud-service
       - session-service
       - session-crud-service
       - chat-crud-service
@@ -309,7 +370,11 @@ services:
       - knowledge-base-crud-service
       - questions-crud-service
       - interview-builder-service
-      - mock-model-service
+      - dialogue-aggregator
+      - interviewer-agent-service
+      - analyst-agent-service
+      - knowledge-producer-service
+      - admin-bff-service
 
   grafana:
     image: grafana/grafana:latest
@@ -378,23 +443,28 @@ services:
       - "29092:29092"
       - "9092:9092"
 
-  mock-model-service:
+  dialogue-aggregator:
     build:
-      context: ./backend/mock-model-service
+      context: ./backend/dialogue-aggregator
+      network: host
     environment:
-      MOCK_MODEL_SERVER_HOST: "0.0.0.0"
-      MOCK_MODEL_SERVER_PORT: "8084"
-      MOCK_MODEL_KAFKA_BROKERS: kafka:9092
-      MOCK_MODEL_KAFKA_TOPIC_CHAT_OUT: team10-chat.events.out
-      MOCK_MODEL_KAFKA_TOPIC_CHAT_IN: team10-chat.events.in
-      MOCK_MODEL_KAFKA_CONSUMER_GROUP: mock-model-service-group
-      MOCK_MODEL_MODEL_QUESTION_DELAY_SECONDS: "2"
-      MOCK_MODEL_SESSION_MANAGER_BASE_URL: http://session-service:8083
-      MOCK_MODEL_SESSION_MANAGER_TIMEOUT_SECONDS: "5"
-      MOCK_MODEL_CHAT_CRUD_BASE_URL: http://chat-crud-service:8087
-      MOCK_MODEL_CHAT_CRUD_TIMEOUT_SECONDS: "5"
-      MOCK_MODEL_RESULTS_CRUD_BASE_URL: http://results-crud-service:8088
-      MOCK_MODEL_RESULTS_CRUD_TIMEOUT_SECONDS: "5"
+      DIALOGUE_AGGREGATOR_SERVER_HOST: "0.0.0.0"
+      DIALOGUE_AGGREGATOR_SERVER_PORT: "8084"
+      DIALOGUE_AGGREGATOR_KAFKA_BROKERS: kafka:9092
+      DIALOGUE_AGGREGATOR_KAFKA_TOPIC_CHAT_OUT: tensor-talks-chat.events.out
+      DIALOGUE_AGGREGATOR_KAFKA_TOPIC_CHAT_IN: tensor-talks-chat.events.in
+      DIALOGUE_AGGREGATOR_KAFKA_CONSUMER_GROUP: tensor-talks-dialogue-aggregator-group
+      DIALOGUE_AGGREGATOR_KAFKA_TOPIC_MESSAGES_FULL: tensor-talks-messages.full.data
+      DIALOGUE_AGGREGATOR_KAFKA_TOPIC_GENERATED_PHRASES: tensor-talks-generated.phrases
+      DIALOGUE_AGGREGATOR_KAFKA_AGENT_CONSUMER_GROUP: tensor-talks-dialogue-aggregator-agent-group
+      DIALOGUE_AGGREGATOR_KAFKA_TOPIC_SESSION_COMPLETED: tensor-talks-session.completed
+      DIALOGUE_AGGREGATOR_MODEL_QUESTION_DELAY_SECONDS: "2"
+      DIALOGUE_AGGREGATOR_SESSION_MANAGER_BASE_URL: http://session-service:8083
+      DIALOGUE_AGGREGATOR_SESSION_MANAGER_TIMEOUT_SECONDS: "5"
+      DIALOGUE_AGGREGATOR_CHAT_CRUD_BASE_URL: http://chat-crud-service:8087
+      DIALOGUE_AGGREGATOR_CHAT_CRUD_TIMEOUT_SECONDS: "5"
+      DIALOGUE_AGGREGATOR_RESULTS_CRUD_BASE_URL: http://results-crud-service:8088
+      DIALOGUE_AGGREGATOR_RESULTS_CRUD_TIMEOUT_SECONDS: "5"
     depends_on:
       session-service:
         condition: service_started
@@ -407,83 +477,34 @@ services:
     ports:
       - "8084:8084"
 
-  dialogue-aggregator:
+  interviewer-agent-service:
     build:
-      context: ./backend/dialogue-aggregator
-    environment:
-      # Kafka
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_CONSUMER_GROUP_PUBLICATION: dialogue-aggregator-publication-group
-      KAFKA_CONSUMER_GROUP_MESSAGES: dialogue-aggregator-messages-group
-      KAFKA_CONSUMER_GROUP_GENERATED: dialogue-aggregator-generated-group
-      KAFKA_TOPIC_PUBLICATION: publication.events
-      KAFKA_TOPIC_MESSAGES: messages.events
-      KAFKA_TOPIC_GENERATED: generated.phrases
-      KAFKA_TOPIC_FULL_DATA: messages.full.data
-      KAFKA_TOPIC_HISTORY: history.full.events
-      KAFKA_TOPIC_DLQ: dialogue-aggregator.dlq
-      KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
-      KAFKA_CONSUMER_ENABLE_AUTO_COMMIT: "false"
-      KAFKA_CONSUMER_MAX_POLL_RECORDS: 100
-      KAFKA_PRODUCER_ACKS: all
-      KAFKA_PRODUCER_RETRIES: 3
-      KAFKA_PRODUCER_COMPRESSION_TYPE: snappy
-      # Redis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_DB: 0
-      REDIS_PASSWORD: ""
-      REDIS_MAX_CONNECTIONS: 50
-      REDIS_DIALOGUE_TTL_SECONDS: 86400
-      REDIS_MESSAGES_CACHE_SIZE: 50
-      # Service
-      SERVICE_NAME: dialogue-aggregator
-      SERVICE_VERSION: 1.0.0
-      LOG_LEVEL: INFO
-      LOG_FORMAT: json
-      MAX_MESSAGES_CACHE_SIZE: 50
-      # Metrics
-      METRICS_PORT: 9091
-      ENABLE_PROMETHEUS: "true"
-    depends_on:
-      kafka:
-        condition: service_started
-      redis:
-        condition: service_healthy
-    ports:
-      - "8086:8085"  # FastAPI app
-      - "9091:9091"  # Metrics
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  agent-service:
-    build:
-      context: ./backend/agent-service
+      context: ./backend/interviewer-agent-service
+      network: host
     environment:
       # Service
-      AGENT_SERVICE_NAME: agent-service
+      AGENT_SERVICE_NAME: interviewer-agent-service
       AGENT_SERVICE_VERSION: 1.0.0
       LOG_LEVEL: INFO
       LOG_FORMAT: json
       # Kafka
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_TOPIC_MESSAGES_FULL: messages.full.data
-      KAFKA_TOPIC_GENERATED: generated.phrases
-      KAFKA_CONSUMER_GROUP: agent-service-group
+      KAFKA_TOPIC_MESSAGES_FULL: tensor-talks-messages.full.data
+      KAFKA_TOPIC_GENERATED: tensor-talks-generated.phrases
+      KAFKA_TOPIC_SESSION_COMPLETED: tensor-talks-session.completed
+      KAFKA_CONSUMER_GROUP: tensor-talks-agent-service-group
       KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
       KAFKA_CONSUMER_ENABLE_AUTO_COMMIT: "false"
       KAFKA_CONSUMER_MAX_POLL_RECORDS: 100
       KAFKA_PRODUCER_ACKS: all
       KAFKA_PRODUCER_RETRIES: 3
       KAFKA_PRODUCER_COMPRESSION_TYPE: snappy
-      # LLM
+      # LLM (interviewer: GPT-5.4-mini main, GPT-5.4-nano summarization)
       LLM_PROVIDER: openai
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4.1-mini}
+      LLM_MODEL: ${INTERVIEWER_LLM_MODEL:-gpt-5.4-mini}
+      LLM_MODEL_NANO: ${INTERVIEWER_LLM_MODEL_NANO:-gpt-5.4-nano}
       LLM_TEMPERATURE: 0.7
       LLM_MAX_TOKENS: 2000
       LLM_TIMEOUT: 60
@@ -523,6 +544,47 @@ services:
       - "9192:9092"  # Metrics (avoid kafka host port)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8093/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  analyst-agent-service:
+    build:
+      context: ./backend/analyst-agent-service
+      network: host
+    environment:
+      SERVICE_NAME: analyst-agent-service
+      SERVICE_VERSION: 1.0.0
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_SESSION_COMPLETED: tensor-talks-session.completed
+      KAFKA_CONSUMER_GROUP: tensor-talks-analyst-agent-service-group
+      # LLM (analyst: GPT-5.4 heavy, GPT-5.4-mini standard, GPT-5.4-nano auxiliary)
+      LLM_PROVIDER: openai
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${ANALYST_LLM_MODEL:-gpt-5.4}
+      LLM_MODEL_MINI: ${ANALYST_LLM_MODEL_MINI:-gpt-5.4-mini}
+      LLM_MODEL_NANO: ${ANALYST_LLM_MODEL_NANO:-gpt-5.4-nano}
+      LLM_TEMPERATURE: 0.3
+      LLM_MAX_TOKENS: 4000
+      LLM_TIMEOUT: 120
+      RESULTS_CRUD_SERVICE_URL: http://results-crud-service:8088
+      SESSION_SERVICE_URL: http://session-service:8083
+      CHAT_CRUD_SERVICE_URL: http://chat-crud-service:8087
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8094"
+      METRICS_PORT: "9094"
+    depends_on:
+      kafka:
+        condition: service_started
+      results-crud-service:
+        condition: service_started
+    ports:
+      - "8094:8094"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8094/health"]
       interval: 10s
       timeout: 5s
       retries: 3

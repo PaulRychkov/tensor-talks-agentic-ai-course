@@ -106,7 +106,7 @@ Namespace: tensor-talks
 │                    PostgreSQL Cluster                        │
 │  StatefulSet: 1 под (external в production)                 │
 │  Схемы:                                                      │
-│  - user_store (auth-service, user-store-service)           │
+│  - user_store (auth-service, user-crud-service)            │
 │  - session_crud (session-crud-service)                     │
 │  - chat_crud (chat-crud-service)                           │
 │  - results_crud (results-crud-service)                     │
@@ -118,10 +118,21 @@ Namespace: tensor-talks
 │                      Kafka Cluster                           │
 │  Strimzi Operator (external в production)                  │
 │  Топики:                                                     │
-│  - tensor-talks-chat.events.out (3 partition, RF=1)        │
-│  - tensor-talks-chat.events.in (3 partition, RF=1)         │
-│  - tensor-talks-interview.build.request (3 partition)      │
-│  - tensor-talks-interview.build.response (3 partition)     │
+│  - tensor-talks-chat.events.out (BFF → dialogue-aggregator)│
+│  - tensor-talks-chat.events.in  (dialogue-aggregator → BFF)│
+│  - tensor-talks-interview.build.request                     │
+│      (session-service → interview-builder)                  │
+│  - tensor-talks-interview.build.response                    │
+│      (interview-builder → session-service)                  │
+│  - messages.full.data                                       │
+│      (dialogue-aggregator → interviewer-agent-service)      │
+│  - generated.phrases                                        │
+│      (interviewer-agent-service → dialogue-aggregator)      │
+│  - session.completed                                        │
+│      (dialogue-aggregator → analyst-agent-service)          │
+│  Замечание: 4 первых топика декларированы в                 │
+│  helm/templates/kafka/kafka-topics.yaml; последние 3 НЕ     │
+│  декларированы (см. план §10.12).                           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -135,20 +146,21 @@ Namespace: tensor-talks
 |--------|------|---------|----------|
 | `bff-service` | 8080 | 2 | Backend-for-frontend, API шлюз |
 | `auth-service` | 8081 | 2 | Аутентификация, JWT |
-| `user-store-service` | 8082 | 1 | CRUD пользователей |
+| `user-crud-service` | 8082 | 1 | CRUD пользователей |
 | `session-service` | 8083 | 2 | Управление сессиями интервью |
-| `session-crud-service` | 8087 | 1 | Хранение сессий в PostgreSQL |
-| `chat-crud-service` | 8088 | 1 | Хранение чатов в PostgreSQL |
-| `results-crud-service` | 8089 | 1 | Хранение результатов в PostgreSQL |
-| `knowledge-base-crud-service` | 8085 | 1 | CRUD базы знаний |
-| `questions-crud-service` | 8086 | 1 | CRUD базы вопросов |
+| `dialogue-aggregator` | 8084 | 1 | Оркестратор диалогов (бывший mock-model-service) |
+| `session-crud-service` | 8085 | 1 | Хранение сессий в PostgreSQL |
+| `chat-crud-service` | 8087 | 1 | Хранение чатов в PostgreSQL |
+| `results-crud-service` | 8088 | 1 | Хранение результатов в PostgreSQL |
+| `knowledge-base-crud-service` | 8090 | 1 | CRUD базы знаний |
+| `questions-crud-service` | 8091 | 1 | CRUD базы вопросов |
 
 ### AI сервисы (Python)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │              Interview Builder Service                       │
-│  (Python FastAPI, :8084)                                    │
+│  (Python FastAPI, :8089)                                    │
 │  Deployment: 1 под                                          │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │ Логика:                                              │   │
@@ -175,6 +187,22 @@ Namespace: tensor-talks
 │  │ - web_search (external)                             │   │
 │  │ - summarize_dialogue                                │   │
 │  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                  Analyst Agent Service                       │
+│  (Python + LangGraph, :8094)                                │
+│  Deployment: 1 под                                          │
+│  Подписан на Kafka session.completed, формирует отчёт,      │
+│  пишет evaluations/reports/presets в results-crud-service.  │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│              Knowledge Producer Service                      │
+│  (Python, :8092)                                            │
+│  Deployment: 1 под                                          │
+│  AS-IS: загрузчик JSON-материалов в knowledge-base-crud /   │
+│  questions-crud (см. план §3, цель — LangGraph + HITL).     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -225,7 +253,7 @@ Namespace: tensor-talks
 |--------|-----------|------|-------------|
 | auth-service | backend/auth-service/Dockerfile | backend/auth-service | - |
 | bff-service | backend/bff-service/Dockerfile | backend/bff-service | - |
-| user-store-service | backend/user-store-service/Dockerfile | backend/user-store-service | - |
+| user-crud-service | backend/user-crud-service/Dockerfile | backend/user-crud-service | - |
 | session-service | backend/session-service/Dockerfile | backend/session-service | - |
 | session-crud-service | backend/session-crud-service/Dockerfile | backend/session-crud-service | - |
 | chat-crud-service | backend/chat-crud-service/Dockerfile | backend/chat-crud-service | - |
@@ -234,7 +262,7 @@ Namespace: tensor-talks
 | questions-crud-service | backend/questions-crud-service/Dockerfile | backend/questions-crud-service | - |
 | interview-builder-service | backend/interview-builder-service/Dockerfile | backend/interview-builder-service | - |
 | knowledge-producer-service | backend/knowledge-producer-service/Dockerfile | backend/knowledge-producer-service | - |
-| agent-service | backend/agent-service/Dockerfile | backend/agent-service | - |
+| interviewer-agent-service | backend/interviewer-agent-service/Dockerfile | backend/interviewer-agent-service | - |
 | frontend | frontend/Dockerfile | frontend | - |
 
 ### Триггеры и события
@@ -513,7 +541,7 @@ spec:
 | `tensor-talks/jwt` | secret, issuer, audience | JWT секреты |
 | `tensor-talks/grafana` | admin-user, admin-password | Grafana credentials |
 | `tensor-talks/github` | username, token | GitHub токен для ArgoCD |
-| `tensor-talks/llm` | api-key | LLM API key для agent-service |
+| `tensor-talks/llm` | api-key | LLM API key для interviewer-agent-service |
 
 **Добавление секретов:**
 ```bash
@@ -703,6 +731,40 @@ kubectl delete pvc -n tensor-talks -l app.kubernetes.io/instance=tensor-talks
 
 # Переустановка
 helm install tensor-talks ./helm --namespace tensor-talks
+```
+
+---
+
+## Публикация в интернет через Cloudflare Tunnel
+
+Проект публикуется через Cloudflare Tunnel (бесплатный, без необходимости белого IP).
+
+### Текущая конфигурация
+
+**Конфиг:** `tobedel/cloudflared-config.yml`  
+**Туннель:** `tensor-talks-new`  
+**Домен:** `tensor-talks.ru` → `http://127.0.0.1:8080` (kubectl port-forward к Kubernetes ingress)
+
+### Запуск/остановка
+
+```powershell
+# Cloudflared запущен как Windows-сервис
+# Статус:
+Get-Service cloudflared
+
+# Запустить:
+Start-Service cloudflared
+
+# Остановить:
+Stop-Service cloudflared
+```
+
+### Установка (если сервис не установлен)
+
+```powershell
+# Установка через скрипт (см. tobedel/install-cloudflared-service.ps1)
+# или вручную:
+cloudflared service install
 ```
 
 ---

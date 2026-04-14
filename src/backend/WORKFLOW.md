@@ -69,8 +69,10 @@
 │  Python Services                                            │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │ interview-builder-service  │ Генерация программы    │   │
-│  │ knowledge-producer-service │ Заполнение баз         │   │
-│  │ agent-service (LangGraph)  │ AI-интервьюер          │   │
+│  │ knowledge-producer-service │ Заполнение баз (HITL)  │   │
+│  │ interviewer-agent-service  │ AI-интервьюер          │   │
+│  │ analyst-agent-service      │ Финальный отчёт        │   │
+│  │ dialogue-aggregator (Go)   │ Оркестратор диалога    │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -88,10 +90,10 @@
 └────┬────┘      └────┬────┘      └────┬────┘      └────┬────┘
      │                │                │                │
      │ POST /api/     │                │                │
-     │ interview/start│                │                │
+     │ chat/start     │                │                │
      │───────────────>│                │                │
      │                │ POST /api/     │                │
-     │                │ interview/start│                │
+     │                │ chat/start     │                │
      │                │───────────────>│                │
      │                │                │ POST /sessions│
      │                │                │───────────────>│
@@ -118,13 +120,14 @@
 
 2. **Создание сессии в БД**
    ```json
-   POST http://session-crud-service:8087/sessions
+   POST http://session-crud-service:8085/sessions
    {
      "user_id": "uuid",
      "params": {
        "topics": ["ml", "nlp"],
        "level": "middle",
-       "type": "interview"
+       "type": "ml",
+       "mode": "interview"
      }
    }
    
@@ -151,7 +154,8 @@
        "params": {
          "topics": ["ml", "nlp"],
          "level": "middle",
-         "type": "interview"
+         "type": "ml",
+         "mode": "interview"
        }
      }
    }
@@ -193,7 +197,7 @@
 
 1. **Поиск вопросов по фильтрам**
    ```
-   GET http://questions-crud-service:8086/questions/search
+   GET http://questions-crud-service:8091/questions/search
      ?complexity=2
      &theory_id=ml_basics
      &question_type=conceptual
@@ -202,7 +206,7 @@
 
 2. **Получение знаний для вопросов**
    ```
-   GET http://knowledge-base-crud-service:8085/knowledge/{theory_id}
+   GET http://knowledge-base-crud-service:8090/knowledge/{theory_id}
    ```
 
 3. **Сборка программы**
@@ -324,7 +328,7 @@ app = workflow.compile()
 
 ## Форматы событий
 
-### Kafka: chat.events.out
+### Kafka: tensor-talks-chat.events.out
 
 **Событие: chat.started**
 ```json
@@ -358,7 +362,7 @@ app = workflow.compile()
 }
 ```
 
-### Kafka: chat.events.in
+### Kafka: tensor-talks-chat.events.in
 
 **Событие: assistant.message**
 ```json
@@ -366,7 +370,7 @@ app = workflow.compile()
   "event_id": "uuid",
   "event_type": "assistant.message",
   "timestamp": "2026-03-31T10:05:05Z",
-  "service": "agent-service",
+  "service": "interviewer-agent-service",
   "version": "1.0.0",
   "payload": {
     "session_id": "uuid",
@@ -378,27 +382,55 @@ app = workflow.compile()
 }
 ```
 
-**Событие: interview.completed**
+**Событие: chat.completed** (BFF получает от dialogue-aggregator, score=0 placeholder, финальные данные приходят из results-crud после обработки analyst-agent)
 ```json
 {
   "event_id": "uuid",
-  "event_type": "interview.completed",
+  "event_type": "chat.completed",
   "timestamp": "2026-03-31T10:30:00Z",
-  "service": "agent-service",
+  "service": "dialogue-aggregator",
   "version": "1.0.0",
   "payload": {
     "session_id": "uuid",
-    "score": 75,
-    "feedback": "...",
-    "evaluations": [...]
+    "user_id": "uuid",
+    "results": {
+      "score": 0,
+      "feedback": "Оценка формируется аналитиком.",
+      "recommendations": []
+    },
+    "completed_at": "2026-03-31T10:30:00Z"
   }
 }
 ```
+
+### Kafka: tensor-talks-session.completed (dialogue-aggregator → analyst-agent-service)
+
+```json
+{
+  "event_id": "uuid",
+  "event_type": "session.completed",
+  "service": "dialogue-aggregator",
+  "payload": {
+    "session_id": "uuid",
+    "session_kind": "interview",
+    "user_id": "uuid",
+    "chat_id": "uuid",
+    "topics": ["ml", "nlp"],
+    "level": "middle",
+    "terminated_early": false,
+    "answered_questions": 8,
+    "total_questions": 10,
+    "completed_at": "2026-03-31T10:30:00Z"
+  }
+}
+```
+
+`analyst-agent-service` подписан на этот топик; по `session_kind` он либо обновляет `results.report_json` + создаёт `presets` (interview), либо ставит финальную оценку (training), либо обновляет `user_topic_progress` (study).
 
 ---
 
 ## Ссылки
 
 - [KAFKA.md](./KAFKA.md) - Детальное описание Kafka топиков
-- [../DEVOPS.md](../DEVOPS.md) - DevOps архитектура
+- [../DEVOPS_DEPLOY.md](../DEVOPS_DEPLOY.md) - DevOps архитектура
 - [../README.md](../README.md) - Общая архитектура системы

@@ -60,27 +60,38 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 		brokers = []string{"kafka:9092"} // fallback
 	}
 
-	kafkaProducer, err := kafka.NewProducer(
-		brokers,
-		cfg.Kafka.TopicChatOut,
-		"bff-service",
-		"1.0.0",
-		logger,
-	)
+	var kafkaProducer *kafka.Producer
+	for attempt := 1; attempt <= 10; attempt++ {
+		kafkaProducer, err = kafka.NewProducer(brokers, cfg.Kafka.TopicChatOut, "bff-service", "1.0.0", logger)
+		if err == nil {
+			break
+		}
+		logger.Warn("Kafka producer not ready, retrying", zap.Int("attempt", attempt), zap.Error(err))
+		time.Sleep(time.Duration(attempt*3) * time.Second)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("init kafka producer: %w", err)
 	}
 
-	// Инициализация Kafka consumer
-	kafkaConsumer, err := kafka.NewConsumer(
-		brokers,
-		cfg.Kafka.TopicChatIn,
-		cfg.Kafka.ConsumerGroup,
-		logger,
-	)
+	var kafkaConsumer *kafka.Consumer
+	for attempt := 1; attempt <= 10; attempt++ {
+		kafkaConsumer, err = kafka.NewConsumer(brokers, cfg.Kafka.TopicChatIn, cfg.Kafka.ConsumerGroup, logger)
+		if err == nil {
+			break
+		}
+		logger.Warn("Kafka consumer not ready, retrying", zap.Int("attempt", attempt), zap.Error(err))
+		time.Sleep(time.Duration(attempt*3) * time.Second)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("init kafka consumer: %w", err)
 	}
+
+	// Redis step client — читает текущий шаг агента для polling endpoint
+	redisAddr := cfg.Redis.Addr
+	if redisAddr == "" {
+		redisAddr = "redis:6379"
+	}
+	redisStepClient := client.NewRedisStepClient(redisAddr, cfg.Redis.Password, cfg.Redis.DB, logger)
 
 	authService := service.NewAuthService(authClient)
 	chatService := service.NewChatService(
@@ -89,13 +100,14 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 		chatCRUDClient,
 		resultsCRUDClient,
 		kafkaProducer,
+		redisStepClient,
 		logger,
 	)
 
 	// Устанавливаем обработчик событий для consumer
 	kafkaConsumer.SetEventHandler(chatService)
 
-	httpHandler := handler.New(authService, chatService, logger)
+	httpHandler := handler.NewWithUserCrud(authService, chatService, cfg.UserCRUD.BaseURL, logger)
 
 	engine := gin.Default()
 
@@ -109,9 +121,11 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 	engine.Use(middleware.NewCORS(cfg.CORS))
 
 	// Health check
-	engine.GET("/healthz", func(c *gin.Context) {
+	healthHandler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	}
+	engine.GET("/healthz", healthHandler)
+	engine.GET("/health", healthHandler)
 
 	// Metrics endpoint
 	engine.GET("/metrics", metricsHandler())

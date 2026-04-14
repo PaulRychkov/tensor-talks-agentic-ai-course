@@ -1,0 +1,43 @@
+{
+  "id": "question_rag_02",
+  "theory_id": "theory_rag",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Опишите полный pipeline RAG-системы. Какова роль векторной базы данных?",
+    "expected_points": [
+      "indexing: документы → chunks → embeddings → vector store",
+      "retrieval: query embedding → kNN → топ-k chunks",
+      "generation: LLM(query + retrieved) → ответ",
+      "vector stores: Chroma, Pinecone, Qdrant"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_rag",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_rag",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Pipeline: 1) Indexing — chunks→embeddings→vector store; 2) Retrieval — ANN поиск топ-k; 3) Augmentation — concat query+context; 4) Generation — LLM с контекстом.",
+    "covers": [
+      "indexing",
+      "retrieval",
+      "ANN",
+      "generation"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

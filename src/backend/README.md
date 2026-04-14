@@ -6,7 +6,7 @@
 
 ### Микросервисы
 
-1. **user-store-service**
+1. **user-crud-service**
    - Единственный сервис, имеющий прямой доступ к базе с логинами/паролями.
    - Предоставляет CRUD HTTP API над таблицей пользователей (создать/прочитать/обновить/удалить).
    - Реализует отладочный эндпоинт `GET /debug/users` с фильтрами по логину и поддержкой `limit/offset`.
@@ -14,8 +14,8 @@
 
 2. **auth-service**
    - Отвечает за регистрацию, логин и работу с JWT (access/refresh токены).
-   - Никогда не ходит в базу напрямую — только через `user-store-service` по HTTP.
-   - Хеширует пароли с помощью **bcrypt** до записи в `user-store-service`.
+   - Никогда не ходит в базу напрямую — только через `user-crud-service` по HTTP.
+   - Хеширует пароли с помощью **bcrypt** до записи в `user-crud-service`.
    - Выдаёт JWT с GUID пользователя, issuer/audience и ограниченным TTL.
    - Управляет активными логин-сессиями через Redis (хранение сессий с TTL, возможность отзыва токенов через logout).
    - При валидации токенов проверяет наличие активной сессии в Redis.
@@ -39,18 +39,18 @@
 
 6. **results-crud-service**
    - CRUD микросервис для работы с результатами интервью в PostgreSQL.
-   - Хранит результаты интервью (score, feedback).
-   - Предоставляет API для сохранения и получения результатов.
+   - Хранит финальный отчёт (`report_json`), placeholder-результат (score/feedback), `evaluations` по вопросам, `session_kind`, `result_format_version`.
+   - Дополнительно содержит таблицы `presets` (рекомендации после interview-сессии) и `user_topic_progress` (прогресс по темам после study-сессии).
+   - Предоставляет API для сохранения, получения результатов и работы с пресетами/прогрессом тем.
 
 7. **interview-builder-service**
-   - Python FastAPI сервис для динамического создания программы интервью.
+   - Python FastAPI сервис для динамического создания программы интервью / training / study.
    - Слушает Kafka топик `interview.build.request`.
-   - Получает параметры интервью (topics, level, type).
-   - Запрашивает вопросы из questions-crud-service по фильтрам.
-   - Запрашивает знания из knowledge-base-crud-service для каждого вопроса.
-   - Собирает программу интервью (5 вопросов по умолчанию).
-   - Упорядочивает вопросы по логике (связанные вопросы рядом).
-   - Отправляет программу в Kafka топик `interview.build.response`.
+   - Получает параметры (`topics`, `level`, `type`, `mode` ∈ `interview` | `training` | `study`).
+   - Запрашивает вопросы из questions-crud-service и теорию из knowledge-base-crud-service.
+   - Применяет пайплайн `filter → dedup → coverage → balance → mode-profile → sort → enrich`.
+   - Возвращает программу + `program_meta` (`validation_passed`, `coverage`, `fallback_reason`, `generator_version`).
+   - Отправляет результат в Kafka топик `interview.build.response`.
 
 8. **knowledge-base-crud-service**
    - Go микросервис для работы с базой знаний в PostgreSQL.
@@ -65,27 +65,37 @@
    - Хранение структурированных вопросов в JSONB формате.
 
 10. **knowledge-producer-service**
-    - Python FastAPI сервис для заполнения баз знаний и вопросов.
-    - Автоматически загружает данные из JSON файлов при старте.
-    - Проверяет на дубликаты по ID.
-    - Проверяет версии для обновления.
-    - Сохраняет в knowledge-base-crud-service и questions-crud-service.
+    - Python FastAPI сервис для наполнения баз знаний и вопросов с HITL workflow `draft → review → publish`.
+    - Поддерживает ингест из markdown / JSON / PDF / URL и web-search (arxiv, Semantic Scholar).
+    - Дедупликация черновиков по similarity (`SequenceMatcher`).
+    - Только опубликованные сущности уходят в `knowledge-base-crud-service` / `questions-crud-service`.
 
-11. **mock-model-service** (будущий marking-service)
-   - Заглушка AI-модели для обработки чатов.
-   - Читает события из Kafka (`chat.events.out`) и отправляет ответы в Kafka (`chat.events.in`).
-   - Получает программу интервью от `session-service` по REST API.
-   - Сохраняет все сообщения (system/user) в `chat-crud-service`.
-   - Сохраняет результаты интервью в `results-crud-service`.
-   - Закрывает сессии через `session-service` при завершении интервью.
+11. **dialogue-aggregator** (бывший `mock-model-service`)
+   - Go-оркестратор диалога: читает `chat.events.out`, общается с `interviewer-agent-service` через AgentBridge (`messages.full.data` / `generated.phrases`), отправляет ответы в `chat.events.in`.
+   - Сам решений не принимает — все `next` / `hint` / `clarify` / `skip` / `complete` приходят от `interviewer-agent-service`.
+   - Получает программу + метаданные сессии (`session_mode`, `topics`, `level`) от `session-service` и хранит их в `SessionManager`.
+   - Сохраняет все сообщения в `chat-crud-service`, placeholder-результат в `results-crud-service`, закрывает сессию в `session-service`.
+   - Публикует `session.completed` (с реальными `session_kind`/`topics`/`level`) для `analyst-agent-service`.
 
-12. **bff-service**
+12. **interviewer-agent-service**
+   - Python LangGraph-сервис, ведущий интервью.
+   - Принимает `messages.full.data` от `dialogue-aggregator`, прогоняет граф (классификация ответа → оценка → решение) и возвращает реплику в `generated.phrases`.
+   - Хранит `question_evaluations` и состояние диалога в Redis, общается с `session-crud` / `chat-crud` для контекста.
+
+13. **analyst-agent-service**
+   - Python LangGraph-сервис для генерации финального отчёта.
+   - Подписан на `session.completed`, по `session_kind` уходит в одну из веток:
+     - `interview` → формирует `report_json` + рекомендации, обновляет `results` и создаёт запись в `presets`.
+     - `training` → обновляет `results` финальной оценкой по training-сценарию.
+     - `study` → обновляет `user_topic_progress` для пройденных тем.
+
+14. **bff-service**
    - **Backend-for-frontend**, предоставляющий фронтенду стабильное REST API.
    - Проксирует запросы аутентификации в `auth-service`, скрывая внутреннюю топологию сервисов.
    - Управляет чатами: создаёт сессии через `session-service`, отправляет события в Kafka.
    - Читает события от модели из Kafka и обрабатывает их.
    - Проверяет JWT токены через middleware для защищенных endpoints (`/api/chat/*`, `/api/interviews/*`).
-   - Конфигурирует CORS и не имеет доступа ни к базе данных, ни к `user-store-service` напрямую.
+   - Конфигурирует CORS и не имеет доступа ни к базе данных, ни к `user-crud-service` напрямую.
 
 ### Базы данных
 
@@ -133,16 +143,27 @@
 | created_at| TIMESTAMP | Время создания                                               |
 | updated_at| TIMESTAMP | Время обновления                                             |
 
-**results_crud_db** — хранит результаты интервью:
+**results_crud_db** — хранит результаты интервью / training / study:
 
-| Колонка   | Тип        | Описание                                                     |
-|-----------|-----------|--------------------------------------------------------------|
-| id        | SERIAL PK | Идентификатор результата                                     |
-| session_id| UUID      | Идентификатор сессии (unique indexed)                        |
-| score     | INTEGER   | Оценка (0-100)                                               |
-| feedback  | TEXT      | Текстовая обратная связь                                     |
-| created_at| TIMESTAMP | Время создания                                               |
-| updated_at| TIMESTAMP | Время обновления                                             |
+Таблица `results`:
+| Колонка               | Тип        | Описание                                                     |
+|-----------------------|-----------|--------------------------------------------------------------|
+| id                    | SERIAL PK | Идентификатор результата                                     |
+| session_id            | UUID      | Идентификатор сессии (unique indexed)                        |
+| user_id               | UUID      | Идентификатор пользователя (indexed)                         |
+| session_kind          | VARCHAR   | `interview` / `training` / `study`                           |
+| score                 | INTEGER   | Оценка (0-100), 0 для placeholder до обновления аналитиком   |
+| feedback              | TEXT      | Текстовая обратная связь                                     |
+| terminated_early      | BOOLEAN   | Сессия завершена досрочно                                    |
+| report_json           | JSONB     | Финальный отчёт от analyst-agent-service (nullable)          |
+| evaluations           | JSONB     | Покомпонентные оценки по вопросам                            |
+| result_format_version | VARCHAR   | Версия схемы отчёта                                          |
+| created_at            | TIMESTAMP | Время создания                                               |
+| updated_at            | TIMESTAMP | Время обновления                                             |
+
+Таблица `presets` — рекомендованные программы после interview-сессии (создаются analyst-agent).
+
+Таблица `user_topic_progress` — прогресс пользователя по темам после study-сессии (обновляется analyst-agent).
 
 **knowledge_base_crud_db** — хранит структурированные знания:
 
@@ -174,10 +195,13 @@
 
 Используются следующие топики для асинхронной обработки событий:
 
-- **chat.events.out** — события от BFF к модели (старт чата, ответ пользователя)
-- **chat.events.in** — события от модели к BFF (вопрос от модели, результаты, окончание чата)
-- **interview.build.request** — запрос на создание программы интервью (session-manager → interview-builder)
-- **interview.build.response** — ответ с программой интервью (interview-builder → session-manager)
+- **chat.events.out** — события от BFF к dialogue-aggregator (старт чата, ответ пользователя, terminate)
+- **chat.events.in** — события от dialogue-aggregator к BFF (вопрос модели, completed)
+- **messages.full.data** — полный контекст диалога от dialogue-aggregator к interviewer-agent-service
+- **generated.phrases** — реплика/решение от interviewer-agent-service к dialogue-aggregator
+- **interview.build.request** — запрос на создание программы интервью (session-service → interview-builder)
+- **interview.build.response** — ответ с программой интервью (interview-builder → session-service)
+- **session.completed** — событие завершения сессии от dialogue-aggregator к analyst-agent-service (с `session_kind`, `topics`, `level`)
 
 Подробнее см. [KAFKA.md](./KAFKA.md)
 
@@ -187,7 +211,7 @@
 
 - файл `config/config.yaml` внутри сервиса;
 - переменные окружения с соответствующим префиксом:
-  - `USER_STORE_...` для `user-store-service`;
+  - `USER_CRUD_...` для `user-crud-service`;
   - `AUTH_...` для `auth-service`;
   - `SESSION_...` для `session-service`;
   - `SESSION_CRUD_...` для `session-crud-service`;
@@ -197,7 +221,7 @@
   - `KNOWLEDGE_BASE_CRUD_...` для `knowledge-base-crud-service`;
   - `QUESTIONS_CRUD_...` для `questions-crud-service`;
   - `KNOWLEDGE_PRODUCER_...` для `knowledge-producer-service`;
-  - `MOCK_MODEL_...` для `mock-model-service`;
+  - `DIALOGUE_AGGREGATOR_...` для `dialogue-aggregator`;
   - `BFF_...` для `bff-service`.
 
 Секреты (JWT-secret, пароли БД и т.п.) в проде должны передаваться только через переменные окружения
@@ -218,8 +242,10 @@
   - `knowledge-base-crud-service` — CRUD для базы знаний;
   - `questions-crud-service` — CRUD для базы вопросов;
   - `knowledge-producer-service` — заполнение баз знаний и вопросов из JSON файлов (Python FastAPI);
-  - `mock-model-service` — заглушка AI-модели для обработки чатов;
-  - `user-store-service` — CRUD над таблицей пользователей;
+  - `dialogue-aggregator` — оркестратор диалога между BFF и interviewer-agent-service;
+  - `interviewer-agent-service` — interviewer-agent (LangGraph) для ведения интервью;
+  - `analyst-agent-service` — генератор финальных отчётов / прогресса по `session.completed`;
+  - `user-crud-service` — CRUD над таблицей пользователей;
   - PostgreSQL (несколько БД: user_store_db, session_crud_db, chat_crud_db, results_crud_db, knowledge_base_crud_db, questions_crud_db);
   - Redis — кэширование активных сессий;
   - Kafka + Zookeeper для очередей;
@@ -280,24 +306,27 @@
                     | (3 БД)      |                 |
                     +-------------+                 |
                                                 +-----+-----+
-                                                |Mock Model |
-                                                |  Service  |
-                                                |(marking)  |
+                                                | dialogue- |
+                                                | aggregator|
+                                                |  + agent  |
+                                                |  + analyst|
                                                 +-----------+
 ```
 
 Кратко:
 
 - фронтенд никогда не обращается напрямую к внутренним сервисам — только к `bff-service`;
-- `auth-service` не имеет прямого доступа к PostgreSQL и использует `user-store-service`;
-- `user-store-service` — единственная точка доступа к таблице `users`;
+- `auth-service` не имеет прямого доступа к PostgreSQL и использует `user-crud-service`;
+- `user-crud-service` — единственная точка доступа к таблице `users`;
 - `session-service` (session-manager) управляет жизненным циклом сессий, кэширует активные сессии в Redis, координирует создание программы интервью через Kafka с `interview-builder-service`;
 - `session-crud-service`, `chat-crud-service`, `results-crud-service` — CRUD сервисы для персистентного хранения данных в отдельных PostgreSQL БД;
 - `knowledge-base-crud-service`, `questions-crud-service` — CRUD сервисы для базы знаний и вопросов;
 - `knowledge-producer-service` автоматически заполняет базы знаний и вопросов из JSON файлов при старте;
 - `interview-builder-service` создаёт программу интервью через Kafka очереди (`interview.build.request/response`), запрашивая вопросы и знания из соответствующих CRUD сервисов;
 - `bff-service` управляет чатами через `session-service`, получает историю из `chat-crud-service` и результаты из `results-crud-service`;
-- `mock-model-service` (будущий `marking-service`) обрабатывает события чатов, получает программу интервью от session-manager, сохраняет сообщения в `chat-crud-service` и результаты в `results-crud-service`;
+- `dialogue-aggregator` оркестрирует диалог: общается с `interviewer-agent-service` через `messages.full.data` / `generated.phrases`, не принимает решений сам, публикует `session.completed` для `analyst-agent-service`;
+- `interviewer-agent-service` (LangGraph) ведёт интервью и возвращает реплики в `generated.phrases`;
+- `analyst-agent-service` подписан на `session.completed` и формирует финальный `report_json` / обновляет `presets` или `user_topic_progress` в зависимости от `session_kind`;
 - все сервисы конфигурируются через Viper (Go) или Pydantic Settings (Python) и запускаются в отдельных контейнерах.
 
 ### Мониторинг и логирование
@@ -330,7 +359,7 @@
 Подробные схемы и описание каждого сервиса см. в соответствующих `README.md`
 в директориях:
 - `auth-service`
-- `user-store-service`
+- `user-crud-service`
 - `bff-service`
 - `session-service`
 - `session-crud-service`
@@ -340,7 +369,9 @@
 - `knowledge-base-crud-service`
 - `questions-crud-service`
 - `knowledge-producer-service`
-- `mock-model-service`
+- `dialogue-aggregator`
+- `interviewer-agent-service`
+- `analyst-agent-service`
 
 Дополнительная документация:
 - [WORKFLOW.md](./WORKFLOW.md) — полное описание workflow платформы

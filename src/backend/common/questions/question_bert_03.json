@@ -1,0 +1,38 @@
+{
+  "id": "question_bert_03",
+  "theory_id": "theory_bert",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Как fine-tuning BERT отличается от обучения с нуля? Для каких задач NLP применяют?",
+    "expected_points": [
+      "fine-tuning: предобученные веса + classification head",
+      "малый LR 2e-5, 2-5 эпох",
+      "задачи: NER, sentiment, QA, NLI",
+      "значительно лучше при малом labeled dataset"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_bert",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Fine-tuning: берём BERT, добавляем task-голову, LR=2e-5, 3-5 эпох. На 1-10k примерах fine-tuning≈scratch на 100k+.",
+    "covers": [
+      "fine-tuning",
+      "LR",
+      "задачи NLP",
+      "vs scratch"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

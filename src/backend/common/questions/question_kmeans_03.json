@@ -1,0 +1,43 @@
+{
+  "id": "question_kmeans_03",
+  "theory_id": "theory_kmeans",
+  "linked_segments": [
+    "definition",
+    "intuition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Как работает алгоритм K-means? Опишите шаги итерации.",
+    "expected_points": [
+      "инициализация k центроидов (k-means++)",
+      "E: назначить каждую точку ближайшему центроиду",
+      "M: центроид = среднее точек кластера",
+      "повторять до сходимости"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_kmeans",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_kmeans",
+        "segment_type": "intuition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "EM-итерация: 1) Инициализация k-means++; 2) E-step: argmin_k ||xi-μk||²; 3) M-step: μk=mean(cluster_k); 4) До стабилизации.",
+    "covers": [
+      "инициализация",
+      "E-step",
+      "M-step",
+      "сходимость"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

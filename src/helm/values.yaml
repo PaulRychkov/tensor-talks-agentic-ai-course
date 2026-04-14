@@ -307,10 +307,10 @@ services:
       accessTokenTTL: 15m
       refreshTokenTTL: 720h
 
-  user-store-service:
+  user-crud-service:
     enabled: true
     image:
-      repository: paulrychkov/tensor-talks-user-store-service
+      repository: paulrychkov/tensor-talks-user-crud-service
       tag: latest
       pullPolicy: ""  # Автоматически определяется на основе localDevelopment
     replicaCount: 1
@@ -322,7 +322,24 @@ services:
         cpu: 50m
         memory: 64Mi
     database:
-      schema: user_store
+      schema: user_crud
+
+  admin-bff-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-admin-bff-service
+      tag: latest
+      pullPolicy: ""
+    replicaCount: 1
+    jwtSecret: "changeme-in-prod"
+    adminSecret: "tt-admin-secret-2026"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
 
   bff-service:
     enabled: true
@@ -385,7 +402,7 @@ services:
     enabled: true
     image:
       repository: paulrychkov/tensor-talks-chat-crud-service
-      tag: manual-20260120-162421
+      tag: manual-20260411-181406
       pullPolicy: ""  # Автоматически определяется на основе localDevelopment
     replicaCount: 1
     resources:
@@ -472,9 +489,9 @@ services:
   knowledge-producer-service:
     enabled: true
     image:
-      repository: paulrychkov/tensor-talks-knowledge-producer-service
-      tag: latest
-      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+      repository: tensor-talks-knowledge-producer-service
+      tag: local-20260411
+      pullPolicy: Never
     replicaCount: 1
     resources:
       limits:
@@ -484,12 +501,13 @@ services:
         cpu: 50m
         memory: 64Mi
 
-  mock-model-service:
+  dialogue-aggregator:
     enabled: true
     image:
-      repository: paulrychkov/tensor-talks-mock-model-service
-      tag: manual-20260121-094343
-      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+      repository: tensor-talks-dialogue-aggregator
+      tag: local-20260412-123016
+      pullPolicy: Never
+
     replicaCount: 1
     autoscaling:
       enabled: true
@@ -504,13 +522,13 @@ services:
         cpu: 75m
         memory: 192Mi
 
-  agent-service:
+  interviewer-agent-service:
     enabled: true
     maxClarifications: 3
     image:
-      repository: paulrychkov/tensor-talks-agent-service
-      tag: manual-20260121-153331
-      pullPolicy: ""  # Автоматически определяется на основе localDevelopment
+      repository: tensor-talks-interviewer-agent-service
+      tag: local-20260412-123016
+      pullPolicy: Never
     replicaCount: 1
     autoscaling:
       enabled: true
@@ -518,10 +536,11 @@ services:
       maxReplicas: 2
       targetCPUUtilizationPercentage: 80
     llm:
-      provider: openai  # openai, anthropic, local
-      baseUrl: "https://openai.api.proxyapi.ru/v1"  # Прокси API для OpenAI
+      provider: openai
+      baseUrl: "https://api.proxyapi.ru/openai/v1"
       apiKey: ""  # Берется из Vault если vault.enabled = true, или из секрета
-      model: gpt-5-chat-latest
+      model: gpt-5.4-mini
+      apiKey: ""  # Берется из Vault (kv/tensor-talks/llm api-key)
       temperature: 1
       maxTokens: 2000
       timeout: 60
@@ -533,13 +552,51 @@ services:
         cpu: 200m
         memory: 512Mi
 
+  analyst-agent-service:
+    enabled: true
+    image:
+      repository: tensor-talks-analyst-agent-service
+      tag: local-20260412-123016
+      pullPolicy: Never
+    replicaCount: 1
+    llm:
+      provider: openai
+      baseUrl: "https://api.proxyapi.ru/openai/v1"
+      apiKey: ""
+      model: gpt-5.4
+      temperature: 0.3
+      maxTokens: 4000
+      timeout: 120
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
   frontend:
     enabled: true
     image:
-      repository: paulrychkov/tensor-talks-frontend
-      tag: manual-20260122-004347
-      pullPolicy: Never  # Используем локальный образ из minikube
+      repository: tensor-talks-frontend
+      tag: local-20260412-123016
+      pullPolicy: Never
     containerPort: 8080
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 50m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 64Mi
+
+  admin-frontend:
+    enabled: true
+    image:
+      repository: tensor-talks-admin-frontend
+      tag: local-20260411
+      pullPolicy: Never
     replicaCount: 1
     resources:
       limits:
@@ -555,7 +612,7 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # Cloudflare автоматически предоставляет SSL, поэтому можем использовать HTTP внутри
+    # Cloudflare Tunnel автоматически предоставляет SSL, поэтому HTTP внутри кластера
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
     - host: tensor-talks.ru
@@ -567,7 +624,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  # TLS опционален, так как Cloudflare предоставляет SSL
+  # TLS опционален, так как Cloudflare Tunnel завершает TLS снаружи
   # Если хотите использовать TLS внутри кластера, раскомментируйте:
   # tls:
   #   - hosts:

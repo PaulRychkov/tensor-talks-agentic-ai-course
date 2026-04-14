@@ -25,7 +25,7 @@ type SessionManagerService struct {
 	programTimeout time.Duration // Таймаут ожидания программы интервью от builder-service (для HTTP ответа bff-service)
 
 	// Каналы для ожидания ответов от interview builder
-	pendingSessions sync.Map // map[string]chan *models.InterviewProgram
+	pendingSessions sync.Map // map[string]chan *programResult
 	mu              sync.RWMutex
 }
 
@@ -96,12 +96,12 @@ func (s *SessionManagerService) CreateSession(ctx context.Context, userID uuid.U
 	sessionID := crudResp.Session.SessionID
 
 	// Создаём канал для ожидания программы
-	programChan := make(chan *models.InterviewProgram, 1)
+	programChan := make(chan *programResult, 1)
 	s.pendingSessions.Store(sessionID.String(), programChan)
 	defer s.pendingSessions.Delete(sessionID.String())
 
 	// Отправляем запрос в Kafka
-	if err := s.kafkaProducer.SendInterviewBuildRequest(sessionID, params); err != nil {
+	if err := s.kafkaProducer.SendInterviewBuildRequest(sessionID, userID, params); err != nil {
 		return nil, fmt.Errorf("send interview build request: %w", err)
 	}
 
@@ -112,15 +112,15 @@ func (s *SessionManagerService) CreateSession(ctx context.Context, userID uuid.U
 
 	// Ждём программу интервью от builder-service через Kafka.
 	// Это таймаут для HTTP ответа bff-service, а не для результатов интервью.
-	// Результаты интервью приходят асинхронно через Kafka от mock-model-service.
+	// Результаты интервью приходят асинхронно через Kafka от dialogue-aggregator.
 	select {
-	case program := <-programChan:
-		if program == nil {
+	case res := <-programChan:
+		if res == nil || res.Program == nil {
 			return nil, fmt.Errorf("received nil program")
 		}
 
 		// Сохраняем программу в CRUD
-		if err := s.crudClient.UpdateProgram(ctx, sessionID, program); err != nil {
+		if err := s.crudClient.UpdateProgram(ctx, sessionID, res.Program); err != nil {
 			return nil, fmt.Errorf("update program in crud: %w", err)
 		}
 
@@ -129,7 +129,10 @@ func (s *SessionManagerService) CreateSession(ctx context.Context, userID uuid.U
 			SessionID:        sessionID,
 			UserID:           userID,
 			Params:           params,
-			InterviewProgram: *program,
+			InterviewProgram: *res.Program,
+			ProgramStatus:    res.Status,
+			ProgramMeta:      res.Meta,
+			ProgramVersion:   "1",
 			CachedAt:         time.Now(),
 		}
 		if err := s.redisCache.SetSession(ctx, cachedSession); err != nil {
@@ -137,7 +140,6 @@ func (s *SessionManagerService) CreateSession(ctx context.Context, userID uuid.U
 				zap.String("session_id", sessionID.String()),
 				zap.Error(err),
 			)
-			// Не возвращаем ошибку, продолжаем
 		}
 
 		return &SessionResponse{
@@ -152,8 +154,18 @@ func (s *SessionManagerService) CreateSession(ctx context.Context, userID uuid.U
 	}
 }
 
+// ProgramResponse bundles program with its meta/status for the handler.
+type ProgramResponse struct {
+	Program     *models.InterviewProgram
+	Status      string
+	Meta        *models.ProgramMeta
+	SessionMode string
+	Topics      []string
+	Level       string
+}
+
 // GetInterviewProgram возвращает программу интервью для сессии (сначала из Redis, потом из CRUD).
-func (s *SessionManagerService) GetInterviewProgram(ctx context.Context, sessionID uuid.UUID) (*models.InterviewProgram, error) {
+func (s *SessionManagerService) GetInterviewProgram(ctx context.Context, sessionID uuid.UUID) (*ProgramResponse, error) {
 	// Пробуем получить из Redis
 	cachedSession, err := s.redisCache.GetSession(ctx, sessionID)
 	if err != nil {
@@ -167,7 +179,22 @@ func (s *SessionManagerService) GetInterviewProgram(ctx context.Context, session
 		s.logger.Info("Interview program found in Redis cache",
 			zap.String("session_id", sessionID.String()),
 		)
-		return &cachedSession.InterviewProgram, nil
+		status := cachedSession.ProgramStatus
+		if status == "" {
+			status = "ready"
+		}
+		sessionMode := cachedSession.Params.Mode
+		if sessionMode == "" {
+			sessionMode = cachedSession.Params.Type // ghcr.io session-crud stores mode as "type"
+		}
+		return &ProgramResponse{
+			Program:     &cachedSession.InterviewProgram,
+			Status:      status,
+			Meta:        cachedSession.ProgramMeta,
+			SessionMode: sessionMode,
+			Topics:      cachedSession.Params.Topics,
+			Level:       cachedSession.Params.Level,
+		}, nil
 	}
 
 	// Если не в кэше, получаем из CRUD
@@ -205,7 +232,18 @@ func (s *SessionManagerService) GetInterviewProgram(ctx context.Context, session
 		)
 	}
 
-	return crudResp.Session.InterviewProgram, nil
+	sessionMode := crudResp.Session.Params.Mode
+	if sessionMode == "" {
+		sessionMode = crudResp.Session.Params.Type // ghcr.io session-crud stores mode as "type"
+	}
+	return &ProgramResponse{
+		Program:     crudResp.Session.InterviewProgram,
+		Status:      "ready",
+		Meta:        nil,
+		SessionMode: sessionMode,
+		Topics:      cachedSession.Params.Topics,
+		Level:       cachedSession.Params.Level,
+	}, nil
 }
 
 // CloseSession закрывает сессию.
@@ -231,10 +269,27 @@ func (s *SessionManagerService) CloseSession(ctx context.Context, sessionID uuid
 	return nil
 }
 
+// programResult bundles the parsed program with its meta for the pending channel.
+type programResult struct {
+	Program *models.InterviewProgram
+	Meta    *models.ProgramMeta
+	Status  string // "ready" or "failed"
+}
+
 // HandleInterviewBuildResponse обрабатывает ответ от interview builder (реализует kafka.EventHandler).
-func (s *SessionManagerService) HandleInterviewBuildResponse(ctx context.Context, sessionID string, programPayload map[string]interface{}) error {
+func (s *SessionManagerService) HandleInterviewBuildResponse(ctx context.Context, sessionID string, programPayload map[string]interface{}, programMetaPayload map[string]interface{}) error {
+	// Parse program_meta first to determine status
+	meta := models.ProgramMetaFromMap(programMetaPayload)
+	status := "ready"
+	if meta != nil && !meta.ValidationPassed {
+		status = "failed"
+		s.logger.Warn("Interview builder reported validation failure",
+			zap.String("session_id", sessionID),
+			zap.Stringp("fallback_reason", meta.FallbackReason),
+		)
+	}
+
 	// Конвертируем payload в InterviewProgram
-	// programPayload имеет структуру: {"questions": [...]}
 	questionsRaw, ok := programPayload["questions"].([]interface{})
 	if !ok {
 		return fmt.Errorf("invalid questions format in program payload")
@@ -260,8 +315,27 @@ func (s *SessionManagerService) HandleInterviewBuildResponse(ctx context.Context
 		if t, ok := qMap["theory"].(string); ok {
 			question.Theory = t
 		}
+		if t, ok := qMap["topic"].(string); ok {
+			question.Topic = t
+		}
 		if o, ok := qMap["order"].(float64); ok {
 			question.Order = int(o)
+		}
+		// Study-mode hierarchy fields
+		if st, ok := qMap["subtopic"].(string); ok {
+			question.Subtopic = st
+		}
+		if pid, ok := qMap["point_id"].(string); ok {
+			question.PointID = pid
+		}
+		if pt, ok := qMap["point_title"].(string); ok {
+			question.PointTitle = pt
+		}
+		if pth, ok := qMap["point_theory"].(string); ok {
+			question.PointTheory = pth
+		}
+		if qip, ok := qMap["question_in_point"].(float64); ok {
+			question.QuestionInPoint = int(qip)
 		}
 
 		program.Questions = append(program.Questions, question)
@@ -269,12 +343,18 @@ func (s *SessionManagerService) HandleInterviewBuildResponse(ctx context.Context
 
 	// Находим канал для этой сессии
 	if ch, ok := s.pendingSessions.Load(sessionID); ok {
-		programChan := ch.(chan *models.InterviewProgram)
+		resChan := ch.(chan *programResult)
+		res := &programResult{
+			Program: &program,
+			Meta:    meta,
+			Status:  status,
+		}
 		select {
-		case programChan <- &program:
+		case resChan <- res:
 			s.logger.Info("Interview program sent to waiting channel",
 				zap.String("session_id", sessionID),
 				zap.Int("questions_count", len(program.Questions)),
+				zap.String("program_status", status),
 			)
 		default:
 			s.logger.Warn("Program channel full or closed",

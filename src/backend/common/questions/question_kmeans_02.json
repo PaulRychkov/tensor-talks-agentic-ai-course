@@ -1,0 +1,42 @@
+{
+  "id": "question_kmeans_02",
+  "theory_id": "theory_kmeans",
+  "linked_segments": [
+    "formula",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как выбрать оптимальное число кластеров k в K-means? Опишите метод локтя.",
+    "expected_points": [
+      "WCSS от k — ищем точку перегиба (локоть)",
+      "silhouette score: сходство внутри кластера vs соседним",
+      "Gap statistic как альтернатива",
+      "обычно перебирают k=2..10"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_kmeans",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_kmeans",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Elbow: WCSS=Σ||xi-μk||², строим от k, ищем перегиб. Silhouette=(b-a)/max(a,b), лучший k≈max(silhouette). Часто комбинируют оба.",
+    "covers": [
+      "Elbow method",
+      "WCSS",
+      "silhouette score"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

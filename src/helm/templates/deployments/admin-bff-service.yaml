@@ -1,0 +1,86 @@
+{{- if (index .Values.services "admin-bff-service").enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-admin-bff-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-bff-service
+spec:
+  replicas: {{ (index .Values.services "admin-bff-service").replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: admin-bff-service
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: admin-bff-service
+    spec:
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+{{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: admin-bff-service
+          image: {{ include "tensor-talks.image" (dict "Values" .Values "repository" (index .Values.services "admin-bff-service").image.repository "tag" (index .Values.services "admin-bff-service").image.tag) }}
+          imagePullPolicy: {{ (index .Values.services "admin-bff-service").image.pullPolicy | default (include "tensor-talks.imagePullPolicy" .Values) }}
+          ports:
+            - name: http
+              containerPort: 8096
+              protocol: TCP
+          env:
+            - name: ADMIN_BFF_SERVER_HOST
+              value: "0.0.0.0"
+            - name: ADMIN_BFF_SERVER_PORT
+              value: "8096"
+            - name: ADMIN_BFF_AUTH_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-auth-service:8081"
+            - name: ADMIN_BFF_USER_CRUD_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-user-crud-service:8082"
+            - name: ADMIN_BFF_KNOWLEDGE_PRODUCER_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-knowledge-producer-service:8092"
+            - name: ADMIN_BFF_KNOWLEDGE_BASE_CRUD_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-knowledge-base-crud-service:8090"
+            - name: ADMIN_BFF_QUESTIONS_CRUD_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-questions-crud-service:8091"
+            - name: ADMIN_BFF_RESULTS_CRUD_SERVICE_BASE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-results-crud-service:8088"
+            - name: ADMIN_BFF_PROMETHEUS_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-prometheus:9090"
+            {{- if .Values.vault.enabled }}
+            - name: ADMIN_BFF_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-jwt-secret
+                  key: secret
+            {{- else }}
+            - name: ADMIN_BFF_JWT_SECRET
+              value: {{ (index .Values.services "admin-bff-service").jwtSecret | default "changeme-in-prod" | quote }}
+            {{- end }}
+            - name: ADMIN_BFF_ADMIN_SECRET
+              value: {{ (index .Values.services "admin-bff-service").adminSecret | default "changeme-admin-secret" | quote }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml (index .Values.services "admin-bff-service").resources | nindent 12 }}
+{{- end }}

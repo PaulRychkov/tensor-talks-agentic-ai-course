@@ -2,7 +2,32 @@
 
 Этот документ содержит актуальную информацию о всех доступных UI эндпоинтах для TensorTalks.
 
-## 🚀 Быстрый доступ
+## 🐳 Docker-compose (локальная разработка)
+
+| Сервис | URL | Логин/Пароль |
+|--------|-----|--------------|
+| Frontend (основной) | http://localhost:5173 | Регистрация через UI |
+| BFF API | http://localhost:8080 | JWT токен |
+| Admin Frontend | http://localhost:8097 | секрет `tt-admin-secret-2026` |
+| Admin BFF API | http://localhost:8096 | — |
+| Prometheus | http://localhost:9090 | — |
+| Grafana | http://localhost:3000 | admin/admin |
+| Kafdrop (Kafka UI) | http://localhost:9000 | — |
+| pgAdmin | http://localhost:5050 | admin@admin.com / admin |
+
+### Новое: Дашборд метрик в админке
+
+Страница `/metrics` в Admin Frontend содержит три вкладки:
+- **Продуктовые** — сессии, completion rate, avg score, рейтинги (из results-crud)
+- **Технические** — RPS, error rate, p95 latency, статус сервисов (из Prometheus)
+- **ИИ-метрики** — LLM вызовы, PII блокировки, уверенность агента (из Prometheus)
+
+API admin-bff:
+- `GET /admin/api/metrics/product` → результаты из results-crud
+- `GET /admin/api/metrics/technical` → запросы к Prometheus  
+- `GET /admin/api/metrics/ai` → запросы к Prometheus
+
+## 🚀 Быстрый доступ (Kubernetes)
 
 Запустите все port-forward команды в отдельных терминалах или используйте `&` для фонового режима.
 
@@ -51,7 +76,6 @@
 - **Пароль**: получить через `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d`
 - **Port-forward**: `kubectl port-forward svc/argocd-server -n argocd 8081:443`
 - **Описание**: GitOps развертывание, управление приложениями
-- **Описание**: GitOps развертывание, управление приложениями
 
 ### Vault UI
 - **URL**: http://localhost:8200
@@ -61,9 +85,9 @@
 ## 🌐 Приложение
 
 ### Frontend
-- **URL**: http://localhost:5173
-- **Port-forward**: `kubectl port-forward svc/tensor-talks-frontend -n tensor-talks 5173:80`
-- **Описание**: Пользовательский интерфейс TensorTalks
+- **URL**: http://localhost:8080 (через `minikube tunnel`, без port-forward)
+- **Описание**: Пользовательский интерфейс TensorTalks. Service имеет тип LoadBalancer,
+  `minikube tunnel` (запущен Scheduled Task «TensorTalks-Tunnel») сам пробрасывает на 127.0.0.1:8080.
 
 ### BFF API
 - **URL**: http://localhost:8080
@@ -86,9 +110,10 @@ kubectl port-forward svc/tensor-talks-postgresql -n tensor-talks 5432:5432 &
 kubectl port-forward svc/argocd-server -n argocd 8081:443 &
 kubectl port-forward svc/tensor-talks-vault -n tensor-talks 8200:8200 &
 
-# Приложение
-kubectl port-forward svc/tensor-talks-frontend -n tensor-talks 5173:80 &
-kubectl port-forward svc/tensor-talks-bff-service -n tensor-talks 8080:8080 &
+# Приложение — port-forward НЕ нужен.
+# Frontend (Service type: LoadBalancer) автоматически доступен на http://127.0.0.1:8080
+# через minikube tunnel (Scheduled Task TensorTalks-Tunnel, install-autostart.ps1).
+# BFF — через ingress изнутри кластера; наружу — через cloudflared (tensor-talks.ru).
 ```
 
 ## 🔍 Проверка статуса сервисов
@@ -115,7 +140,7 @@ kubectl get pods -n argocd
 
 ## 📚 Дополнительная документация
 
-- [INSTALLATION.md](INSTALLATION.md) - **Полное руководство: установка, локальная разработка, облачное развертывание**
-- [DEVOPS.md](DEVOPS.md) - DevOps архитектура
+- [INSTALLATION_MANUAL.md](INSTALLATION_MANUAL.md) - установка и развертывание
+- [DEVOPS_DEPLOY.md](DEVOPS_DEPLOY.md) - DevOps архитектура
 - [helm/README.md](helm/README.md) - документация по Helm chart
 - [argocd/README.md](argocd/README.md) - GitOps развертывание через ArgoCD

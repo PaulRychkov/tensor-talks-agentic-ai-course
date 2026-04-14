@@ -1,7 +1,8 @@
 [
   "auth-service",
   "bff-service",
-  "user-store-service",
+  "admin-bff-service",
+  "user-crud-service",
   "session-service",
   "session-crud-service",
   "chat-crud-service",
@@ -10,7 +11,8 @@
   "questions-crud-service",
   "interview-builder-service",
   "knowledge-producer-service",
-  "mock-model-service",
-  "agent-service",
+  "dialogue-aggregator",
+  "interviewer-agent-service",
+  "analyst-agent-service",
   "frontend"
 ]

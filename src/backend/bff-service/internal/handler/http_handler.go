@@ -1,18 +1,67 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tensor-talks/bff-service/internal/client"
 	"github.com/tensor-talks/bff-service/internal/middleware"
 	"github.com/tensor-talks/bff-service/internal/service"
 	"go.uber.org/zap"
 )
+
+var messageFeedbackTotal = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "tensortalks_message_feedback_total",
+		Help: "Per-message user ratings submitted in chat",
+	},
+	[]string{"rating"},
+)
+
+func init() {
+	prometheus.MustRegister(messageFeedbackTotal)
+}
+
+// ── PII guardrail (Level 1 — BFF, before Kafka publish) ──────────────────────
+// Быстрая regex-проверка на персональные данные (152-ФЗ).
+// Если обнаружены PII — сообщение отклоняется до публикации в Kafka и сохранения в chat-crud.
+var (
+	piiEmail    = regexp.MustCompile(`(?i)[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}`)
+	piiPhone    = regexp.MustCompile(`(?:\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}`)
+	piiPassport = regexp.MustCompile(`\b\d{4}\s?\d{6}\b`)
+	piiINN      = regexp.MustCompile(`(?i)\bИНН\s*:?\s*\d{10,12}\b`)
+	piiSNILS    = regexp.MustCompile(`\b\d{3}-\d{3}-\d{3}\s?\d{2}\b`)
+	piiCard     = regexp.MustCompile(`\b(?:\d{4}[\s\-]){3}\d{4}\b`)
+)
+
+// detectPII возвращает категорию PII если найдена, или "" если чисто.
+func detectPII(text string) string {
+	switch {
+	case piiEmail.MatchString(text):
+		return "email"
+	case piiPhone.MatchString(text):
+		return "телефон"
+	case piiCard.MatchString(text):
+		return "банковская карта"
+	case piiSNILS.MatchString(text):
+		return "СНИЛС"
+	case piiINN.MatchString(text):
+		return "ИНН"
+	case piiPassport.MatchString(text):
+		return "паспортные данные"
+	}
+	return ""
+}
 
 /*
 Пакет handler реализует HTTP-слой BFF (backend-for-frontend) сервиса.
@@ -21,19 +70,25 @@ import (
   - предоставить фронтенду стабильное и упрощённое API;
   - проксировать запросы аутентификации в auth-service, не раскрывая внутреннюю топологию микросервисов.
 
-Важно: BFF не имеет прямого доступа ни к user-store-service, ни к базе данных.
+Важно: BFF не имеет прямого доступа ни к user-crud-service, ни к базе данных.
 */
 
 // Handler инкапсулирует HTTP-эндпоинты, которые вызываются фронтендом.
 type Handler struct {
-	auth   *service.AuthService
-	chat   *service.ChatService
-	logger *zap.Logger
+	auth         *service.AuthService
+	chat         *service.ChatService
+	userCrudURL  string // base URL для user-crud-service (для /generate-random-login)
+	logger       *zap.Logger
 }
 
 // New создаёт новый обработчик HTTP-запросов BFF.
 func New(auth *service.AuthService, chat *service.ChatService, logger *zap.Logger) *Handler {
 	return &Handler{auth: auth, chat: chat, logger: logger}
+}
+
+// NewWithUserCrud создаёт обработчик с userCrudURL для проксирования запросов генерации логина.
+func NewWithUserCrud(auth *service.AuthService, chat *service.ChatService, userCrudURL string, logger *zap.Logger) *Handler {
+	return &Handler{auth: auth, chat: chat, userCrudURL: userCrudURL, logger: logger}
 }
 
 // RegisterRoutes регистрирует маршруты BFF под префиксом /api.
@@ -55,6 +110,7 @@ func (h *Handler) RegisterRoutes(router gin.IRouter) {
 		chat.POST("/:session_id/terminate", h.terminateChat)
 		chat.GET("/:session_id/question", h.getNextQuestion)
 		chat.GET("/:session_id/results", h.getResults)
+		chat.POST("/:session_id/message-feedback", h.submitMessageFeedback)
 
 		interviews := api.Group("/interviews")
 		interviews.Use(middleware.AuthMiddleware(h.auth, h.logger))
@@ -69,6 +125,33 @@ func (h *Handler) RegisterRoutes(router gin.IRouter) {
 		interviews.GET("", h.getInterviews)
 		interviews.GET("/:session_id/chat", h.getInterviewChat)
 		interviews.GET("/:session_id/result", h.getInterviewResult)
+		interviews.POST("/:session_id/rating", h.submitInterviewRating)
+
+		// Dashboard endpoints (§10.2) — proxy to results-crud and session-crud services
+		dashboard := api.Group("/dashboard")
+		dashboard.Use(middleware.AuthMiddleware(h.auth, h.logger))
+		dashboard.GET("/summary", h.getDashboardSummary)
+		dashboard.GET("/activity", h.getDashboardActivity)
+		dashboard.GET("/topic-progress", h.getDashboardTopicProgress)
+		dashboard.GET("/recommendations", h.getDashboardRecommendations)
+
+		// Public auth endpoints (no token required)
+		auth.POST("/recover", h.recover)
+
+		// Auth management endpoints (require Bearer token)
+		authManage := api.Group("/auth")
+		authManage.Use(middleware.AuthMiddleware(h.auth, h.logger))
+		authManage.POST("/logout", h.logout)
+		authManage.POST("/change-password", h.changePassword)
+		authManage.POST("/regenerate-recovery-key", h.regenerateRecoveryKey)
+		authManage.DELETE("/account", h.deleteAccount)
+
+		// User utility endpoints
+		users := api.Group("/users")
+		users.GET("/generate-random-login", h.generateRandomLogin)
+		users.GET("/login-words/adjectives", h.getLoginAdjectives)
+		users.GET("/login-words/nouns", h.getLoginNouns)
+		users.POST("/login-words/check-availability", h.checkLoginAvailability)
 	}
 }
 
@@ -289,6 +372,13 @@ func (h *Handler) startChat(c *gin.Context) {
 		logDuration("invalid_payload")
 		return
 	}
+	if len(req.Params.Topics) == 0 || req.Params.Mode == "" ||
+		(req.Params.Level == "" && req.Params.Type == "") {
+		h.logger.Warn("StartChat: missing params fields")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "params must include topics, mode, and level or type"})
+		logDuration("invalid_params")
+		return
+	}
 
 	h.logger.Info("Start chat request", zap.String("user_id", userID.String()))
 	// Create a context with timeout for session creation (allows time for interview program building)
@@ -368,6 +458,21 @@ func (h *Handler) sendMessage(c *gin.Context) {
 		zap.String("session_id", req.SessionID.String()),
 		zap.String("user_id", userID.String()),
 	)
+
+	// PII guardrail (Level 1 — BFF, §10.11): блокируем до Kafka
+	if category := detectPII(req.Content); category != "" {
+		h.logger.Info("PII detected in BFF, blocking message",
+			zap.String("session_id", req.SessionID.String()),
+			zap.String("category", category),
+		)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error":        "Пожалуйста, не указывайте персональные данные (" + category + ") — требование 152-ФЗ. Перефразируйте ответ без личной информации.",
+			"pii_detected": true,
+			"category":     category,
+		})
+		logDuration("pii_blocked")
+		return
+	}
 
 	if err := h.chat.SendMessage(c.Request.Context(), req.SessionID, userID, req.Content); err != nil {
 		h.logger.Error("Send message failed",
@@ -500,9 +605,12 @@ func (h *Handler) terminateChat(c *gin.Context) {
 }
 
 type questionResponse struct {
-	Question   string `json:"question"`
-	QuestionID string `json:"question_id"`
-	Timestamp  string `json:"timestamp"`
+	Question         string `json:"question"`
+	QuestionID       string `json:"question_id"`
+	Timestamp        string `json:"timestamp"`
+	QuestionNumber   int    `json:"question_number"`
+	TotalQuestions   int    `json:"total_questions"`
+	PIIMaskedContent string `json:"pii_masked_content,omitempty"`
 }
 
 // getNextQuestion обрабатывает GET /api/chat/:session_id/question (polling для получения вопросов).
@@ -524,7 +632,8 @@ func (h *Handler) getNextQuestion(c *gin.Context) {
 		h.logger.Info("No question available for session",
 			zap.String("session_id", sessionID),
 		)
-		c.JSON(http.StatusOK, gin.H{"question": nil, "available": false})
+		processingStep := h.chat.GetProcessingStep(sessionID)
+		c.JSON(http.StatusOK, gin.H{"question": nil, "available": false, "processing_step": processingStep})
 		return
 	}
 
@@ -534,9 +643,12 @@ func (h *Handler) getNextQuestion(c *gin.Context) {
 	)
 
 	c.JSON(http.StatusOK, questionResponse{
-		Question:   question.Question,
-		QuestionID: question.QuestionID,
-		Timestamp:  question.Timestamp.Format(time.RFC3339),
+		Question:         question.Question,
+		QuestionID:       question.QuestionID,
+		Timestamp:        question.Timestamp.Format(time.RFC3339),
+		QuestionNumber:   question.QuestionNumber,
+		TotalQuestions:   question.TotalQuestions,
+		PIIMaskedContent: question.PIIMaskedContent,
 	})
 }
 
@@ -545,6 +657,41 @@ type resultsResponse struct {
 	Feedback        string   `json:"feedback"`
 	Recommendations []string `json:"recommendations"`
 	CompletedAt     string   `json:"completed_at"`
+}
+
+// interviewResultLegacy — ответ для результатов без report_json (обратная совместимость с UI).
+type interviewResultLegacy struct {
+	ID              uint      `json:"id"`
+	SessionID       uuid.UUID `json:"session_id"`
+	Score           int       `json:"score"`
+	Feedback        string    `json:"feedback"`
+	TerminatedEarly bool      `json:"terminated_early"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// interviewResultWithReport — полный ответ, когда в CRUD есть отчёт.
+type interviewResultWithReport struct {
+	ID                  uint            `json:"id"`
+	SessionID           uuid.UUID       `json:"session_id"`
+	Score               int             `json:"score"`
+	Feedback            string          `json:"feedback"`
+	TerminatedEarly     bool            `json:"terminated_early"`
+	ReportJSON          json.RawMessage `json:"report_json"`
+	PresetTraining      json.RawMessage `json:"preset_training,omitempty"`
+	Evaluations         json.RawMessage `json:"evaluations,omitempty"`
+	ResultFormatVersion int             `json:"result_format_version"`
+	SessionKind         string          `json:"session_kind,omitempty"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+func reportJSONPresent(raw json.RawMessage) bool {
+	b := bytes.TrimSpace(raw)
+	if len(b) == 0 {
+		return false
+	}
+	return string(b) != "null"
 }
 
 // getResults обрабатывает GET /api/chat/:session_id/results (получение результатов чата).
@@ -558,7 +705,13 @@ func (h *Handler) getResults(c *gin.Context) {
 	results, ok := h.chat.GetResults(sessionID)
 	if !ok {
 		// Возвращаем 200 с пустым ответом вместо 404 для polling (чтобы не засорять консоль)
-		c.JSON(http.StatusOK, gin.H{"results": nil, "available": false})
+		c.JSON(http.StatusOK, gin.H{"results": nil, "available": false, "completed": false})
+		return
+	}
+
+	if results.Pending {
+		// Чат завершён, аналитик ещё формирует отчёт
+		c.JSON(http.StatusOK, gin.H{"results": nil, "available": false, "completed": true, "pending": true})
 		return
 	}
 
@@ -567,25 +720,31 @@ func (h *Handler) getResults(c *gin.Context) {
 		zap.Int("score", results.Score),
 	)
 
-	c.JSON(http.StatusOK, resultsResponse{
-		Score:           results.Score,
-		Feedback:        results.Feedback,
-		Recommendations: results.Recommendations,
-		CompletedAt:     results.CompletedAt.Format(time.RFC3339),
+	c.JSON(http.StatusOK, gin.H{
+		"score":           results.Score,
+		"feedback":        results.Feedback,
+		"recommendations": results.Recommendations,
+		"completed_at":    results.CompletedAt.Format(time.RFC3339),
+		"available":       true,
+		"completed":       true,
 	})
 }
 
 // getInterviews обрабатывает GET /api/interviews (список всех интервью пользователя).
 func (h *Handler) getInterviews(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query parameter required"})
+	userIDValue, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
-
+	userIDStr, ok := userIDValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
@@ -653,16 +812,23 @@ func (h *Handler) getInterviewResult(c *gin.Context) {
 
 	result, err := h.chat.GetChatResult(c.Request.Context(), sessionID)
 	if err != nil {
-		if err.Error() == "result not found" || err.Error() == "results crud service error: result not found" {
+		errStr := err.Error()
+		if strings.Contains(errStr, "result not found") {
 			h.logger.Warn("Result not found", zap.String("session_id", sessionID.String()))
-			c.JSON(http.StatusNotFound, gin.H{"error": "result not found"})
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":      "Result not found",
+				"error_code": "RESULT_NOT_FOUND",
+			})
 			return
 		}
 		h.logger.Error("Get chat result failed",
 			zap.Error(err),
 			zap.String("session_id", sessionID.String()),
 		)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get result"})
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error":      "Unable to load interview result. Please try again later.",
+			"error_code": "RESULT_UNAVAILABLE",
+		})
 		return
 	}
 
@@ -671,5 +837,429 @@ func (h *Handler) getInterviewResult(c *gin.Context) {
 		zap.Int("score", result.Score),
 	)
 
-	c.JSON(http.StatusOK, gin.H{"result": result})
+	if reportJSONPresent(result.ReportJSON) {
+		c.JSON(http.StatusOK, gin.H{"result": interviewResultWithReport{
+			ID:                  result.ID,
+			SessionID:           result.SessionID,
+			Score:               result.Score,
+			Feedback:            result.Feedback,
+			TerminatedEarly:     result.TerminatedEarly,
+			ReportJSON:          result.ReportJSON,
+			PresetTraining:      result.PresetTraining,
+			Evaluations:         result.Evaluations,
+			ResultFormatVersion: result.ResultFormatVersion,
+			SessionKind:         result.SessionKind,
+			CreatedAt:           result.CreatedAt,
+			UpdatedAt:           result.UpdatedAt,
+		}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"result": interviewResultLegacy{
+		ID:              result.ID,
+		SessionID:       result.SessionID,
+		Score:           result.Score,
+		Feedback:        result.Feedback,
+		TerminatedEarly: result.TerminatedEarly,
+		CreatedAt:       result.CreatedAt,
+		UpdatedAt:       result.UpdatedAt,
+	}})
+}
+
+// submitInterviewRating обрабатывает POST /api/interviews/:session_id/rating.
+// Принимает {"rating": 1-5, "comment": "..."} и сохраняет в results-crud.
+func (h *Handler) submitInterviewRating(c *gin.Context) {
+	sessionID, err := uuid.Parse(c.Param("session_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session_id"})
+		return
+	}
+
+	var req struct {
+		Rating  int    `json:"rating" binding:"required"`
+		Comment string `json:"comment"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload: " + err.Error()})
+		return
+	}
+
+	if req.Rating < 1 || req.Rating > 5 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "rating must be between 1 and 5"})
+		return
+	}
+
+	if err := h.chat.SubmitSessionRating(c.Request.Context(), sessionID, req.Rating, req.Comment); err != nil {
+		h.logger.Warn("SubmitSessionRating failed",
+			zap.String("session_id", sessionID.String()),
+			zap.Error(err),
+		)
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "result not found"})
+			return
+		}
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to save rating"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── Dashboard endpoints (§10.2) ─────────────────────────────────────────────
+
+// getDashboardSummary возвращает сводную статистику пользователя для дашборда.
+// Проксирует агрегированные данные из results-crud и session-crud сервисов.
+// При отсутствии данных возвращает пустое состояние (не захардкоженные значения).
+func (h *Handler) getDashboardSummary(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	summary, err := h.chat.GetDashboardSummary(c.Request.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to get dashboard summary",
+			zap.String("user_id", userID),
+			zap.Error(err),
+		)
+		c.JSON(http.StatusOK, gin.H{
+			"total_sessions":            0,
+			"completed_sessions":        0,
+			"avg_score":                 0.0,
+			"streak_days":               0,
+			"current_level":             "",
+			"training_unlocked_topics":  []string{},
+			"last_session_date":         nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
+
+// getDashboardActivity возвращает календарь активности пользователя.
+func (h *Handler) getDashboardActivity(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	from := c.Query("from")
+	to := c.Query("to")
+
+	activity, err := h.chat.GetDashboardActivity(c.Request.Context(), userID, from, to)
+	if err != nil {
+		h.logger.Error("Failed to get dashboard activity",
+			zap.String("user_id", userID),
+			zap.Error(err),
+		)
+		c.JSON(http.StatusOK, []interface{}{})
+		return
+	}
+
+	c.JSON(http.StatusOK, activity)
+}
+
+// getDashboardTopicProgress возвращает прогресс пользователя по темам.
+func (h *Handler) getDashboardTopicProgress(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	progress, err := h.chat.GetDashboardTopicProgress(c.Request.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to get topic progress",
+			zap.String("user_id", userID),
+			zap.Error(err),
+		)
+		c.JSON(http.StatusOK, []interface{}{})
+		return
+	}
+
+	c.JSON(http.StatusOK, progress)
+}
+
+// getDashboardRecommendations возвращает рекомендации из последнего отчёта аналитика.
+func (h *Handler) getDashboardRecommendations(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	recommendations, err := h.chat.GetDashboardRecommendations(c.Request.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to get dashboard recommendations",
+			zap.String("user_id", userID),
+			zap.Error(err),
+		)
+		c.JSON(http.StatusOK, []interface{}{})
+		return
+	}
+
+	c.JSON(http.StatusOK, recommendations)
+}
+
+// logout инвалидирует текущую сессию пользователя.
+func (h *Handler) logout(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	if token != "" {
+		// Инвалидируем Redis-сессию в auth-service (ошибка не блокирует logout)
+		if err := h.auth.Logout(c.Request.Context(), token); err != nil {
+			h.logger.Warn("Logout: auth-service error (ignored)", zap.Error(err))
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// recover обрабатывает POST /api/auth/recover — сброс пароля по ключу восстановления.
+func (h *Handler) recover(c *gin.Context) {
+	var req struct {
+		Login       string `json:"login" binding:"required"`
+		RecoveryKey string `json:"recovery_key" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+	if err := h.auth.Recover(c.Request.Context(), req.Login, req.RecoveryKey, req.NewPassword); err != nil {
+		switch {
+		case service.IsError(err, service.ErrInvalidCredentials):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid login or recovery key"})
+		case service.IsError(err, service.ErrBadRequest):
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrorMessage(err)})
+		default:
+			h.logger.Error("Recover failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// changePassword обрабатывает POST /api/auth/change-password.
+func (h *Handler) changePassword(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	var req struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+	if err := h.auth.ChangePassword(c.Request.Context(), token, req.CurrentPassword, req.NewPassword); err != nil {
+		switch {
+		case service.IsError(err, service.ErrInvalidCredentials):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect current password"})
+		case service.IsError(err, service.ErrBadRequest):
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrorMessage(err)})
+		default:
+			h.logger.Error("ChangePassword failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// regenerateRecoveryKey обрабатывает POST /api/auth/regenerate-recovery-key.
+func (h *Handler) regenerateRecoveryKey(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+	rawKey, err := h.auth.RegenerateRecoveryKey(c.Request.Context(), token, req.Password)
+	if err != nil {
+		switch {
+		case service.IsError(err, service.ErrInvalidCredentials):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		case service.IsError(err, service.ErrBadRequest):
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrorMessage(err)})
+		default:
+			h.logger.Error("RegenerateRecoveryKey failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"recovery_key": rawKey})
+}
+
+// deleteAccount обрабатывает DELETE /api/auth/account.
+func (h *Handler) deleteAccount(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+	if err := h.auth.DeleteAccount(c.Request.Context(), token, req.Password); err != nil {
+		switch {
+		case service.IsError(err, service.ErrInvalidCredentials):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		case service.IsError(err, service.ErrBadRequest):
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrorMessage(err)})
+		default:
+			h.logger.Error("DeleteAccount failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// generateRandomLogin проксирует GET /api/users/generate-random-login → user-crud-service.
+func (h *Handler) generateRandomLogin(c *gin.Context) {
+	userCrudURL := h.userCrudURL
+	if userCrudURL == "" {
+		userCrudURL = "http://user-crud-service:8082"
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, userCrudURL+"/login-words/generate-random", nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		h.logger.Warn("generateRandomLogin: user-crud-service unreachable", zap.Error(err))
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "login generation unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		c.JSON(resp.StatusCode, gin.H{"error": "login generation failed"})
+		return
+	}
+
+	var result struct {
+		Login string `json:"login"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || result.Login == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"login": result.Login})
+}
+
+// getLoginAdjectives проксирует GET /api/users/login-words/adjectives → user-crud-service.
+func (h *Handler) getLoginAdjectives(c *gin.Context) {
+	h.proxyUserCrudGet(c, "/login-words/adjectives")
+}
+
+// getLoginNouns проксирует GET /api/users/login-words/nouns → user-crud-service.
+func (h *Handler) getLoginNouns(c *gin.Context) {
+	h.proxyUserCrudGet(c, "/login-words/nouns")
+}
+
+// checkLoginAvailability проксирует POST /api/users/login-words/check-availability → user-crud-service.
+func (h *Handler) checkLoginAvailability(c *gin.Context) {
+	userCrudURL := h.userCrudURL
+	if userCrudURL == "" {
+		userCrudURL = "http://user-crud-service:8082"
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, userCrudURL+"/login-words/check-availability", c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	c.Status(resp.StatusCode)
+	c.Header("Content-Type", "application/json")
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		h.logger.Warn("checkLoginAvailability: copy error", zap.Error(err))
+	}
+}
+
+// proxyUserCrudGet выполняет GET-прокси к user-crud-service и отдаёт ответ напрямую.
+// submitMessageFeedback обрабатывает POST /api/chat/:session_id/message-feedback.
+// Сохраняет оценку (1-5 звёзд) для конкретного сообщения агента.
+func (h *Handler) submitMessageFeedback(c *gin.Context) {
+	sessionID := c.Param("session_id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id required"})
+		return
+	}
+
+	var req struct {
+		QuestionID string `json:"question_id" binding:"required"`
+		Rating     int    `json:"rating" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload: " + err.Error()})
+		return
+	}
+	if req.Rating < 1 || req.Rating > 5 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "rating must be 1-5"})
+		return
+	}
+
+	h.logger.Info("Message feedback received",
+		zap.String("session_id", sessionID),
+		zap.String("question_id", req.QuestionID),
+		zap.Int("rating", req.Rating),
+	)
+
+	// Записываем в Prometheus для агрегации (хранение отдельных оценок — будущая задача)
+	messageFeedbackTotal.WithLabelValues(fmt.Sprintf("%d", req.Rating)).Inc()
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) proxyUserCrudGet(c *gin.Context, path string) {
+	userCrudURL := h.userCrudURL
+	if userCrudURL == "" {
+		userCrudURL = "http://user-crud-service:8082"
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userCrudURL+path, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	c.Status(resp.StatusCode)
+	c.Header("Content-Type", "application/json")
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		h.logger.Warn("proxyUserCrudGet: copy error", zap.Error(err))
+	}
 }

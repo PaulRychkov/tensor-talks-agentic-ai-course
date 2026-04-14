@@ -1,0 +1,37 @@
+{
+  "id": "question_tokenization_03",
+  "theory_id": "theory_tokenization",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое токенизация и почему нельзя просто разбивать текст по пробелам?",
+    "expected_points": [
+      "разбиение текста на единицы для модели",
+      "по пробелам: OOV для редких слов, огромный словарь",
+      "subword: эффективный словарь + любые слова",
+      "токен ≠ слово"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_tokenization",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Токенизация — разбиение на единицы. По пробелам: OOV, огромный словарь. Subword (BPE, WordPiece): 30k-100k токенов, любое слово → подслова.",
+    "covers": [
+      "зачем",
+      "OOV",
+      "subword"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

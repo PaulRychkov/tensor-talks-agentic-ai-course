@@ -1,0 +1,244 @@
+[
+  {
+    "id": "python-q-001",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 1,
+    "content": {
+      "question": "Что такое list comprehension в Python и чем он отличается от обычного цикла for?",
+      "expected_points": [
+        "Синтаксис [expr for item in iterable if condition]",
+        "Компактная запись по сравнению с циклом for + append",
+        "Быстрее обычного цикла за счёт оптимизаций интерпретатора",
+        "Создаёт новый список в памяти"
+      ]
+    },
+    "ideal_answer": {
+      "text": "List comprehension — это синтаксический сахар для создания списков. Запись [x*2 for x in range(5) if x > 1] эквивалентна циклу с append, но короче и немного быстрее, так как интерпретатор оптимизирует её как единую операцию. В отличие от генераторного выражения, list comprehension сразу создаёт весь список в памяти.",
+      "covers": ["синтаксис", "производительность", "память"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-002",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 2,
+    "content": {
+      "question": "Объясните разницу между генератором (generator) и обычной функцией в Python. Когда стоит использовать генераторы?",
+      "expected_points": [
+        "yield вместо return — функция возобновляется с того же места",
+        "Ленивые вычисления (lazy evaluation) — элементы генерируются по требованию",
+        "Экономия памяти при работе с большими последовательностями",
+        "Генератор — это объект-итератор, поддерживает next()"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Обычная функция выполняется до конца и возвращает значение. Функция-генератор содержит yield: при каждом вызове next() она продолжает выполнение с последнего yield. Это позволяет создавать бесконечные последовательности и обрабатывать большие данные без загрузки всего в память. Используйте генераторы, когда не нужны все элементы сразу или когда последовательность слишком большая.",
+      "covers": ["yield", "lazy evaluation", "память", "итератор"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-003",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 2,
+    "content": {
+      "question": "Что такое декоратор в Python? Напишите простой декоратор для измерения времени выполнения функции.",
+      "expected_points": [
+        "Декоратор — функция, принимающая функцию и возвращающая новую функцию",
+        "Синтаксис @decorator над определением функции",
+        "functools.wraps для сохранения метаданных исходной функции",
+        "Применение: логирование, авторизация, кэширование, измерение времени"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Декоратор — это функция-обёртка. Она принимает функцию как аргумент и возвращает новую функцию с расширенным поведением. Пример: def timer(func): @functools.wraps(func) def wrapper(*args, **kwargs): t = time.time(); result = func(*args, **kwargs); print(time.time()-t); return result; return wrapper. @functools.wraps важен для сохранения __name__ и __doc__ оригинальной функции.",
+      "covers": ["синтаксис", "functools.wraps", "применение"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-004",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 3,
+    "content": {
+      "question": "Что такое GIL (Global Interpreter Lock) в CPython? Как он влияет на многопоточность?",
+      "expected_points": [
+        "GIL — мьютекс, позволяющий только одному потоку выполнять байткод Python одновременно",
+        "Многопоточность не даёт выигрыша для CPU-bound задач",
+        "Для I/O-bound задач потоки эффективны (GIL освобождается при ожидании I/O)",
+        "Для параллельных CPU-вычислений используют multiprocessing или C-расширения"
+      ]
+    },
+    "ideal_answer": {
+      "text": "GIL — глобальная блокировка интерпретатора CPython. Она гарантирует, что только один поток исполняет Python-байткод в любой момент. Из-за GIL потоки не дают параллелизма для CPU-bound задач. Однако при ожидании I/O (сеть, диск) GIL освобождается, поэтому threading.Thread подходит для I/O-bound задач. Для CPU-bound параллелизма используют multiprocessing или asyncio.",
+      "covers": ["определение", "CPU-bound vs I/O-bound", "альтернативы"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-005",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 3,
+    "content": {
+      "question": "Объясните принципы asyncio в Python: event loop, корутины, await. Чем asyncio отличается от threading?",
+      "expected_points": [
+        "Корутина — async def функция, выполнение которой можно приостановить через await",
+        "Event loop — цикл событий, планирующий выполнение корутин",
+        "Кооперативная многозадачность vs вытесняющая (threading)",
+        "asyncio не создаёт новых потоков, всё в одном потоке",
+        "Подходит для I/O-bound задач, не для CPU-bound"
+      ]
+    },
+    "ideal_answer": {
+      "text": "asyncio реализует кооперативную многозадачность: корутина сама говорит 'я жду' через await, передавая управление event loop. Event loop выбирает следующую готовую корутину и продолжает её. В отличие от threading, asyncio не создаёт OS-потоков — накладные расходы ниже. Но корутины нельзя прерывать принудительно, и CPU-bound код заблокирует весь loop.",
+      "covers": ["event loop", "await", "кооперативность", "отличие от threading"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-006",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 2,
+    "content": {
+      "question": "Что означают *args и **kwargs в Python? Приведите пример функции, принимающей произвольное число аргументов.",
+      "expected_points": [
+        "*args собирает позиционные аргументы в кортеж",
+        "**kwargs собирает именованные аргументы в словарь",
+        "Порядок: обычные параметры, *args, keyword-only, **kwargs",
+        "Используются для передачи аргументов в wrapper-функции и перегрузки"
+      ]
+    },
+    "ideal_answer": {
+      "text": "*args позволяет функции принять любое количество позиционных аргументов — они собираются в кортеж. **kwargs собирает любые именованные аргументы в словарь. Пример: def log(level, *messages, sep=' ', **meta): print(sep.join(messages), meta). При вызове: log('INFO', 'start', 'ok', sep='-', user='alice'). Звёздочки можно использовать и при вызове для распаковки: func(*list_arg, **dict_arg).",
+      "covers": ["*args", "**kwargs", "порядок параметров", "распаковка"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-007",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 2,
+    "content": {
+      "question": "Что такое контекстный менеджер (context manager) в Python? Как реализовать свой с помощью класса и с помощью contextlib?",
+      "expected_points": [
+        "Конструкция with ... as ..., методы __enter__ и __exit__",
+        "__exit__ получает информацию об исключении и может его подавить",
+        "Гарантирует выполнение завершающего кода даже при исключении",
+        "@contextlib.contextmanager — генераторный способ создания менеджера"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Контекстный менеджер — объект с методами __enter__ (вызывается при входе в with-блок) и __exit__ (вызывается при выходе, в том числе при исключении). Класс: class Timer: def __enter__(self): self.t=time.time(); return self; def __exit__(self, *exc): print(time.time()-self.t). Через contextlib: @contextmanager def timer(): t=time.time(); yield; print(time.time()-t). С contextlib код до yield — это __enter__, после — __exit__.",
+      "covers": ["__enter__/__exit__", "__exit__ при исключении", "contextlib"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-008",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 1,
+    "content": {
+      "question": "Объясните duck typing в Python. В чём его преимущества и какие потенциальные проблемы он несёт?",
+      "expected_points": [
+        "'Если ходит как утка и крякает как утка — это утка'",
+        "Python проверяет наличие методов/атрибутов во время выполнения, а не типы",
+        "Преимущество: гибкость, полиморфизм без наследования",
+        "Риск: ошибки типов обнаруживаются только в runtime"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Duck typing означает, что Python не проверяет тип объекта — он проверяет, есть ли нужный метод или атрибут. Если объект умеет __len__, он 'ведёт себя как последовательность' — и этого достаточно. Это делает код гибким: функция может работать со списком, строкой или своим классом без явного наследования. Минус: ошибки типов всплывают только в runtime. Для ранней проверки используют type hints и mypy.",
+      "covers": ["концепция", "преимущества полиморфизма", "риски", "type hints"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-009",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 3,
+    "content": {
+      "question": "Что такое дескрипторы (descriptors) в Python? Как работают property, classmethod и staticmethod под капотом?",
+      "expected_points": [
+        "Дескриптор — объект, реализующий __get__, __set__ или __delete__",
+        "property — дескриптор, позволяющий управлять доступом к атрибуту через методы",
+        "classmethod передаёт класс вместо экземпляра как первый аргумент",
+        "staticmethod — обычная функция внутри класса, без cls и self"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Дескриптор — объект, управляющий доступом к атрибуту через __get__/__set__/__delete__. property — дескриптор данных: при чтении атрибута вызывается getter, при записи — setter. classmethod.__get__ возвращает bound method, где первый аргумент — класс, а не экземпляр. staticmethod.__get__ возвращает просто функцию без автоматических аргументов. Протокол дескрипторов — основа метапрограммирования в Python.",
+      "covers": ["__get__/__set__", "property", "classmethod", "staticmethod"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  },
+  {
+    "id": "python-q-010",
+    "theory_id": "python",
+    "question_type": "open",
+    "complexity": 2,
+    "content": {
+      "question": "Чем отличаются изменяемые (mutable) и неизменяемые (immutable) объекты в Python? Как это влияет на передачу аргументов в функции?",
+      "expected_points": [
+        "Immutable: int, str, tuple, frozenset — нельзя изменить после создания",
+        "Mutable: list, dict, set, объекты классов — изменяемые",
+        "Python передаёт объекты по ссылке (pass by object reference)",
+        "Изменение mutable-аргумента внутри функции видно снаружи",
+        "Опасность изменяемых дефолтных аргументов def f(x=[])"
+      ]
+    },
+    "ideal_answer": {
+      "text": "Immutable-объекты (int, str, tuple) нельзя изменить — операции создают новый объект. Mutable (list, dict, set) изменяются на месте. Python передаёт аргументы по ссылке на объект: для mutable изменение внутри функции видно снаружи. Классический баг: def f(x=[]) — список-дефолт создаётся один раз при объявлении функции и разделяется между вызовами. Правильно: def f(x=None): if x is None: x = [].",
+      "covers": ["immutable vs mutable", "передача по ссылке", "дефолтный список"]
+    },
+    "metadata": {
+      "language": "ru",
+      "created_by": "seed",
+      "last_updated": "2025-01-01"
+    }
+  }
+]

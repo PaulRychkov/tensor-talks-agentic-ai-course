@@ -55,26 +55,32 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 	)
 
 	// Инициализация Kafka producer
-	kafkaProducer, err := kafka.NewProducer(
-		cfg.Kafka.Brokers,
-		cfg.Kafka.TopicRequest,
-		"session-manager-service",
-		"1.0.0",
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("init kafka producer: %w", err)
+	var kafkaProducer *kafka.Producer
+	var kafkaErr error
+	for attempt := 1; attempt <= 10; attempt++ {
+		kafkaProducer, kafkaErr = kafka.NewProducer(cfg.Kafka.Brokers, cfg.Kafka.TopicRequest, "session-manager-service", "1.0.0", logger)
+		if kafkaErr == nil {
+			break
+		}
+		logger.Warn("Kafka producer not ready, retrying", zap.Int("attempt", attempt), zap.Error(kafkaErr))
+		time.Sleep(time.Duration(attempt*3) * time.Second)
+	}
+	if kafkaErr != nil {
+		return nil, fmt.Errorf("init kafka producer: %w", kafkaErr)
 	}
 
 	// Инициализация Kafka consumer
-	kafkaConsumer, err := kafka.NewConsumer(
-		cfg.Kafka.Brokers,
-		cfg.Kafka.TopicResponse,
-		cfg.Kafka.ConsumerGroup,
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("init kafka consumer: %w", err)
+	var kafkaConsumer *kafka.Consumer
+	for attempt := 1; attempt <= 10; attempt++ {
+		kafkaConsumer, kafkaErr = kafka.NewConsumer(cfg.Kafka.Brokers, cfg.Kafka.TopicResponse, cfg.Kafka.ConsumerGroup, logger)
+		if kafkaErr == nil {
+			break
+		}
+		logger.Warn("Kafka consumer not ready, retrying", zap.Int("attempt", attempt), zap.Error(kafkaErr))
+		time.Sleep(time.Duration(attempt*3) * time.Second)
+	}
+	if kafkaErr != nil {
+		return nil, fmt.Errorf("init kafka consumer: %w", kafkaErr)
 	}
 
 	// Создаём сервис управления сессиями

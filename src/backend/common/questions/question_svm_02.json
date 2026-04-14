@@ -1,0 +1,37 @@
+{
+  "id": "question_svm_02",
+  "theory_id": "theory_svm",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое kernel trick в SVM и зачем он нужен для нелинейно разделимых данных?",
+    "expected_points": [
+      "K(x,x')=φ(x)·φ(x') без явного отображения в высокое пространство",
+      "RBF kernel: K=exp(-γ||x-x'||²) — бесконечномерное пространство",
+      "нелинейные границы в исходном пространстве",
+      "kernels: RBF, polynomial, sigmoid"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_svm",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "SVM оптимизирует через скалярные произведения. Kernel trick: заменяем <xi,xj> на K(xi,xj) — произведение в новом пространстве без явного φ. RBF≡бесконечномерному φ.",
+    "covers": [
+      "kernel trick",
+      "RBF",
+      "нелинейная граница"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

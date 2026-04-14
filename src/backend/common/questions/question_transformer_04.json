@@ -1,0 +1,38 @@
+{
+  "id": "question_transformer_04",
+  "theory_id": "theory_transformer",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Какова вычислительная сложность self-attention? Как её снижают для длинных последовательностей?",
+    "expected_points": [
+      "O(n²·d) по времени и памяти",
+      "для длинных контекстов — узкое место",
+      "Sparse attention: Longformer — локальные окна",
+      "FlashAttention: IO-эффективная реализация"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_transformer",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Self-attention O(n²). Решения: Sparse Attention (Longformer — локальные окна); FlashAttention — тайловое вычисление без полной QKᵀ, ускорение 2-4x; Linear Attention O(n).",
+    "covers": [
+      "O(n²)",
+      "Longformer",
+      "FlashAttention",
+      "linear attention"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

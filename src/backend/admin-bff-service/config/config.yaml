@@ -1,0 +1,41 @@
+server:
+  host: "0.0.0.0"
+  port: 8096
+
+auth_service:
+  base_url: "http://auth-service:8081"
+  timeout_seconds: 5
+
+knowledge_producer_service:
+  base_url: "http://knowledge-producer-service:8092"
+  timeout_seconds: 10
+
+knowledge_base_crud_service:
+  base_url: "http://knowledge-base-crud-service:8090"
+  timeout_seconds: 5
+
+questions_crud_service:
+  base_url: "http://questions-crud-service:8091"
+  timeout_seconds: 5
+
+user_crud_service:
+  base_url: "http://user-crud-service:8082"
+  timeout_seconds: 5
+
+results_crud_service:
+  base_url: "http://results-crud-service:8088"
+  timeout_seconds: 10
+
+prometheus_url: "http://prometheus:9090"
+
+jwt:
+  secret: "changeme-in-prod"
+  issuer: "tensor-talks-auth"
+  audience: "tensor-talks-services"
+
+allowed_roles:
+  - "admin"
+  - "content_editor"
+
+# Bootstrap secret for POST /admin/login (override via ADMIN_BFF_ADMIN_SECRET env var)
+admin_secret: "changeme-admin-secret"

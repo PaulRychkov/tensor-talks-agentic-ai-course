@@ -1,0 +1,43 @@
+{
+  "id": "question_cot_02",
+  "theory_id": "theory_chain_of_thought",
+  "linked_segments": [
+    "example",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое Tree-of-Thought и чем он отличается от Chain-of-Thought?",
+    "expected_points": [
+      "CoT: линейная цепочка рассуждений",
+      "ToT: дерево ветвей с оценкой и бэктрекингом",
+      "ToT лучше для задач с несколькими путями решения",
+      "реализуется через многократные LLM вызовы + верификатор"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_chain_of_thought",
+        "segment_type": "example"
+      },
+      {
+        "theory_id": "theory_chain_of_thought",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "CoT — линейное рассуждение A→B→C. ToT — дерево: несколько ветвей, оценка (LLM-верификатор), backtracking. ToT≈BFS/DFS в пространстве рассуждений.",
+    "covers": [
+      "CoT vs ToT",
+      "бэктрекинг",
+      "верификатор",
+      "применения"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

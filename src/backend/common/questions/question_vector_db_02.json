@@ -1,0 +1,43 @@
+{
+  "id": "question_vector_db_02",
+  "theory_id": "theory_vector_databases",
+  "linked_segments": [
+    "definition",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое HNSW и ANN? Как векторные БД находят ближайших соседей эффективно?",
+    "expected_points": [
+      "ANN: приближённый поиск O(log n) вместо O(n)",
+      "HNSW: иерархический навигационный граф",
+      "IVF: разбиение пространства на кластеры",
+      "трейдофф: скорость vs recall"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_vector_databases",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_vector_databases",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "ANN vs точный kNN O(n·d). HNSW — многоуровневый граф, O(log n), recall≈0.95+. IVF — поиск в nprobe ближайших кластерах. pgvector использует IVFFlat.",
+    "covers": [
+      "ANN",
+      "HNSW",
+      "IVF",
+      "recall"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "question_rlhf_02",
+  "theory_id": "theory_rlhf",
+  "linked_segments": [
+    "definition",
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Опишите три ключевых этапа RLHF. Что такое Reward Model и как он обучается?",
+    "expected_points": [
+      "SFT: обучение на демонстрациях людей",
+      "Reward Model: ранжирует ответы (Bradley-Terry)",
+      "PPO: оптимизация LLM с KL-penalty от SFT",
+      "RLHF = InstructGPT / ChatGPT подход"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_rlhf",
+        "segment_type": "definition"
+      },
+      {
+        "theory_id": "theory_rlhf",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "1) SFT — дообучаем LLM на примерах хороших ответов; 2) RM — предсказывает предпочтения (ранжирование пар); 3) PPO: reward=RM(ответ)-β*KL(LLM||SFT).",
+    "covers": [
+      "SFT",
+      "Reward Model",
+      "PPO",
+      "KL-penalty"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

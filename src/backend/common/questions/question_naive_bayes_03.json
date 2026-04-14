@@ -1,0 +1,38 @@
+{
+  "id": "question_naive_bayes_03",
+  "theory_id": "theory_naive_bayes",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Объясните теорему Байеса применительно к классификации.",
+    "expected_points": [
+      "P(y|X) = P(X|y)*P(y)/P(X)",
+      "posterior ∝ likelihood × prior",
+      "P(X) одинаков для всех классов — игнорируем",
+      "argmax_y P(X|y)*P(y)"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_naive_bayes",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "P(y|X)∝P(X|y)*P(y). Posterior=Likelihood×Prior. P(X) — константа, игнорируем. Выбираем class с max posterior. Наивность: P(X|y)=ΠP(xi|y).",
+    "covers": [
+      "теорема Байеса",
+      "posterior",
+      "prior",
+      "likelihood"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

@@ -42,7 +42,30 @@ func NewProducer(brokers []string, topic, serviceName, version string, logger *z
 }
 
 // SendInterviewBuildRequest отправляет запрос на создание программы интервью.
-func (p *Producer) SendInterviewBuildRequest(sessionID uuid.UUID, params models.SessionParams) error {
+func (p *Producer) SendInterviewBuildRequest(sessionID, userID uuid.UUID, params models.SessionParams) error {
+	mode := params.Mode
+	if mode == "" {
+		mode = params.Type // ghcr.io session-crud stores mode as "type"
+	}
+	if mode == "" {
+		mode = "interview"
+	}
+
+	kafkaParams := map[string]interface{}{
+		"topics":               params.Topics,
+		"level":                params.Level,
+		"type":                 params.Type,
+		"mode":                 mode,
+		"use_previous_results": params.UsePreviousResults,
+		"user_id":              userID.String(),
+	}
+	if len(params.Subtopics) > 0 {
+		kafkaParams["subtopics"] = params.Subtopics
+	}
+	if params.NumQuestions != nil {
+		kafkaParams["num_questions"] = *params.NumQuestions
+	}
+
 	event := InterviewBuilderEvent{
 		EventID:   uuid.New().String(),
 		EventType: "interview.build.request",
@@ -51,11 +74,7 @@ func (p *Producer) SendInterviewBuildRequest(sessionID uuid.UUID, params models.
 		Version:   p.version,
 		Payload: map[string]interface{}{
 			"session_id": sessionID.String(),
-			"params": map[string]interface{}{
-				"topics": params.Topics,
-				"level":  params.Level,
-				"type":   params.Type,
-			},
+			"params":     kafkaParams,
 		},
 	}
 

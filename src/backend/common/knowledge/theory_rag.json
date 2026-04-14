@@ -3,27 +3,27 @@
   "concept": "RAG (Retrieval-Augmented Generation)",
   "complexity": 3,
   "parent_id": null,
-  "tags": ["nlp", "llm", "rag", "retrieval"],
+  "tags": ["nlp", "llm", "rag", "retrieval", "theory_rag"],
   "segments": [
     {
       "type": "definition",
-      "content": "RAG — подход, комбинирующий извлечение релевантной информации из базы знаний с генерацией ответа языковой моделью."
+      "content": "RAG (Retrieval-Augmented Generation) — это архитектурный паттерн, который расширяет возможности LLM, позволяя ей обращаться к внешней базе знаний перед генерацией ответа. В отличие от чистой генерации, где модель опирается исключительно на знания, полученные при обучении, RAG сначала извлекает (retrieve) релевантные документы из внешнего хранилища, а затем использует их как дополнительный контекст при генерации ответа. Это позволяет модели давать ответы, основанные на актуальных, верифицированных данных, а не только на запомненной информации из обучающей выборки."
     },
     {
       "type": "intuition",
-      "content": "Сначала находим релевантные документы, затем используем их как контекст для генерации ответа моделью."
+      "content": "RAG работает по принципу «сначала найди, потом отвечай». Представьте студента, который перед ответом на экзамене может заглянуть в учебник — он ищет нужную страницу (retrieval), читает её (context augmentation), а затем формулирует ответ своими словами (generation). Процесс состоит из двух этапов: (1) Retrieval — пользовательский запрос преобразуется в вектор (embedding), и по нему из базы извлекаются K наиболее похожих документов; (2) Generation — найденные документы вместе с оригинальным запросом подаются в LLM, которая генерирует ответ, опираясь на полученный контекст. Ключевое отличие от fine-tuning: RAG не изменяет веса модели, а динамически расширяет контекст."
     },
     {
       "type": "formula",
-      "content": "RAG(query) = LLM(query + retrieved_docs)"
+      "content": "RAG pipeline: query → Embedding(query) → VectorSearch(embedding, top_k) → retrieved_docs → LLM(prompt = query + retrieved_docs) → answer. Метрики качества retrieval: Precision@K (доля релевантных среди top-K), Recall@K (доля найденных среди всех релевантных), MRR (Mean Reciprocal Rank). Similarity: cosine_sim(q, d) = dot(q, d) / (||q|| * ||d||)."
     },
     {
       "type": "example",
-      "content": "Вопросно-ответные системы, чат-боты с доступом к документации. Векторные БД для поиска, embedding модели для retrieval."
+      "content": "Практические применения RAG: (1) Корпоративный Q&A-бот — индексирует внутреннюю документацию компании (Confluence, Notion), при вопросе сотрудника находит релевантные страницы и генерирует ответ с ссылками на источники. (2) Медицинский ассистент — ищет в базе клинических рекомендаций и формулирует ответ для врача. (3) Юридический поиск — по запросу находит релевантные статьи закона и судебные прецеденты. Типичный стек: LangChain/LlamaIndex для оркестрации, ChromaDB/Pinecone/Weaviate как векторная БД, модели OpenAI Ada-002 или E5 для embeddings, GPT-4/Claude для генерации."
     },
     {
       "type": "practical_notes",
-      "content": "Решает проблему галлюцинаций LLM. Компоненты: retriever (dense/sparse), generator (LLM). Важна релевантность retrieved документов."
+      "content": "Ключевые компоненты RAG-системы: (1) Document Loader — загрузка и парсинг документов (PDF, HTML, Markdown); (2) Text Splitter — разбивка на чанки (chunk_size=500-1000 токенов, overlap=50-200 для сохранения контекста между чанками); (3) Embedding Model — преобразование текста в вектор (dense embeddings: OpenAI Ada, E5, BGE; sparse: BM25, TF-IDF); (4) Vector Store — хранение и поиск (FAISS для in-memory, Pinecone/Weaviate/Qdrant для production); (5) Retriever — поиск top-K релевантных чанков (hybrid search = dense + sparse для лучшего recall); (6) Generator (LLM) — генерация ответа с контекстом. Основные проблемы: lost in the middle (модель игнорирует документы из середины контекста), chunk boundary issues (разрыв смысла на границе чанков), irrelevant retrieval (шумные результаты снижают качество ответа). Продвинутые техники: re-ranking (CrossEncoder для переранжирования top-K), query decomposition (разбивка сложного запроса на подзапросы), self-RAG (модель сама решает, нужен ли retrieval)."
     }
   ],
   "relations": [
@@ -34,12 +34,19 @@
     {
       "target_id": "theory_word_embeddings",
       "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_vector_databases",
+      "relation_type": "uses"
+    },
+    {
+      "target_id": "theory_transformer",
+      "relation_type": "prerequisite"
     }
   ],
   "metadata": {
-    "version": "1.0",
+    "version": "2.0",
     "language": "ru",
-    "last_updated": "2025-01-27"
+    "last_updated": "2026-04-13"
   }
 }
-

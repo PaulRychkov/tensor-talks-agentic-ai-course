@@ -1,0 +1,44 @@
+{
+  "id": "question_word_embeddings_02",
+  "theory_id": "theory_word_embeddings",
+  "linked_segments": [
+    "example",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Чем Word2Vec отличается от GloVe и контекстуальных эмбеддингов (BERT)?",
+    "expected_points": [
+      "Word2Vec, GloVe — статические: одно слово = один вектор",
+      "BERT — контекстуальные: зависят от окружения",
+      "Word2Vec: CBOW/Skip-gram",
+      "GloVe: матрица совместной встречаемости",
+      "статические не различают многозначность"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_word_embeddings",
+        "segment_type": "example"
+      },
+      {
+        "theory_id": "theory_word_embeddings",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Word2Vec/GloVe: один вектор на слово. BERT: вектор зависит от контекста. Word2Vec — predictive, GloVe — count-based. Статические не работают с полисемией.",
+    "covers": [
+      "статические vs контекстуальные",
+      "CBOW/skip-gram",
+      "GloVe",
+      "полисемия"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

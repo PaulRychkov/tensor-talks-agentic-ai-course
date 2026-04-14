@@ -31,12 +31,26 @@ Kafka используется для асинхронной обработки 
 
 Топик — это категория или канал сообщений. Каждый топик имеет имя и может содержать множество партиций для масштабирования.
 
-**Топики для TensorTalks:**
+**Топики для TensorTalks** (все с префиксом `tensor-talks-`):
 
-- `chat.events.out` — события от BFF к модели (старт чата, ответ пользователя)
-- `chat.events.in` — события от модели к BFF (вопрос от модели, результаты, окончание чата)
-- `interview.build.request` — запрос на создание программы интервью (session-manager → interview-builder)
-- `interview.build.response` — ответ с программой интервью (interview-builder → session-manager)
+| Топик | Направление | Описание |
+|---|---|---|
+| `tensor-talks-chat.events.out` | BFF → dialogue-aggregator | Старт чата, сообщение пользователя, terminate |
+| `tensor-talks-chat.events.in` | dialogue-aggregator → BFF | Вопрос агента, completed |
+| `tensor-talks-messages.full.data` | dialogue-aggregator → interviewer-agent-service | Полный контекст диалога |
+| `tensor-talks-generated.phrases` | interviewer-agent-service → dialogue-aggregator | Реплика/решение агента |
+| `tensor-talks-interview.build.request` | session-service → interview-builder-service | Запрос на создание программы интервью |
+| `tensor-talks-interview.build.response` | interview-builder-service → session-service | Ответ с программой и `program_meta` |
+| `tensor-talks-session.completed` | dialogue-aggregator → analyst-agent-service | Завершение сессии интервью |
+
+**Consumer groups** (все с префиксом `tensor-talks-`):
+- `tensor-talks-bff-service-group`
+- `tensor-talks-dialogue-aggregator-group`
+- `tensor-talks-dialogue-aggregator-agent-group`
+- `tensor-talks-session-manager-service-group`
+- `tensor-talks-interview-builder-service-group`
+- `tensor-talks-interviewer-agent-service-group`
+- `tensor-talks-analyst-agent-service-group`
 
 ### Partitions (Партиции)
 
@@ -75,7 +89,7 @@ Kafka используется для асинхронной обработки 
 ### Обязательные поля
 
 - `event_id` — уникальный ID события (UUID)
-- `event_type` — тип события (например, `user.registered`, `interview.completed`)
+- `event_type` — тип события (например, `user.registered`, `session.completed`)
 - `timestamp` — время создания события (ISO 8601 UTC)
 - `service` — имя сервиса, создавшего событие
 - `version` — версия сервиса
@@ -185,7 +199,7 @@ Kafka используется для асинхронной обработки 
   "event_id": "evt-ghi789",
   "event_type": "chat.model_question",
   "timestamp": "2025-01-15T10:32:00.123Z",
-  "service": "model-service",
+  "service": "dialogue-aggregator",
   "version": "1.0.0",
   "payload": {
     "session_id": "session-xyz789",
@@ -243,7 +257,7 @@ Kafka используется для асинхронной обработки 
   "event_id": "evt-jkl012",
   "event_type": "chat.completed",
   "timestamp": "2025-01-15T10:45:00.123Z",
-  "service": "model-service",
+  "service": "dialogue-aggregator",
   "version": "1.0.0",
   "payload": {
     "session_id": "session-xyz789",
@@ -270,6 +284,46 @@ Kafka используется для асинхронной обработки 
   - `recommendations` (array of strings) — рекомендации для улучшения
 - `completed_at` (string, ISO 8601) — время завершения чата
 
+### Топик `session.completed` (Dialogue Aggregator → Analyst Agent)
+
+#### Событие `session.completed`
+
+Публикуется dialogue-aggregator после нормального или досрочного завершения любой сессии (interview, training, study). Analyst-agent подписан на этот топик для генерации финального отчёта. `session_kind`, `topics` и `level` берутся из реальных параметров сессии (через session-service `GET /sessions/{id}/program`), а не хардкодятся.
+
+```json
+{
+  "event_id": "evt-sc-001",
+  "event_type": "session.completed",
+  "timestamp": "2026-04-01T12:05:00.123Z",
+  "service": "dialogue-aggregator",
+  "version": "1.0.0",
+  "payload": {
+    "session_id": "session-xyz789",
+    "session_kind": "interview",
+    "user_id": "user-123456",
+    "chat_id": "chat-abc789",
+    "topics": ["nlp", "llm"],
+    "level": "middle",
+    "terminated_early": false,
+    "answered_questions": 8,
+    "total_questions": 10,
+    "completed_at": "2026-04-01T12:05:00.123Z"
+  }
+}
+```
+
+**Поля payload:**
+- `session_id` (string, UUID) — идентификатор сессии
+- `session_kind` (string) — тип сессии: `interview` | `training` | `study`
+- `user_id` (string, UUID) — идентификатор пользователя
+- `chat_id` (string, UUID) — идентификатор чата
+- `topics` (array of strings) — темы сессии (из `session.params.topics`)
+- `level` (string) — уровень сложности (`junior` | `middle` | `senior`)
+- `terminated_early` (bool) — была ли сессия завершена досрочно
+- `answered_questions` (int) — количество отвеченных вопросов
+- `total_questions` (int) — общее количество вопросов в программе
+- `completed_at` (string, ISO 8601) — время завершения
+
 ### Новые топики для создания программы интервью
 
 #### Топик `interview.build.request` (Session Manager → Interview Builder)
@@ -290,7 +344,8 @@ Kafka используется для асинхронной обработки 
     "params": {
       "topics": ["ml", "nlp"],
       "level": "middle",
-      "type": "interview"
+      "type": "ml",
+      "mode": "interview"
     }
   },
   "metadata": {
@@ -301,10 +356,11 @@ Kafka используется для асинхронной обработки 
 
 **Поля payload:**
 - `session_id` (string, UUID) — идентификатор сессии
-- `params` (object) — параметры интервьюируемого:
-  - `topics` (array of strings) — темы интервью
+- `params` (object) — параметры сессии:
+  - `topics` (array of strings) — темы
   - `level` (string) — уровень сложности (junior, middle, senior)
-  - `type` (string) — тип интервью (interview, training)
+  - `type` (string) — специальность (ml, nlp, llm, cv, ds)
+  - `mode` (string) — режим сессии: `interview` | `training` | `study`
 
 #### Топик `interview.build.response` (Interview Builder → Session Manager)
 
@@ -334,6 +390,12 @@ Kafka используется для асинхронной обработки 
           "order": 2
         }
       ]
+    },
+    "program_meta": {
+      "validation_passed": true,
+      "coverage": {"ml": 1, "nlp": 1},
+      "fallback_reason": null,
+      "generator_version": "1.2.0"
     }
   },
   "metadata": {
@@ -349,6 +411,11 @@ Kafka используется для асинхронной обработки 
     - `question` (string) — текст вопроса
     - `theory` (string) — теория к вопросу
     - `order` (number) — порядковый номер вопроса
+- `program_meta` (object) — метаданные качества сборки:
+  - `validation_passed` (bool) — прошла ли валидация
+  - `coverage` (object) — покрытие тем
+  - `fallback_reason` (string, nullable) — причина fallback
+  - `generator_version` (string) — версия генератора
 
 ## Использование в Go-микросервисах
 

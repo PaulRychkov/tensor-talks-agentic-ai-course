@@ -1,0 +1,38 @@
+{
+  "id": "question_cross_validation_02",
+  "theory_id": "theory_cross_validation",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Когда использовать стратифицированную кросс-валидацию и что такое Leave-One-Out CV?",
+    "expected_points": [
+      "стратифицированная CV сохраняет соотношение классов в каждом fold",
+      "необходима при дисбалансе классов",
+      "LOOCV: k=n, каждый пример — тест",
+      "LOOCV несмещённо но вычислительно дорого"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_cross_validation",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Stratified CV: каждый fold содержит ту же долю классов — критично при дисбалансе. LOOCV = k=n: минимальное смещение, O(n) обучений. Компромисс: 5-fold или 10-fold stratified.",
+    "covers": [
+      "стратификация",
+      "дисбаланс",
+      "LOOCV",
+      "трейдофф"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

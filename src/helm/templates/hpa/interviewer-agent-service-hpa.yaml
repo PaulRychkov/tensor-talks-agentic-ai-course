@@ -1,0 +1,34 @@
+{{- if and (index .Values.services "interviewer-agent-service").enabled (index .Values.services "interviewer-agent-service").autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-interviewer-agent-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: interviewer-agent-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tensor-talks.fullname" . }}-interviewer-agent-service
+  minReplicas: {{ (index .Values.services "interviewer-agent-service").autoscaling.minReplicas }}
+  maxReplicas: {{ (index .Values.services "interviewer-agent-service").autoscaling.maxReplicas }}
+  metrics:
+    {{- if (index .Values.services "interviewer-agent-service").autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ (index .Values.services "interviewer-agent-service").autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if (index .Values.services "interviewer-agent-service").autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ (index .Values.services "interviewer-agent-service").autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

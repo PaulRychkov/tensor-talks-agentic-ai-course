@@ -1,0 +1,38 @@
+{
+  "id": "question_logistic_regression_04",
+  "theory_id": "theory_logistic_regression",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Как обрабатывать несбалансированные классы при обучении логистической регрессии?",
+    "expected_points": [
+      "class_weight=balanced",
+      "SMOTE oversampling",
+      "изменение порога классификации",
+      "метрики F1, ROC-AUC вместо accuracy"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_logistic_regression",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "class_weight=balanced автоматически взвешивает потери. SMOTE oversamples меньший класс. Снижение порога уменьшает FN. Оценка через F1, ROC-AUC.",
+    "covers": [
+      "class_weight",
+      "SMOTE",
+      "порог",
+      "метрики дисбаланса"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

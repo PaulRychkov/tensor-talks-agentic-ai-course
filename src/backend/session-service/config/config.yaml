@@ -14,9 +14,9 @@ session_crud:
 
 kafka:
   brokers: ["kafka:9092"]
-  topic_request: "team10-interview.build.request"   # Prefixed for Kubernetes shared cluster
-  topic_response: "team10-interview.build.response" # Prefixed for Kubernetes shared cluster
-  consumer_group: "team10-session-manager-service-group"  # Prefixed for Kubernetes shared cluster
+  topic_request: "tensor-talks-interview.build.request"
+  topic_response: "tensor-talks-interview.build.response"
+  consumer_group: "tensor-talks-session-manager-service-group"
 
 session_manager:
   max_active_sessions: 100

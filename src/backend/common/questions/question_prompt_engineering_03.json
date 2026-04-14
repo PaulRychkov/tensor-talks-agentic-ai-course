@@ -1,0 +1,37 @@
+{
+  "id": "question_prompt_engineering_03",
+  "theory_id": "theory_prompt_engineering",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "conceptual",
+  "complexity": 1,
+  "content": {
+    "question": "Что такое prompt engineering? Из каких компонентов состоит эффективный промпт?",
+    "expected_points": [
+      "формулировка инструкций для LLM",
+      "компоненты: роль, задача, контекст, формат, ограничения",
+      "system prompt vs user prompt",
+      "итеративная разработка"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_prompt_engineering",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Prompt engineering — создание инструкций для LLM. Эффективный промпт: роль ('Ты эксперт...'), задача, контекст, формат вывода, ограничения.",
+    "covers": [
+      "определение",
+      "компоненты промпта",
+      "system/user"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

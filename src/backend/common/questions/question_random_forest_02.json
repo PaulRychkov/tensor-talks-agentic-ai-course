@@ -1,0 +1,43 @@
+{
+  "id": "question_random_forest_02",
+  "theory_id": "theory_random_forest",
+  "linked_segments": [
+    "formula",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как рассчитывается feature importance в Random Forest? Насколько ей можно доверять?",
+    "expected_points": [
+      "MDI: суммарное снижение Gini по признаку",
+      "Permutation Importance: падение accuracy при перемешивании признака",
+      "MDI предвзята к высококардинальным признакам",
+      "SHAP values — более надёжная альтернатива"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_random_forest",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_random_forest",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "MDI: усредняем impurity_decrease по деревьям — предвзята к числовым признакам. Permutation: перемешиваем признак → падение accuracy на тесте. SHAP — наиболее корректны.",
+    "covers": [
+      "MDI",
+      "permutation importance",
+      "предвзятость",
+      "SHAP"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

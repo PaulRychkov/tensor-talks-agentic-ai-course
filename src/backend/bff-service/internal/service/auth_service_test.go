@@ -34,6 +34,12 @@ func (s *stubAuthClient) Me(ctx context.Context, token string) (*client.User, er
 	return &client.User{ID: "1", Login: "user"}, nil
 }
 
+func (s *stubAuthClient) Logout(_ context.Context, _ string) error                             { return s.err }
+func (s *stubAuthClient) Recover(_ context.Context, _, _, _ string) error                      { return s.err }
+func (s *stubAuthClient) ChangePassword(_ context.Context, _, _, _ string) error               { return s.err }
+func (s *stubAuthClient) RegenerateRecoveryKey(_ context.Context, _, _ string) (string, error) { return "", s.err }
+func (s *stubAuthClient) DeleteAccount(_ context.Context, _, _ string) error                   { return s.err }
+
 func TestMapErrorBadRequest(t *testing.T) {
 	err := mapError(&client.APIError{Status: 400, Message: "invalid"})
 	require.Error(t, err)

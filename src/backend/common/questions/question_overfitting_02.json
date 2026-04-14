@@ -1,0 +1,38 @@
+{
+  "id": "question_overfitting_02",
+  "theory_id": "theory_overfitting",
+  "linked_segments": [
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Назовите 4 основных метода борьбы с переобучением и кратко объясните механизм каждого.",
+    "expected_points": [
+      "L1/L2 регуляризация: штраф за большие веса",
+      "Dropout: случайно отключает нейроны",
+      "Early stopping: мониторинг val_loss",
+      "Data augmentation: увеличение вариативности данных"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_overfitting",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "1) L1/L2 штрафуют большие веса; 2) Dropout обнуляет p% нейронов; 3) Early stopping прекращает при росте val_loss; 4) Augmentation синтетически расширяет датасет.",
+    "covers": [
+      "регуляризация",
+      "dropout",
+      "early stopping",
+      "аугментация"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

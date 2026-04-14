@@ -1,0 +1,42 @@
+{
+  "id": "question_pca_02",
+  "theory_id": "theory_pca",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как выбрать число компонент в PCA? Что такое explained variance ratio?",
+    "expected_points": [
+      "explained_variance_ratio_[i] — доля дисперсии i-й компоненты",
+      "cumsum ≥ 0.95 — стандартный порог",
+      "scree plot: ищем локоть",
+      "cross-validation с downstream задачей"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_pca",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_pca",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "explained_variance_ratio_[i]=λ_i/Σλ_j. Стратегии: cumsum≥0.95; scree plot — перегиб; reconstruction error на validation.",
+    "covers": [
+      "explained_variance_ratio",
+      "cumsum",
+      "scree plot"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

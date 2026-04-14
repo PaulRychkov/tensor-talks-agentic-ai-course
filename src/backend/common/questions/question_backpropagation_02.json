@@ -1,0 +1,38 @@
+{
+  "id": "question_backpropagation_02",
+  "theory_id": "theory_backpropagation",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 3,
+  "content": {
+    "question": "Объясните правило цепочки в контексте backpropagation. Как вычисляются градиенты?",
+    "expected_points": [
+      "chain rule: ∂L/∂w = ∂L/∂a · ∂a/∂z · ∂z/∂w",
+      "backward pass: локальный градиент × upstream gradient",
+      "δ^l = (W^{l+1})ᵀδ^{l+1} ⊙ σ'(z^l)",
+      "autograd строит computational graph"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_backpropagation",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Chain rule: ∂L/∂z=∂L/∂a·σ'(z). Backprop: δ^l=(W^{l+1})ᵀδ^{l+1}⊙σ'(z^l). ∇W^l=δ^l(a^{l-1})ᵀ. PyTorch autograd — автоматически.",
+    "covers": [
+      "chain rule",
+      "backward pass",
+      "delta",
+      "autograd"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

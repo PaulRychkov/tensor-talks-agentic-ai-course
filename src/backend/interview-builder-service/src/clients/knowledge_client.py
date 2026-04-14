@@ -13,12 +13,12 @@ class KnowledgeClient:
 
     def __init__(self, base_url: Optional[str] = None):
         self.base_url = base_url or settings.knowledge_base_crud_url
-        self.client = httpx.AsyncClient(timeout=30.0)
 
     async def get_knowledge_by_id(self, knowledge_id: str) -> Optional[Dict[str, Any]]:
         """Get knowledge by ID"""
         try:
-            response = await self.client.get(f"{self.base_url}/knowledge/{knowledge_id}")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(f"{self.base_url}/knowledge/{knowledge_id}")
             if response.status_code == 200:
                 data = response.json()
                 return data.get("knowledge")
@@ -49,10 +49,11 @@ class KnowledgeClient:
             if tags:
                 params["tags"] = tags
 
-            response = await self.client.get(
-                f"{self.base_url}/knowledge",
-                params=params
-            )
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/knowledge",
+                    params=params
+                )
             response.raise_for_status()
             data = response.json()
             return data.get("knowledge", [])
@@ -61,6 +62,6 @@ class KnowledgeClient:
             raise
 
     async def close(self):
-        """Close HTTP client"""
-        await self.client.aclose()
+        """No-op: connections are created per-request"""
+        pass
 

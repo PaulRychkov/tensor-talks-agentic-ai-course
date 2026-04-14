@@ -1,0 +1,38 @@
+{
+  "id": "question_lstm_02",
+  "theory_id": "theory_lstm",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Опишите три гейта в LSTM. Как cell state позволяет сохранять информацию на длинных дистанциях?",
+    "expected_points": [
+      "forget gate: что забыть из cell state",
+      "input gate: что добавить",
+      "output gate: что вывести из cell state",
+      "cell state аддитивно обновляется — нет vanishing gradient"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_lstm",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Gates (сигмоида): f_t — забыть, i_t — добавить, o_t — вывести. C_t=f_t⊙C_{t-1}+i_t⊙g_t — аддитивное обновление. Градиент течёт через ⊙f_t без умножения на W.",
+    "covers": [
+      "forget gate",
+      "input gate",
+      "output gate",
+      "cell state аддитивность"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

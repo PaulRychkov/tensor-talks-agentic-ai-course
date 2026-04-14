@@ -21,6 +21,8 @@ type ChatRepository interface {
 	GetChatDumpBySessionID(ctx context.Context, sessionID uuid.UUID) (*models.ChatDump, error)
 	CreateChatDump(ctx context.Context, dump *models.ChatDump) error
 	UpdateChatDump(ctx context.Context, dump *models.ChatDump) error
+	MaskMessageContent(ctx context.Context, messageID uint, placeholder string) error
+	MaskMessageContentByKafkaID(ctx context.Context, kafkaMessageID string, placeholder string) error
 }
 
 // GormChatRepository — реализация ChatRepository на основе GORM.
@@ -66,6 +68,32 @@ func (r *GormChatRepository) GetChatDumpBySessionID(ctx context.Context, session
 func (r *GormChatRepository) CreateChatDump(ctx context.Context, dump *models.ChatDump) error {
 	if err := r.db.WithContext(ctx).Create(dump).Error; err != nil {
 		return err
+	}
+	return nil
+}
+
+// MaskMessageContent заменяет содержимое сообщения плейсхолдером (для PII-маскирования).
+func (r *GormChatRepository) MaskMessageContent(ctx context.Context, messageID uint, placeholder string) error {
+	result := r.db.WithContext(ctx).Model(&models.Message{}).Where("id = ?", messageID).Update("content", placeholder)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// MaskMessageContentByKafkaID заменяет содержимое сообщения по message_id из metadata (Kafka UUID).
+func (r *GormChatRepository) MaskMessageContentByKafkaID(ctx context.Context, kafkaMessageID string, placeholder string) error {
+	result := r.db.WithContext(ctx).Model(&models.Message{}).
+		Where("metadata->>'message_id' = ?", kafkaMessageID).
+		Update("content", placeholder)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
 	}
 	return nil
 }

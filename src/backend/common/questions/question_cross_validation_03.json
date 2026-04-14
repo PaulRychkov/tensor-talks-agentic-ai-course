@@ -1,0 +1,37 @@
+{
+  "id": "question_cross_validation_03",
+  "theory_id": "theory_cross_validation",
+  "linked_segments": [
+    "definition"
+  ],
+  "question_type": "applied",
+  "complexity": 3,
+  "content": {
+    "question": "Как правильно использовать CV при подборе гиперпараметров, чтобы избежать data leakage?",
+    "expected_points": [
+      "nested CV: внешний для оценки, внутренний для гиперпараметров",
+      "нельзя использовать один fold для обоих",
+      "sklearn Pipeline предотвращает утечку",
+      "финальная модель обучается на всём train"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_cross_validation",
+        "segment_type": "definition"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Nested CV: outer k-fold для оценки, inner CV внутри каждого fold для гиперпараметров. Один fold для обоих — data leakage. sklearn Pipeline: scaler обучается только на train-части.",
+    "covers": [
+      "nested CV",
+      "data leakage",
+      "Pipeline sklearn"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

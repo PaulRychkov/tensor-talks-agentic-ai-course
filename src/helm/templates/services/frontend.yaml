@@ -8,9 +8,16 @@ metadata:
     {{- include "tensor-talks.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 spec:
-  type: ClusterIP
+  # LoadBalancer + `minikube tunnel` автоматически пробрасывает сервис на
+  # 127.0.0.1:80 хоста — заменяет kubectl port-forward и watchdog-скрипт.
+  # Cloudflared подключается к 127.0.0.1:80 и получает стабильный адрес без
+  # внешних скриптов. В реальном проде этот же LoadBalancer заберёт облачный LB.
+  type: {{ (index .Values.services "frontend").serviceType | default "LoadBalancer" }}
   ports:
-    - port: 80
+    # Порт 8080 на хосте (после minikube tunnel → 127.0.0.1:8080) —
+    # ровно то, на что уже смотрит cloudflared (tobedel/cloudflared-config.yml).
+    # Нужно чтобы избежать конфликта с IIS/прочими сервисами на 80.
+    - port: 8080
       targetPort: 8080
       protocol: TCP
       name: http

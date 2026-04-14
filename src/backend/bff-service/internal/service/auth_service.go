@@ -33,6 +33,11 @@ type AuthAPI interface {
 	Login(ctx context.Context, login, password string) (*client.AuthResponse, error)
 	Refresh(ctx context.Context, refreshToken string) (*client.AuthResponse, error)
 	Me(ctx context.Context, accessToken string) (*client.User, error)
+	Logout(ctx context.Context, accessToken string) error
+	Recover(ctx context.Context, login, recoveryKey, newPassword string) error
+	ChangePassword(ctx context.Context, accessToken, currentPassword, newPassword string) error
+	RegenerateRecoveryKey(ctx context.Context, accessToken, password string) (string, error)
+	DeleteAccount(ctx context.Context, accessToken, password string) error
 }
 
 // AuthService инкапсулирует бизнес-логику BFF, связанную с аутентификацией.
@@ -115,6 +120,35 @@ func (s *AuthService) CurrentUser(ctx context.Context, accessToken string) (*cli
 		return nil, mapError(err)
 	}
 	return user, nil
+}
+
+// Logout инвалидирует сессию пользователя.
+func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
+	return mapError(s.client.Logout(ctx, accessToken))
+}
+
+// Recover сбрасывает пароль по ключу восстановления.
+func (s *AuthService) Recover(ctx context.Context, login, recoveryKey, newPassword string) error {
+	return mapError(s.client.Recover(ctx, login, recoveryKey, newPassword))
+}
+
+// ChangePassword меняет пароль аутентифицированного пользователя.
+func (s *AuthService) ChangePassword(ctx context.Context, accessToken, currentPassword, newPassword string) error {
+	return mapError(s.client.ChangePassword(ctx, accessToken, currentPassword, newPassword))
+}
+
+// RegenerateRecoveryKey перегенерирует ключ восстановления.
+func (s *AuthService) RegenerateRecoveryKey(ctx context.Context, accessToken, password string) (string, error) {
+	key, err := s.client.RegenerateRecoveryKey(ctx, accessToken, password)
+	if err != nil {
+		return "", mapError(err)
+	}
+	return key, nil
+}
+
+// DeleteAccount удаляет аккаунт пользователя.
+func (s *AuthService) DeleteAccount(ctx context.Context, accessToken, password string) error {
+	return mapError(s.client.DeleteAccount(ctx, accessToken, password))
 }
 
 // mapError преобразует ошибку HTTP-клиента auth-service в одну из доменных

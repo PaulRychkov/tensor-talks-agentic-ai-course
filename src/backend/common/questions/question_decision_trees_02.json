@@ -1,0 +1,38 @@
+{
+  "id": "question_decision_trees_02",
+  "theory_id": "theory_decision_trees",
+  "linked_segments": [
+    "formula"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое Information Gain и Gini Impurity? Как дерево выбирает лучший признак?",
+    "expected_points": [
+      "Gini = 1 - Σp_i²",
+      "IG = Entropy(parent) - weighted Entropy(children)",
+      "выбираем признак с max IG или min Gini",
+      "CART: Gini; ID3/C4.5: Entropy"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_decision_trees",
+        "segment_type": "formula"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Gini=1-Σp_k². IG=H(parent)-Σ|child|/|parent|·H(child). Дерево перебирает признаки и пороги, выбирает max IG. CART использует Gini.",
+    "covers": [
+      "Gini",
+      "Entropy",
+      "Information Gain",
+      "алгоритм выбора"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

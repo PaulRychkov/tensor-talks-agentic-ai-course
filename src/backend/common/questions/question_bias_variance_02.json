@@ -1,0 +1,43 @@
+{
+  "id": "question_bias_variance_02",
+  "theory_id": "theory_bias_variance",
+  "linked_segments": [
+    "formula",
+    "example"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Как диагностировать high bias и high variance по кривым обучения?",
+    "expected_points": [
+      "high bias: и train и val error высокие, маленький gap",
+      "high variance: train низкий, val высокий, большой gap",
+      "high bias → усложнить модель, меньше регуляризации",
+      "high variance → больше данных, регуляризация"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_bias_variance",
+        "segment_type": "formula"
+      },
+      {
+        "theory_id": "theory_bias_variance",
+        "segment_type": "example"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "High bias: оба error высоки, gap маленький — модель слишком проста. High variance: train низкий, val высокий, большой gap — переобучение.",
+    "covers": [
+      "learning curves",
+      "high bias",
+      "high variance",
+      "лечение"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}

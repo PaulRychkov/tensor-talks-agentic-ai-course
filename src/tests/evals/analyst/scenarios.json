@@ -1,0 +1,78 @@
+[
+  {
+    "id": "ana_001",
+    "category": "strong_candidate",
+    "description": "Сильный кандидат — все оценки > 0.8",
+    "evaluations": [
+      {"question_id": "q1", "score": 0.9, "decision": "next", "topic": "neural_networks"},
+      {"question_id": "q2", "score": 0.85, "decision": "next", "topic": "transformers"},
+      {"question_id": "q3", "score": 0.88, "decision": "next", "topic": "python"},
+      {"question_id": "q4", "score": 0.92, "decision": "next", "topic": "databases"},
+      {"question_id": "q5", "score": 0.87, "decision": "next", "topic": "neural_networks"}
+    ],
+    "session_kind": "interview",
+    "expected": {
+      "report_score_min": 80,
+      "strengths_nonempty": true,
+      "errors_by_topic_minimal": true
+    }
+  },
+  {
+    "id": "ana_002",
+    "category": "weak_candidate",
+    "description": "Слабый кандидат — все оценки < 0.4",
+    "evaluations": [
+      {"question_id": "q1", "score": 0.2, "decision": "redirect", "topic": "neural_networks"},
+      {"question_id": "q2", "score": 0.3, "decision": "hint", "topic": "transformers"},
+      {"question_id": "q3", "score": 0.15, "decision": "redirect", "topic": "python"},
+      {"question_id": "q4", "score": 0.25, "decision": "hint", "topic": "databases"},
+      {"question_id": "q5", "score": 0.35, "decision": "hint", "topic": "neural_networks"}
+    ],
+    "session_kind": "interview",
+    "expected": {
+      "report_score_max": 40,
+      "preparation_plan_min_items": 3
+    }
+  },
+  {
+    "id": "ana_003",
+    "category": "mixed_candidate",
+    "description": "Смешанные результаты по разным темам",
+    "evaluations": [
+      {"question_id": "q1", "score": 0.9, "decision": "next", "topic": "python"},
+      {"question_id": "q2", "score": 0.85, "decision": "next", "topic": "python"},
+      {"question_id": "q3", "score": 0.3, "decision": "hint", "topic": "neural_networks"},
+      {"question_id": "q4", "score": 0.25, "decision": "redirect", "topic": "neural_networks"},
+      {"question_id": "q5", "score": 0.7, "decision": "next", "topic": "databases"}
+    ],
+    "session_kind": "interview",
+    "expected": {
+      "errors_by_topic_contains_weak_topics": ["neural_networks"],
+      "strengths_contains_strong_topics": true
+    }
+  },
+  {
+    "id": "ana_004",
+    "category": "empty_session",
+    "description": "Нет отвеченных вопросов (граничный случай)",
+    "evaluations": [],
+    "session_kind": "interview",
+    "expected": {
+      "report_has_insufficient_data_note": true
+    }
+  },
+  {
+    "id": "ana_005",
+    "category": "preset_generation",
+    "description": "Генерация пресетов для слабых тем в режиме тренировки",
+    "evaluations": [
+      {"question_id": "q1", "score": 0.3, "decision": "hint", "topic": "neural_networks"},
+      {"question_id": "q2", "score": 0.2, "decision": "redirect", "topic": "transformers"}
+    ],
+    "session_kind": "interview",
+    "expected": {
+      "presets_contain_weak_topics": ["neural_networks", "transformers"],
+      "presets_target_mode": "training"
+    }
+  }
+]

@@ -34,8 +34,9 @@ type AuthClient struct {
 // AuthResponse отражает структуру ответа auth-service на операции регистрации/логина/refresh.
 // Содержит информацию о пользователе и пару токенов.
 type AuthResponse struct {
-	User   User      `json:"user"`
-	Tokens TokenPair `json:"tokens"`
+	User        User      `json:"user"`
+	Tokens      TokenPair `json:"tokens"`
+	RecoveryKey string    `json:"recovery_key,omitempty"` // §10.10: set only on registration
 }
 
 // User описывает информацию об аутентифицированном пользователе.
@@ -139,6 +140,101 @@ func (c *AuthClient) Me(ctx context.Context, accessToken string) (*User, error) 
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 	return &data.User, nil
+}
+
+// Logout инвалидирует сессию пользователя в auth-service.
+func (c *AuthClient) Logout(ctx context.Context, accessToken string) error {
+	return c.doAuthedVoid(ctx, http.MethodPost, "/auth/logout", accessToken, nil)
+}
+
+// Recover сбрасывает пароль пользователя по ключу восстановления (§10.10).
+func (c *AuthClient) Recover(ctx context.Context, login, recoveryKey, newPassword string) error {
+	return c.doAuthedVoid(ctx, http.MethodPost, "/auth/recover", "", map[string]string{
+		"login": login, "recovery_key": recoveryKey, "new_password": newPassword,
+	})
+}
+
+// ChangePassword меняет пароль аутентифицированного пользователя (§10.14/6).
+func (c *AuthClient) ChangePassword(ctx context.Context, accessToken, currentPassword, newPassword string) error {
+	return c.doAuthedVoid(ctx, http.MethodPost, "/auth/change-password", accessToken, map[string]string{
+		"current_password": currentPassword, "new_password": newPassword,
+	})
+}
+
+// RegenerateRecoveryKey перегенерирует ключ восстановления и возвращает raw ключ (§10.14/6).
+func (c *AuthClient) RegenerateRecoveryKey(ctx context.Context, accessToken, password string) (string, error) {
+	u := *c.baseURL
+	u.Path = path.Join(c.baseURL.Path, "/auth/regenerate-recovery-key")
+
+	buf, _ := json.Marshal(map[string]string{"password": password})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(buf))
+	if err != nil {
+		return "", fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("perform request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return "", &APIError{Status: resp.StatusCode, Message: extractError(resp.Body)}
+	}
+
+	var data struct {
+		RecoveryKey string `json:"recovery_key"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	return data.RecoveryKey, nil
+}
+
+// DeleteAccount удаляет аккаунт пользователя (§10.14/6).
+func (c *AuthClient) DeleteAccount(ctx context.Context, accessToken, password string) error {
+	return c.doAuthedVoid(ctx, http.MethodDelete, "/auth/account", accessToken, map[string]string{"password": password})
+}
+
+// doAuthedVoid выполняет запрос с опциональным Bearer-токеном и ожидает 2xx ответа.
+func (c *AuthClient) doAuthedVoid(ctx context.Context, method, endpoint, accessToken string, body any) error {
+	u := *c.baseURL
+	u.Path = path.Join(c.baseURL.Path, endpoint)
+
+	var buf []byte
+	if body != nil {
+		var err error
+		buf, err = json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal payload: %w", err)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(buf))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("perform request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return &APIError{Status: resp.StatusCode, Message: extractError(resp.Body)}
+	}
+	return nil
 }
 
 // doRequest — вспомогательный метод для отправки JSON-запроса к auth-service и

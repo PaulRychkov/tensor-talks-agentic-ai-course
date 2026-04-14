@@ -85,7 +85,7 @@ helm upgrade --install tensor-talks ./helm \
 - `tensor-talks/jwt` - JWT секреты для auth-service
 - `tensor-talks/grafana` - credentials для Grafana
 - `tensor-talks/github` - GitHub токен для ArgoCD
-- `tensor-talks/llm` - LLM API key для agent-service
+- `tensor-talks/llm` - LLM API key для interviewer-agent-service
 
 ### Добавление секретов в Vault
 

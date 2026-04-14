@@ -1,0 +1,419 @@
+# values-test.yaml — Helm overrides for the isolated test/CI namespace.
+#
+# Apply on top of values.yaml:
+#   helm upgrade --install tensor-talks-test ./helm \
+#     -f helm/values.yaml -f helm/values-test.yaml \
+#     --namespace tensor-talks-test --create-namespace
+#
+# Key differences from production:
+#   - Separate namespace (tensor-talks-test) to avoid touching prod data
+#   - No Vault dependency — credentials injected directly via env/secret
+#   - Reduced replicas and resources to fit single-node Minikube (8 GB RAM)
+#   - Short Kafka retention (1h) for fast iteration
+#   - Ingress hostname: test.tensor-talks.local (add to /etc/hosts for local)
+#   - Monitoring disabled (no Prometheus scrape overhead)
+#   - Vault integration disabled
+#   - All service image tags pinned to "latest" (CI updates tags here)
+
+createNamespace: true
+localDevelopment: false
+
+global:
+  namespace: tensor-talks-test
+  imageRegistry: "ghcr.io"
+  imagePullSecrets:
+    - name: ghcr-secret
+  labels:
+    team: tensor-talks
+    project: tensor-talks
+    env: test
+
+# ── Infrastructure ────────────────────────────────────────────────────────────
+
+postgresql:
+  deployment:
+    enabled: true
+  host: ""
+  port: 5432
+  database: tensor_talks_test_db
+  user: tensor_talks_test
+  password: "test-password-change-me"
+  sslMode: disable
+  image:
+    repository: postgres
+    tag: 16-alpine
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  pgadmin:
+    enabled: false
+
+kafka:
+  deployment:
+    enabled: true
+  bootstrapServers: tensor-talks-test-kafka-kafka-bootstrap.tensor-talks-test.svc.cluster.local:9092
+  version: 4.1.1
+  metadataVersion: 4.1-IV1
+  controller:
+    resources:
+      requests:
+        cpu: 64m
+        memory: 128Mi
+      limits:
+        cpu: 128m
+        memory: 256Mi
+  broker:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 64m
+        memory: 128Mi
+      limits:
+        cpu: 128m
+        memory: 256Mi
+  storage:
+    size: 1Gi
+    class: standard
+  config:
+    retentionHours: 1
+  topicPrefix: tensor-talks-test-
+  topics:
+    enabled: true
+    partitions: 1
+    retentionDays: 1
+    maxMessageSize: 1048576
+    compression: none
+  ui:
+    enabled: false
+
+redis:
+  deployment:
+    enabled: true
+  host: ""
+  port: 6379
+  password: "redis-test-password"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ── Observability — disabled in test to save resources ────────────────────────
+
+logging:
+  loki:
+    enabled: false
+  grafana:
+    enabled: false
+
+monitoring:
+  prometheus:
+    enabled: false
+  grafana:
+    enabled: false
+
+vault:
+  enabled: false
+
+# ── Services — 1 replica each, minimal resources ─────────────────────────────
+
+services:
+  auth-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-auth-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    jwt:
+      secret: "test-jwt-secret-do-not-use-in-prod"
+      issuer: tensor-talks-auth-test
+      audience: tensor-talks-services-test
+      accessTokenTTL: 15m
+      refreshTokenTTL: 24h
+
+  user-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-user-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    database:
+      schema: user_crud_test
+
+  admin-bff-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-admin-bff-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    jwtSecret: "admin-test-secret"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  bff-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-bff-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 150m
+        memory: 192Mi
+      requests:
+        cpu: 75m
+        memory: 96Mi
+
+  session-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-session-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  session-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-session-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  chat-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-chat-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  results-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-results-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  questions-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-questions-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  knowledge-base-crud-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-knowledge-base-crud-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  knowledge-producer-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-knowledge-producer-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  interview-builder-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-interview-builder-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  dialogue-aggregator:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-dialogue-aggregator
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 150m
+        memory: 192Mi
+      requests:
+        cpu: 75m
+        memory: 96Mi
+
+  interviewer-agent-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-interviewer-agent-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+  analyst-agent-service:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-analyst-agent-service
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+  frontend:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-frontend
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  admin-frontend:
+    enabled: true
+    image:
+      repository: paulrychkov/tensor-talks-admin-frontend
+      tag: latest
+      pullPolicy: Always
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# ── Ingress — test subdomain ──────────────────────────────────────────────────
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: test.tensor-talks.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# ── Istio — disabled in test ──────────────────────────────────────────────────
+
+istio:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
+
+serviceAccount:
+  create: true
+  annotations: {}

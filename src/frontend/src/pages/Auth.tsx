@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login as loginRequest, register as registerRequest } from '../services/auth'
+import RecoveryKeyModal from '../components/RecoveryKeyModal'
+import LoginGenerator from '../components/LoginGenerator'
 
 export default function Auth() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -11,6 +13,8 @@ export default function Auth() {
   const [passwordRepeat, setPasswordRepeat] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [recoveryKey, setRecoveryKey] = useState<string | null>(null)
+  const handleLoginChange = useCallback((v: string) => setLogin(v), [])
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100)
@@ -20,28 +24,17 @@ export default function Auth() {
   const validate = (): boolean => {
     setError(null)
     const trimmedLogin = login.trim()
-    if (trimmedLogin.length < 3 || trimmedLogin.length > 30) {
-      setError('Логин должен быть от 3 до 30 символов')
+    if (trimmedLogin.length === 0) {
+      setError('Логин не может быть пустым')
       return false
     }
-    const allowed = /^[a-zA-Z0-9._-]+$/
-    if (!allowed.test(trimmedLogin)) {
-      setError('Логин может содержать только латинские буквы, цифры, . _ -')
-      return false
-    }
-    if (trimmedLogin.includes('@')) {
-      setError('Логин не должен быть email или содержать персональные данные')
-      return false
-    }
-    if (/\d{6,}/.test(trimmedLogin)) {
-      setError('Логин не должен содержать номера телефонов или персональные данные')
-      return false
-    }
+    // TODO (§10.13 п.6): Раскомментировать проверку надёжности пароля после согласования
+    // требований с auth-service (минимум 8 символов, хотя бы одна буква и цифра).
+    // Сейчас намеренно отключено для упрощения тестирования.
     // if (password.length < 8) {
     //   setError('Пароль должен быть не короче 8 символов')
     //   return false
     // }
-    // // Проверка наличия букв и цифр в пароле
     // const hasLetter = /[a-zA-Z]/.test(password)
     // const hasDigit = /[0-9]/.test(password)
     // if (!hasLetter || !hasDigit) {
@@ -50,6 +43,10 @@ export default function Auth() {
     // }
     if (password.length === 0) {
       setError('Пароль не может быть пустым')
+      return false
+    }
+    if (mode === 'register' && !/\d+$/.test(login.trim())) {
+      setError('Укажите число от 1 до 999 в логине')
       return false
     }
     if (mode === 'register' && password !== passwordRepeat) {
@@ -70,7 +67,11 @@ export default function Auth() {
       const response = await action(login.trim(), password)
       localStorage.setItem('tt_user', JSON.stringify(response.user))
       localStorage.setItem('tt_tokens', JSON.stringify(response.tokens))
-      navigate('/dashboard')
+      if (mode === 'register' && response.recovery_key) {
+        setRecoveryKey(response.recovery_key)
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message)
@@ -83,6 +84,13 @@ export default function Auth() {
   }
 
   return (
+    <>
+    {recoveryKey && (
+      <RecoveryKeyModal
+        recoveryKey={recoveryKey}
+        onClose={() => { setRecoveryKey(null); navigate('/dashboard') }}
+      />
+    )}
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-tr from-orange-300/20 to-rose-300/20 rounded-full blur-3xl animate-pulse" />
@@ -132,21 +140,20 @@ export default function Auth() {
           </div>
 
           <form className="grid gap-2.5" onSubmit={onSubmit}>
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-zinc-700 pl-4">Логин</span>
-              <input
-                type="text"
-                className="px-4 py-3 rounded-xl border border-zinc-200 bg-white hover:border-orange-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
-                placeholder="например: ml.interviewee_2025"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-              />
-              {mode === 'register' && (
-                <span className="text-xs text-zinc-500 pl-4">
-                  Логин не должен содержать персональные данные (ФИО, email, телефон)
-                </span>
+            <div className="grid gap-2">
+              <span className="text-sm font-medium text-zinc-700 pl-1">Логин</span>
+              {mode === 'register' ? (
+                <LoginGenerator onChange={handleLoginChange} />
+              ) : (
+                <input
+                  type="text"
+                  className="px-4 py-3 rounded-xl border border-zinc-200 bg-white hover:border-orange-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all duration-200"
+                  placeholder="например: BraveNeural42"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
+                />
               )}
-            </label>
+            </div>
             <label className="grid gap-2">
               <span className="text-sm font-medium text-zinc-700 pl-4">Пароль</span>
               <input
@@ -204,14 +211,22 @@ export default function Auth() {
               <span className="shrink-0">или</span>
               <div className="h-px bg-zinc-200 flex-1" />
             </div>
-            <div className="mt-4 text-sm text-zinc-600">
+            <div className="mt-4 text-sm text-zinc-600 space-y-2">
               {mode === 'login' ? (
-                <button
-                  className="text-orange-600 hover:text-orange-700 hover:underline font-medium transition-colors duration-200"
-                  onClick={() => setMode('register')}
-                >
-                  Нет аккаунта? Зарегистрироваться
-                </button>
+                <>
+                  <button
+                    className="text-orange-600 hover:text-orange-700 hover:underline font-medium transition-colors duration-200 block mx-auto"
+                    onClick={() => setMode('register')}
+                  >
+                    Нет аккаунта? Зарегистрироваться
+                  </button>
+                  <Link
+                    to="/auth/recover"
+                    className="text-gray-500 hover:text-orange-600 hover:underline text-xs transition-colors block"
+                  >
+                    Забыли пароль? Восстановить доступ
+                  </Link>
+                </>
               ) : (
                 <button
                   className="text-orange-600 hover:text-orange-700 hover:underline font-medium transition-colors duration-200"
@@ -251,6 +266,7 @@ export default function Auth() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

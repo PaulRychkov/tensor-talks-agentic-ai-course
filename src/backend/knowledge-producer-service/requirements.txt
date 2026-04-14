@@ -7,6 +7,15 @@ pydantic-settings==2.1.0
 # HTTP client
 httpx==0.25.1
 
+# File upload support (multipart/form-data)
+python-multipart==0.0.9
+
+# LLM
+openai==1.7.0
+
+# PDF ingestion (optional)
+pdfplumber==0.10.3
+
 # Logging
 structlog==23.2.0
 python-json-logger==2.0.7

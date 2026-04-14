@@ -42,6 +42,10 @@ func (h *AuthHandler) RegisterRoutes(router gin.IRouter) {
 	router.POST("/auth/refresh", h.Refresh)
 	router.POST("/auth/logout", h.Logout)
 	router.GET("/auth/me", h.Me)
+	router.POST("/auth/recover", h.Recover)
+	router.POST("/auth/change-password", h.ChangePassword)
+	router.POST("/auth/regenerate-recovery-key", h.RegenerateRecoveryKey)
+	router.DELETE("/auth/account", h.DeleteAccount)
 }
 
 type credentialsRequest struct {
@@ -54,8 +58,9 @@ type refreshRequest struct {
 }
 
 type authResponse struct {
-	User   userResponse     `json:"user"`
-	Tokens tokens.TokenPair `json:"tokens"`
+	User        userResponse     `json:"user"`
+	Tokens      tokens.TokenPair `json:"tokens"`
+	RecoveryKey string           `json:"recovery_key,omitempty"` // §10.10: set only on registration
 }
 
 type userResponse struct {
@@ -80,7 +85,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, pair, err := h.svc.Register(c.Request.Context(), req.Login, req.Password)
+	user, pair, recoveryKey, err := h.svc.Register(c.Request.Context(), req.Login, req.Password)
 	if err != nil {
 		switch err {
 		case service.ErrInvalidInput:
@@ -107,8 +112,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	h.logger.Info("User registered successfully", zap.String("user_id", user.ID.String()), zap.String("login", user.Login))
 
 	c.JSON(http.StatusCreated, authResponse{
-		User:   sanitizeUser(user),
-		Tokens: pair,
+		User:        sanitizeUser(user),
+		Tokens:      pair,
+		RecoveryKey: recoveryKey,
 	})
 }
 
@@ -194,7 +200,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 // Me возвращает информацию о текущем пользователе на основе access-токена из заголовка Authorization.
 // Заголовок должен иметь формат `Authorization: Bearer <access_token>`.
 // Внутри токен валидируется, из него извлекается GUID пользователя, после чего данные
-// запрашиваются у `user-store-service` через `AuthService`.
+// запрашиваются у `user-crud-service` через `AuthService`.
 func (h *AuthHandler) Me(c *gin.Context) {
 	token := extractBearer(c.GetHeader("Authorization"))
 	if token == "" {
@@ -229,6 +235,124 @@ func sanitizeUser(u *client.User) userResponse {
 	}
 }
 
+// ChangePassword обрабатывает POST /auth/change-password — смена пароля с проверкой текущего (§10.14/6).
+// Требует Authorization: Bearer <access_token>.
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+		return
+	}
+	claims, err := h.svc.ValidateToken(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	if err := h.svc.ChangePassword(c.Request.Context(), claims.UserID, req.CurrentPassword, req.NewPassword); err != nil {
+		switch err {
+		case service.ErrInvalidCredentials:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect current password"})
+		case service.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		default:
+			h.logger.Error("ChangePassword failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	h.logger.Info("Password changed", zap.String("user_id", claims.UserID.String()))
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// RegenerateRecoveryKey обрабатывает POST /auth/regenerate-recovery-key (§10.14/6).
+// Требует Authorization: Bearer <access_token> и подтверждение паролем.
+func (h *AuthHandler) RegenerateRecoveryKey(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+		return
+	}
+	claims, err := h.svc.ValidateToken(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
+
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	rawKey, err := h.svc.RegenerateRecoveryKey(c.Request.Context(), claims.UserID, req.Password)
+	if err != nil {
+		switch err {
+		case service.ErrInvalidCredentials:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		case service.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		default:
+			h.logger.Error("RegenerateRecoveryKey failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	h.logger.Info("Recovery key regenerated", zap.String("user_id", claims.UserID.String()))
+	c.JSON(http.StatusOK, gin.H{"recovery_key": rawKey})
+}
+
+// DeleteAccount обрабатывает DELETE /auth/account — удаление аккаунта с проверкой пароля (§10.14/6).
+func (h *AuthHandler) DeleteAccount(c *gin.Context) {
+	token := extractBearer(c.GetHeader("Authorization"))
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+		return
+	}
+	claims, err := h.svc.ValidateToken(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
+
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	if err := h.svc.DeleteAccount(c.Request.Context(), claims.UserID, req.Password); err != nil {
+		switch err {
+		case service.ErrInvalidCredentials:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		case service.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		default:
+			h.logger.Error("DeleteAccount failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	h.logger.Info("Account deleted", zap.String("user_id", claims.UserID.String()))
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 // extractBearer вытаскивает значение токена из заголовка Authorization формата "Bearer <token>".
 func extractBearer(header string) string {
 	if header == "" {
@@ -242,6 +366,37 @@ func extractBearer(header string) string {
 		return ""
 	}
 	return strings.TrimSpace(parts[1])
+}
+
+type recoverRequest struct {
+	Login       string `json:"login" binding:"required"`
+	RecoveryKey string `json:"recovery_key" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
+// Recover обрабатывает POST /auth/recover — сброс пароля по ключу восстановления (§10.10).
+func (h *AuthHandler) Recover(c *gin.Context) {
+	var req recoverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	if err := h.svc.RecoverPassword(c.Request.Context(), req.Login, req.RecoveryKey, req.NewPassword); err != nil {
+		switch err {
+		case service.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		case service.ErrInvalidRecoveryKey:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid login or recovery key"})
+		default:
+			h.logger.Error("Password recovery failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	h.logger.Info("Password recovered successfully", zap.String("login", req.Login))
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 type logoutRequest struct {
@@ -285,3 +440,4 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	h.logger.Info("User logged out", zap.String("user_id", claims.UserID.String()), zap.String("session_id", req.SessionID))
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
+

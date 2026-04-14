@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tensor-talks/results-crud-service/internal/config"
 	"github.com/tensor-talks/results-crud-service/internal/handler"
+	"github.com/tensor-talks/results-crud-service/internal/metrics"
 	"github.com/tensor-talks/results-crud-service/internal/models"
 	"github.com/tensor-talks/results-crud-service/internal/repository"
 	"github.com/tensor-talks/results-crud-service/internal/service"
@@ -24,6 +25,7 @@ import (
 type Server struct {
 	httpServer *http.Server
 	logger     *zap.Logger
+	resultRepo repository.ResultRepository // для фонового обновления метрик
 }
 
 // New создаёт новый экземпляр Server.
@@ -40,32 +42,44 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 	}
 
 	logger.Info("Running database migrations")
-	if err := db.AutoMigrate(&models.Result{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.Result{},
+		&models.UserTopicProgress{},
+		&models.Preset{},
+	); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}
 	logger.Info("Database migrations completed")
 
-	repo := repository.NewGormResultRepository(db)
-	svc := service.NewResultService(repo)
-	handler := handler.NewResultHandler(svc, logger)
+	// Result
+	resultRepo := repository.NewGormResultRepository(db)
+	resultSvc := service.NewResultService(resultRepo)
+	resultHandler := handler.NewResultHandler(resultSvc, logger)
+
+	// User topic progress
+	progressRepo := repository.NewGormUserProgressRepository(db)
+	progressSvc := service.NewUserProgressService(progressRepo)
+	progressHandler := handler.NewUserProgressHandler(progressSvc, logger)
+
+	// Presets
+	presetRepo := repository.NewGormPresetRepository(db)
+	presetSvc := service.NewPresetService(presetRepo)
+	presetHandler := handler.NewPresetHandler(presetSvc, logger)
 
 	router := gin.Default()
 
-	// Middleware для логирования
 	router.Use(loggingMiddleware(logger))
-
-	// Middleware для метрик
 	router.Use(metricsMiddleware("results-crud-service"))
 
-	// Health check
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// Metrics endpoint
 	router.GET("/metrics", metricsHandler())
 
-	handler.RegisterRoutes(router)
+	resultHandler.RegisterRoutes(router)
+	progressHandler.RegisterRoutes(router)
+	presetHandler.RegisterRoutes(router)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
@@ -73,11 +87,14 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	return &Server{httpServer: httpServer, logger: logger}, nil
+	return &Server{httpServer: httpServer, logger: logger, resultRepo: resultRepo}, nil
 }
 
-// Run запускает HTTP-сервер.
+// Run запускает HTTP-сервер и фоновый воркер продуктовых метрик.
 func (s *Server) Run(ctx context.Context) error {
+	// Запускаем фоновый воркер обновления продуктовых метрик (каждые 30 с)
+	go s.runProductMetricsWorker(ctx)
+
 	errCh := make(chan error, 1)
 
 	go func() {
@@ -97,7 +114,49 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 }
 
-// loggingMiddleware создаёт middleware для логирования HTTP-запросов
+// runProductMetricsWorker периодически вычисляет продуктовые метрики из БД
+// и обновляет соответствующие Prometheus gauges.
+func (s *Server) runProductMetricsWorker(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Первый запуск сразу при старте
+	s.updateProductMetrics(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.updateProductMetrics(ctx)
+		}
+	}
+}
+
+func (s *Server) updateProductMetrics(ctx context.Context) {
+	pm, err := s.resultRepo.GetProductMetrics(ctx)
+	if err != nil {
+		s.logger.Warn("Failed to update product metrics", zap.Error(err))
+		return
+	}
+
+	metrics.ProductTotalSessions.Set(float64(pm.TotalSessions))
+	metrics.ProductCompletionRate.Set(pm.CompletionRate / 100.0) // храним как 0-1
+	metrics.ProductAvgScore.Set(pm.AvgScore)
+	metrics.ProductAvgRating.Set(pm.AvgRating)
+	metrics.ProductRatedSessions.Set(float64(pm.RatedSessions))
+
+	for kind, count := range pm.ByKind {
+		metrics.ProductSessionsByKind.WithLabelValues(kind).Set(float64(count))
+	}
+
+	s.logger.Debug("Product metrics updated",
+		zap.Int64("total_sessions", pm.TotalSessions),
+		zap.Float64("completion_rate", pm.CompletionRate),
+		zap.Float64("avg_score", pm.AvgScore),
+	)
+}
+
 func loggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -144,7 +203,6 @@ func init() {
 	prometheus.MustRegister(httpRequestDuration)
 }
 
-// metricsMiddleware создаёт middleware для сбора HTTP-метрик
 func metricsMiddleware(serviceName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -173,7 +231,6 @@ func metricsMiddleware(serviceName string) gin.HandlerFunc {
 	}
 }
 
-// metricsHandler возвращает handler для /metrics endpoint
 func metricsHandler() gin.HandlerFunc {
 	h := promhttp.Handler()
 	return func(c *gin.Context) {

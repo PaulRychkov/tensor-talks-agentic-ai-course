@@ -17,16 +17,16 @@ import (
 
 Через конфигурацию настраиваются:
   - параметры HTTP-сервера;
-  - подключение к user-store-service;
+  - подключение к user-crud-service;
   - параметры JWT (issuer, audience, TTL, секрет).
 */
 
 // Config агрегирует все опции рантайма для auth-service.
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	UserStore UserStoreConfig `mapstructure:"user_store"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	Redis     RedisConfig     `mapstructure:"redis"`
+	Server    ServerConfig   `mapstructure:"server"`
+	UserCrud  UserCrudConfig `mapstructure:"user_store"`
+	JWT       JWTConfig      `mapstructure:"jwt"`
+	Redis     RedisConfig    `mapstructure:"redis"`
 }
 
 // ServerConfig описывает настройки HTTP-сервера.
@@ -35,8 +35,8 @@ type ServerConfig struct {
 	Port int    `mapstructure:"port"`
 }
 
-// UserStoreConfig описывает параметры подключения к user-store-service.
-type UserStoreConfig struct {
+// UserCrudConfig описывает параметры подключения к user-crud-service.
+type UserCrudConfig struct {
 	BaseURL        string `mapstructure:"base_url"`
 	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
 }
@@ -113,3 +113,4 @@ func (j *JWTConfig) parseDurations() error {
 	j.RefreshTokenTTL = refresh
 	return nil
 }
+

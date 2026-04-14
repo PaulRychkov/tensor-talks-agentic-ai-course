@@ -24,9 +24,9 @@ results_crud:
 
 kafka:
   brokers: "kafka:9092"
-  topic_chat_out: "team10-chat.events.out"  # Prefixed for Kubernetes shared cluster
-  topic_chat_in: "team10-chat.events.in"    # Prefixed for Kubernetes shared cluster
-  consumer_group: "team10-bff-service-group"  # Prefixed for Kubernetes shared cluster
+  topic_chat_out: "tensor-talks-chat.events.out"
+  topic_chat_in: "tensor-talks-chat.events.in"
+  consumer_group: "tensor-talks-bff-service-group"
 
 cors:
   allow_origins:
@@ -35,4 +35,9 @@ cors:
   allow_headers:
     - "Content-Type"
     - "Authorization"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
 

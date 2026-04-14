@@ -21,7 +21,7 @@ type Consumer struct {
 
 // EventHandler обрабатывает события от модели.
 type EventHandler interface {
-	HandleModelQuestion(ctx context.Context, sessionID, userID, question, questionID string) error
+	HandleModelQuestion(ctx context.Context, sessionID, userID, question, questionID string, questionNumber, totalQuestions int, piiMaskedContent string) error
 	HandleChatCompleted(ctx context.Context, sessionID, userID string, results ChatResults) error
 }
 
@@ -173,7 +173,16 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 						session.MarkMessage(message, "")
 						continue
 					}
-					if err := h.consumer.eventHandler.HandleModelQuestion(ctx, sessionID, userID, question, questionID); err != nil {
+					questionNumber := 0
+					totalQuestions := 0
+					if v, ok := event.Payload["question_number"].(float64); ok {
+						questionNumber = int(v)
+					}
+					if v, ok := event.Payload["total_questions"].(float64); ok {
+						totalQuestions = int(v)
+					}
+					piiMaskedContent, _ := event.Payload["pii_masked_content"].(string)
+					if err := h.consumer.eventHandler.HandleModelQuestion(ctx, sessionID, userID, question, questionID, questionNumber, totalQuestions, piiMaskedContent); err != nil {
 						h.logger.Error("Failed to handle model question",
 							zap.Error(err),
 							zap.String("session_id", sessionID),

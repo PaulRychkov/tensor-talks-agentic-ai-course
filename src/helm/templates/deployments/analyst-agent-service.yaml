@@ -1,0 +1,113 @@
+{{- if (index .Values.services "analyst-agent-service").enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tensor-talks.fullname" . }}-analyst-agent-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "tensor-talks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: analyst-agent-service
+spec:
+  replicas: {{ (index .Values.services "analyst-agent-service").replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tensor-talks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: analyst-agent-service
+  template:
+    metadata:
+      labels:
+        {{- include "tensor-talks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: analyst-agent-service
+        team: tensor-talks
+        project: tensor-talks
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9094"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "tensor-talks.serviceAccountName" . }}
+{{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: analyst-agent-service
+          image: {{ include "tensor-talks.image" (dict "Values" .Values "repository" (index .Values.services "analyst-agent-service").image.repository "tag" (index .Values.services "analyst-agent-service").image.tag) }}
+          imagePullPolicy: {{ (index .Values.services "analyst-agent-service").image.pullPolicy | default (include "tensor-talks.imagePullPolicy" .Values) }}
+          ports:
+            - name: http
+              containerPort: 8094
+              protocol: TCP
+            - name: metrics
+              containerPort: 9094
+              protocol: TCP
+          env:
+            - name: SERVICE_NAME
+              value: "analyst-agent-service"
+            - name: SERVICE_VERSION
+              value: "1.0.0"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: LOG_FORMAT
+              value: "json"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+            - name: KAFKA_TOPIC_SESSION_COMPLETED
+              value: "tensor-talks-session.completed"
+            - name: KAFKA_CONSUMER_GROUP
+              value: "tensor-talks-analyst-agent-service-group"
+            - name: LLM_PROVIDER
+              value: {{ (index .Values.services "analyst-agent-service").llm.provider | default "openai" | quote }}
+            - name: LLM_BASE_URL
+              value: {{ (index .Values.services "analyst-agent-service").llm.baseUrl | default "" | quote }}
+            {{- if .Values.vault.enabled }}
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tensor-talks.fullname" . }}-llm-secret
+                  key: api-key
+            {{- else }}
+            - name: LLM_API_KEY
+              value: {{ (index .Values.services "analyst-agent-service").llm.apiKey | default "" | quote }}
+            {{- end }}
+            - name: LLM_MODEL
+              value: {{ (index .Values.services "analyst-agent-service").llm.model | default "gpt-4o-mini" | quote }}
+            - name: LLM_TEMPERATURE
+              value: {{ (index .Values.services "analyst-agent-service").llm.temperature | default "0.3" | quote }}
+            - name: LLM_MAX_TOKENS
+              value: {{ (index .Values.services "analyst-agent-service").llm.maxTokens | default "4000" | quote }}
+            - name: LLM_TIMEOUT
+              value: {{ (index .Values.services "analyst-agent-service").llm.timeout | default "120" | quote }}
+            - name: RESULTS_CRUD_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-results-crud-service:8088"
+            - name: SESSION_SERVICE_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-session-service:8083"
+            - name: CHAT_CRUD_URL
+              value: "http://{{ include "tensor-talks.fullname" . }}-chat-crud-service:8087"
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "8094"
+            - name: METRICS_PORT
+              value: "9094"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml (index .Values.services "analyst-agent-service").resources | nindent 12 }}
+{{- end }}

@@ -1,0 +1,43 @@
+{
+  "id": "question_prompt_engineering_02",
+  "theory_id": "theory_prompt_engineering",
+  "linked_segments": [
+    "example",
+    "practical_notes"
+  ],
+  "question_type": "practical",
+  "complexity": 2,
+  "content": {
+    "question": "Что такое few-shot prompting и chain-of-thought? Когда каждый лучше работает?",
+    "expected_points": [
+      "few-shot: 2-5 примеров input→output в промпте",
+      "CoT: рассуждение пошагово перед ответом",
+      "few-shot: чёткий формат вывода",
+      "CoT: многошаговые рассуждения, математика, логика"
+    ],
+    "links_to_theory": [
+      {
+        "theory_id": "theory_prompt_engineering",
+        "segment_type": "example"
+      },
+      {
+        "theory_id": "theory_prompt_engineering",
+        "segment_type": "practical_notes"
+      }
+    ]
+  },
+  "ideal_answer": {
+    "text": "Few-shot: примеры задают формат — для классификации, NER. CoT: 'Let's think step by step' — для математики, логики. Zero-shot CoT часто не хуже few-shot CoT.",
+    "covers": [
+      "few-shot",
+      "CoT",
+      "zero-shot CoT",
+      "применимость"
+    ]
+  },
+  "metadata": {
+    "language": "ru",
+    "created_by": "seed",
+    "last_updated": "2026-04-10"
+  }
+}
