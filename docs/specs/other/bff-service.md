@@ -16,10 +16,12 @@
 
 ## API
 
-- POST /api/sessions — создать сессию
-- GET /api/sessions/{id} — получить сессию
-- POST /api/sessions/{id}/message — отправить сообщение
-- GET /api/sessions/{id}/results — получить результаты
+- POST /api/chat/start — начать сессию чата (topics, level, type, mode)
+- POST /api/chat/message — отправить сообщение
+- GET /api/chat/history/:session_id — история сообщений
+- POST /api/chat/terminate — досрочное завершение
+- POST /api/chat/resume — возобновление сессии
+- GET /api/results/sessions/:session_id — получить результаты
 
 ## Метрики
 

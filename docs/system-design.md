@@ -20,8 +20,8 @@
 **Агентная система (Python + LangGraph)** — автономные агенты с инструментами (планировщик, интервьюер, аналитик). Отдельно: **knowledge-producer-service** — фиксированный LLM-workflow наполнения базы (этап 0), без графа принятия решений как у агента.
 
 - Агент-планировщик (interview-builder-service)
-- Агент-интервьюер (Agent-service, Interviewer)
-- Агент-аналитик (Agent-service, Analyst)
+- Агент-интервьюер (agent-service, порт 8093)
+- Агент-аналитик (analyst-agent-service, порт 8094)
 - LLM-workflow наполнения базы (knowledge-producer-service) — только этап 0
 
 **Обоснование**: агенты потребляют в ~4 раза больше токенов и менее предсказуемы. Критичная инфраструктура (аутентификация, хранение данных) должна быть стабильной. Агентное поведение добавляем только там, где нужна автономность и работа с неструктурированными данными.
@@ -29,10 +29,12 @@
 ### 2. Асинхронное взаимодействие через Kafka
 
 Агенты не вызывают CRUD-сервисы напрямую. Взаимодействие через Kafka-топики:
-- `chat.events.out` — сообщения от пользователя
-- `chat.events.in` — ответы агента (в том числе финальный отчёт)
+- `chat.events.out` — сообщения от пользователя (BFF → Dialogue-aggregator)
+- `chat.events.in` — ответы агента (Dialogue-aggregator → BFF)
+- `messages.full.data` — полные сообщения для агента (Dialogue-aggregator → Agent-service)
+- `generated.phrases` — реплики агента (Agent-service → Dialogue-aggregator)
 - `interview.build.request` / `interview.build.response` — формирование программы
-- `interview.session.completed` (или эквивалент в контракте) — сигнал завершения интервью для запуска агента-аналитика
+- `session.completed` — сигнал завершения сессии для запуска агента-аналитика (Dialogue-aggregator → Analyst-agent-service)
 
 **Обоснование**: буферизация при пиковых нагрузках, устойчивость к временной недоступности LLM, возможность масштабировать агентов независимо.
 
@@ -63,8 +65,8 @@
 **AI сервисы:**
 | Модуль | Технология | Роль |
 |--------|------------|------|
-| Agent-service (Interviewer) | Python (LangChain + LangGraph) | Агент-интервьюер: ведение диалога, принятие решений |
-| Agent-service (Analyst) | Python (LangChain + LangGraph) | Агент-аналитик: отчёт и рекомендации |
+| Agent-service | Python (LangChain + LangGraph) | Агент-интервьюер: ведение диалога, принятие решений (порт 8093) |
+| Analyst-agent-service | Python (LangChain + LangGraph) | Агент-аналитик: отчёт и рекомендации (порт 8094) |
 | Interview-builder-service | Python (FastAPI + LangGraph) | Агент-планировщик: формирование программы интервью и тренировок |
 | Knowledge-producer-service | Python (FastAPI + LLM) | LLM-workflow (не агент): наполнение базы, этап 0 |
 
@@ -81,6 +83,7 @@
 | Questions-crud-service | Go + PostgreSQL | CRUD базы вопросов |
 | Chat-crud-service | Go + PostgreSQL | Хранение сообщений чата |
 | Results-crud-service | Go + PostgreSQL | Хранение результатов |
+| Dialogue-aggregator | Go | Оркестрация Kafka-сообщений между BFF и агентами (порт 8088) |
 | Kafka | Strimzi (KRaft) | Брокер сообщений |
 
 ## Основной workflow выполнения запроса
@@ -185,9 +188,10 @@
 
 ```
 1. BFF → Kafka: chat.events.out (сообщение пользователя)
-2. Agent-service читает топик
-3. LangGraph State: загрузить контекст сессии (программа уже в state)
-4. Агент-интервьюер:
+2. Dialogue-aggregator → Kafka: messages.full.data (полное сообщение для агента)
+3. Agent-service читает messages.full.data
+4. LangGraph State: загрузить контекст сессии (программа уже в state)
+5. Агент-интервьюер:
    a. Получить текущий вопрос из state (вопрос + теория уже загружены)
    b. Если первое сообщение — сформулировать вопрос
    c. Если ответ пользователя:
@@ -203,21 +207,22 @@
         * Пропуск → записать в оценку
         * Свежий фреймворк (только если кандидат упомянул) → web_search(query) + fetch_url(url)
    d. Сгенерировать реплику
-5. Agent-service → Kafka: chat.events.in
-6. BFF → Frontend: доставить
-7. BFF → Chat-crud-service: сохранить
-8. Повторять до завершения всех n вопросов
+6. Agent-service → Kafka: generated.phrases
+7. Dialogue-aggregator → Kafka: chat.events.in
+8. BFF → Frontend: доставить
+9. BFF → Chat-crud-service: сохранить
+10. Повторять до завершения всех n вопросов
 ```
 
 ### Этап 4: Формирование отчёта и создание пресетов (агент-аналитик)
 
-**Примечание**: Завершение сессии объявляется через Kafka; Agent-service (Analyst) подписан на событие и запускает граф. Цикл не линейный: при `VALIDATION_FAILED` аналитик снова вызывает тулзы материалов и/или `generate_report_section`, затем `validate_report`, пока отчёт не станет валидным или не исчерпан лимит итераций (конфиг).
+**Примечание**: Завершение сессии объявляется через Kafka; Analyst-agent-service подписан на `session.completed` и запускает граф. Цикл не линейный: при `VALIDATION_FAILED` аналитик снова вызывает тулзы материалов и/или `generate_report_section`, затем `validate_report`, пока отчёт не станет валидным или не исчерпан лимит итераций (конфиг). Маршрутизация по `session_kind`: interview → полный отчёт + presets, training → результаты, study → user_topic_progress.
 
 ```
-1. После последнего вопроса: Agent-service (Interviewer) → Kafka: событие завершения интервью (например `interview.session.completed` с session_id; точное имя топика — контракт реализации, в одном кластере с `chat.events.*`)
-2. Agent-service (Analyst) читает Kafka, стартует LangGraph
-3. LangGraph State: подтянуть session_id, программу, историю и оценки из Redis/state и при необходимости из Chat-crud-service / Results-crud-service
-4. Агент-аналитик:
+1. Dialogue-aggregator → Kafka: session.completed (session_id, session_kind, topics, level)
+2. Analyst-agent-service читает Kafka, стартует LangGraph
+3. LangGraph State: подтянуть session_id, параметры сессии, историю и оценки из Session-service / Chat-crud-service / Results-crud-service
+4. Агент-аналитик (маршрутизация по session_kind):
    a. get_evaluations(session_id)
    b. При необходимости уточнить оценки по ответам (LLM, порядок «по ответам / целиком по сессии» не фиксирован)
    c. group_errors_by_topic(evaluations) — темы для секции Errors и для пресетов
@@ -227,9 +232,8 @@
    g. validate_report(report_draft, evaluations) — JSON Schema, полнота секций, согласованность оценок и текста с group_errors_by_topic
    h. Если VALIDATION_FAILED — повторить (d)–(g) с доработкой проблемных секций; максимум итераций — конфиг
 5. Сборка финального report JSON после успешной validate_report
-6. Agent-service (Analyst) → Results-crud-service: сохранить отчёт и preset_training (weak_topics, recommended_materials; вопросы тренировки подбираются при старте этапа 2)
-7. Agent-service (Analyst) → Kafka: chat.events.in (отчёт пользователю)
-8. BFF → Frontend: перенаправление на /results (рекомендации тренировок и study)
+6. Analyst-agent-service → Results-crud-service: сохранить отчёт и presets (weak_topics, recommended_materials; вопросы тренировки подбираются при старте этапа 2) и/или user_topic_progress
+7. BFF → Frontend: перенаправление на /results (рекомендации тренировок и study)
 ```
 
 **Примечание**: Тренировки и study session — отдельные сессии, запускаются через Этап 1 → Этап 2 (с session_type: training или study).
@@ -322,19 +326,27 @@ class InterviewState(TypedDict):
 ### Контракты API (BFF ↔ Services)
 
 ```yaml
-POST /api/sessions:
-  request: { specialty: string, grade: string, use_previous_results: boolean }
-  response: { session_id: string, program: InterviewProgram }
+POST /api/chat/start:
+  request: { topics: string[], level: string, type: string, mode: string }
+  response: { session_id: string }
 
-GET /api/sessions/{id}:
-  response: { status: string, current_question: Question, history: Message[] }
+POST /api/chat/message:
+  request: { session_id: string, content: string }
+  response: { status: string }
 
-POST /api/sessions/{id}/message:
-  request: { content: string }
-  response: { agent_message: string, evaluation?: Evaluation, status: string }
+GET /api/chat/history/{session_id}:
+  response: { messages: Message[] }
 
-GET /api/sessions/{id}/results:
-  response: { score: number, evaluations: Evaluation[], report: ReportJSON }
+POST /api/chat/terminate:
+  request: { session_id: string }
+  response: { status: string }
+
+POST /api/chat/resume:
+  request: { session_id: string }
+  response: { status: string }
+
+GET /api/results/sessions/{session_id}:
+  response: { score: number, evaluations: Evaluation[], report_json: ReportJSON }
 ```
 
 ## Основные failure modes, fallback и guardrails

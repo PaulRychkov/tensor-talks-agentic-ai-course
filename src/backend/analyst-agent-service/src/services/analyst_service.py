@@ -119,33 +119,36 @@ STUDY_REPORT_SYSTEM_PROMPT = """\
    - errors_by_topic — ДЛЯ ОТЧЁТА. Включай КАЖДЫЙ вопрос, где что-то пошло не так: \
 фактические ошибки, "не знаю", вопросы, потребовавшие подсказок/уточнений, неточные ответы. \
 Студент смотрит это поле, чтобы разобрать все проблемы сессии.
-   - unmastered_topics — ДЛЯ ПРЕСЕТОВ-ПОВТОРОВ (что ещё нужно отрабатывать). Вноси сабтопик \
-ТОЛЬКО если, проанализировав весь диалог по этому сабтопику (включая то, как студент в итоге \
-реагировал на подсказки, теорию или уточнения), ты считаешь, что студент НЕ достиг достаточного \
-понимания. Если студент испытывал затруднения в начале, но в итоге продемонстрировал достаточное \
-владение темой — НЕ вноси её сюда (хотя исходные затруднения всё равно должны быть в \
-errors_by_topic). Ты судья того, освоена ли тема к концу сессии. Никогда не вноси темы, \
-которых студент вообще не касался.
-
-AVAILABLE_SUBTOPIC_IDS (используй ТОЧНО эти строки для unmastered_topics): {available_subtopics}
+   - unmastered_points — ДЛЯ СЛЕДУЮЩЕЙ УЧЕБНОЙ СЕССИИ ПО ТОЙ ЖЕ ТЕМЕ. \
+Это СПИСОК НАЗВАНИЙ ПУНКТОВ ПРОГРАММЫ (point_title), которые студент НЕ освоил. \
+Берёшь названия пунктов СТРОГО из программы сессии (поля point_title). НИКАКИХ subtopic_id, \
+никаких theory_*, practice_* — только человекочитаемые названия пунктов как они написаны в программе. \
+Включай пункт ТОЛЬКО если, проанализировав весь диалог по нему (включая реакцию на подсказки, \
+теорию, уточнения), ты считаешь, что студент НЕ достиг достаточного понимания. Если затруднения \
+были в начале, но к концу студент продемонстрировал владение пунктом — НЕ вноси его сюда (но \
+исходные затруднения оставь в errors_by_topic). Никогда не вноси пункты, которых студент не касался.
+8. ЧЕЛОВЕКОЧИТАЕМЫЕ НАЗВАНИЯ. В полях preparation_plan, materials, weaknesses, strengths, \
+errors_by_topic (ключи), topic_scores (ключи) ВСЕГДА используй понятные русскоязычные названия тем \
+(например, "RAG", "Векторные базы данных", "Эмбеддинги"). НИКОГДА не вставляй технические \
+идентификаторы вроде theory_rag, theory_vector_databases, practice_llm — это пользовательский текст.
 
 Верни JSON-объект ТОЧНО со следующими ключами:
 {{
   "summary": "<2-4 предложения: что студент изучил, общий уровень понимания>",
   "score": <целое 0-100 — по умолчанию 100; снижай только за конкретные фактические ошибки и неответы>,
   "errors_by_topic": {{
-    "<topic_name>": [
+    "<человекочитаемое название темы, БЕЗ префиксов theory_/practice_>": [
       {{"question": "<текст вопроса>", "error": "<точная неверная формулировка>", "correction": "<правильный ответ>"}}
     ]
   }},
   "strengths": ["<тема или концепция, которую студент понял хорошо>"],
   "weaknesses": ["<тема или концепция, требующая больше практики>"],
-  "preparation_plan": ["<действие: тема — что изучить или отработать>"],
+  "preparation_plan": ["<действие: тема — что изучить или отработать (человекочитаемо!)>"],
   "materials": ["<концепция/область для повторения и зачем — БЕЗ названий книг/статей>"],
   "topic_scores": {{
-    "<topic_name>": <целое 0-100>
+    "<человекочитаемое название темы>": <целое 0-100>
   }},
-  "unmastered_topics": ["<subtopic_id из AVAILABLE_SUBTOPIC_IDS>"]
+  "unmastered_points": ["<точное название пункта программы (point_title), который НЕ освоен>"]
 }}
 
 Верни ТОЛЬКО валидный JSON, без markdown-обёрток и доп. текста.\
@@ -499,7 +502,6 @@ class AnalystService:
             system_prompt = STUDY_REPORT_SYSTEM_PROMPT.format(
                 topics=topics_str,
                 level=level_str,
-                available_subtopics=", ".join(get_subtopics_for_topics(payload.topics or [])),
             )
         else:
             system_prompt = REPORT_SYSTEM_PROMPT.format(
@@ -648,51 +650,42 @@ class AnalystService:
         report: Dict[str, Any],
         program: Optional[Dict[str, Any]],
     ) -> Optional[Dict[str, Any]]:
-        """Build follow-up study presets — one per subtopic in unmastered_topics.
+        """Build a SINGLE follow-up study preset focused on weak points.
 
-        unmastered_topics — LLM's judgement of which subtopics the student did NOT
-        adequately master (even after hints/clarifications). We create one follow-up
-        study preset per such subtopic, with specific gaps from errors_by_topic as
-        the description so the next session targets the real problems.
+        unmastered_points — free-text point titles (point_title from the program)
+        that the student did NOT adequately master.  We create ONE follow-up study
+        preset for the same topic(s) and pass these point titles as `focus_points`
+        so the interview-builder regenerates a study program targeting exactly
+        the gaps the student showed.
         """
-        unmastered_raw = report.get("unmastered_topics") or []
-        valid_set = set(ALL_VALID_SUBTOPICS)
-        unmastered = [t for t in unmastered_raw if t in valid_set]
-        if not unmastered:
+        unmastered_points: List[str] = []
+        for raw in (report.get("unmastered_points") or []):
+            if isinstance(raw, str) and raw.strip():
+                unmastered_points.append(raw.strip())
+        if not unmastered_points:
             return None
 
-        errors_by_topic = report.get("errors_by_topic") or {}
-        topic_area = (payload.topics or ["llm"])[0]
+        topics = list(payload.topics or [])
+        if not topics:
+            return None
 
-        presets = []
-        for subtopic in unmastered:
-            pretty = AnalystService._pretty_topic(subtopic)
-            errs = errors_by_topic.get(subtopic) or []
-            gap_lines: List[str] = []
-            for e in errs:
-                if isinstance(e, dict) and e.get("error"):
-                    gap_lines.append(str(e["error"]))
-                elif isinstance(e, str) and e.strip():
-                    gap_lines.append(e)
-            description = (
-                "; ".join(gap_lines[:3])
-                if gap_lines
-                else f"Повторить тему: {pretty or subtopic}"
-            )
-            presets.append({
-                "name": f"Доизучение: {pretty}" if pretty else "Доизучение слабых тем",
-                "description": description,
-                "topics": [topic_area],
-                "level": payload.level or "middle",
-                "mode": "study",
-                "weak_topics": [subtopic],
-                "question_count": max(3, min(8, max(len(gap_lines), 1) * 2)),
-                "source": "study_followup",
-            })
+        description = "Слабые пункты: " + "; ".join(unmastered_points[:5])
+        question_count = max(3, min(10, len(unmastered_points) * 2))
+
+        preset = {
+            "name": "Доизучение слабых пунктов",
+            "description": description,
+            "topics": topics,
+            "level": payload.level or "middle",
+            "mode": "study",
+            "focus_points": unmastered_points,
+            "question_count": question_count,
+            "source": "study_followup",
+        }
 
         return {
-            "presets": presets,
-            "weak_topics": unmastered,
+            "presets": [preset],
+            "unmastered_points": unmastered_points,
             "recommended_materials": report.get("materials", []),
             "follow_up_kind": "study",
         }
@@ -873,7 +866,7 @@ class AnalystService:
                     logger.info(
                         "Study follow-up preset generated",
                         session_id=payload.session_id,
-                        unmastered=preset_training.get("weak_topics"),
+                        unmastered_points=preset_training.get("unmastered_points"),
                     )
             if payload.session_kind == SessionKind.TRAINING:
                 preset_training = self._maybe_build_training_followup(
@@ -928,6 +921,21 @@ class AnalystService:
             self.metrics.reports_generated_total.labels(
                 session_kind=payload.session_kind
             ).inc()
+
+            # 5b. Persist follow-up presets to /presets so they appear on the dashboard.
+            if preset_training and preset_training.get("presets"):
+                try:
+                    await self.results_client.create_presets(
+                        session_id=payload.session_id,
+                        user_id=payload.user_id,
+                        presets=preset_training["presets"],
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Failed to create dashboard presets (non-fatal)",
+                        session_id=payload.session_id,
+                        error=str(e),
+                    )
 
             # 6. For study sessions: update user_topic_progress
             if payload.session_kind == SessionKind.STUDY:

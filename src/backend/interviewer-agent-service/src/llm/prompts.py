@@ -93,6 +93,7 @@ def build_evaluation_prompt(
     clarification_attempts: int = 0,
     hint_attempts: int = 0,
     session_mode: str = "interview",
+    prior_assistant_message: str = "",
 ) -> str:
     """Build prompt for evaluating user's answer"""
 
@@ -106,7 +107,16 @@ def build_evaluation_prompt(
 - should_move_on = true ТОЛЬКО если: студент не знает ИЛИ уже было 1+ уточнение.
 - should_move_on = false если: ответ частичный и ещё не было уточнений — дай студенту шанс дополнить.
 - missing_points — конкретные аспекты из вопроса/теории, которые студент не упомянул.
-- evaluation_reasoning — подробно, что хорошо и чего не хватает."""
+- evaluation_reasoning — подробно, что хорошо и чего не хватает.
+
+ANTI-PARROT (обязательно в study):
+- Если предоставлено «Предыдущее сообщение ассистента», сравни ответ студента с ним.
+- Если ≥60% содержания ответа студента — это прямая цитата или близкий пересказ текста ассистента (те же фразы, тот же порядок, без добавления собственного анализа), то:
+  • overall_score ≤ 0.3
+  • is_complete = false
+  • добавь в evaluation_reasoning: «Ответ повторяет текст ассистента без демонстрации собственного понимания»
+  • missing_points: укажи, что именно студент должен объяснить СВОИМИ словами
+- Засчитывай только ту часть ответа, которая содержит НОВУЮ информацию сверх того, что ассистент уже сказал."""
     elif session_mode == "training":
         persona = "наставник на тренировочной ML-сессии"
         mode_instructions = """
@@ -120,6 +130,10 @@ def build_evaluation_prompt(
         persona = "эксперт по машинному обучению, оценивающий ответ кандидата на техническом интервью"
         mode_instructions = ""
 
+    prior_block = ""
+    if prior_assistant_message:
+        prior_block = f"\nПредыдущее сообщение ассистента (для проверки parrot-ответов): {prior_assistant_message}\n"
+
     return f"""Ты - {persona}.
 
 Вопрос интервьюера: {question}
@@ -127,7 +141,7 @@ def build_evaluation_prompt(
 Теория (референс для оценки): {theory}
 
 Ответ кандидата: {user_message}
-
+{prior_block}
 Контекст по текущему вопросу:
 - Количество уточнений: {clarification_attempts}
 - Количество подсказок: {hint_attempts}

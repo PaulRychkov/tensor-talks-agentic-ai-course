@@ -50,7 +50,8 @@
 │ │  │ Шаг 1: Формулирование вопроса                                 │  │ │
 │ │  │ Agent-интервьюер → LangGraph State: загрузить контекст        │  │ │
 │ │  │ Agent → LLM: сформулировать вопрос                            │  │ │
-│ │  │ Agent → Kafka: chat.events.in (вопрос)                        │  │ │
+│ │  │ Agent → Kafka: generated.phrases (вопрос)                     │  │ │
+│ │  │ Dialogue-aggregator → Kafka: chat.events.in                   │  │ │
 │ │  │ BFF → Frontend: доставить вопрос                              │  │ │
 │ │  └───────────────────────────────────────────────────────────────┘  │ │
 │ │                            │                                        │ │
@@ -60,13 +61,14 @@
 │ │  │ Пользователь → Frontend: ввод ответа                          │  │ │
 │ │  │ Frontend → BFF: POST /api/sessions/{id}/message               │  │ │
 │ │  │ BFF → Kafka: chat.events.out (сообщение)                      │  │ │
-│ │  │ BFF → Chat-crud: сохранить сообщение                          │  │ │
+│ │  │ Dialogue-aggregator → Chat-crud: сохранить сообщение          │  │ │
+│ │  │ Dialogue-aggregator → Kafka: messages.full.data               │  │ │
 │ │  └───────────────────────────────────────────────────────────────┘  │ │
 │ │                            │                                        │ │
 │ │                            ▼                                        │ │
 │ │  ┌───────────────────────────────────────────────────────────────┐  │ │
 │ │  │ Шаг 3: Анализ ответа (Агент)                                  │  │ │
-│ │  │ Agent читает Kafka: chat.events.out                           │  │ │
+│ │  │ Agent читает Kafka: messages.full.data                        │  │ │
 │ │  │ Agent → Tool: evaluate_answer(question, answer, theory)       │  │ │
 │ │  │ Tool → LLM: оценка по критериям                               │  │ │
 │ │  │ Tool → Agent: JSON (score, errors, missing_points)            │  │ │
@@ -108,9 +110,10 @@
 │ │  ┌───────────────────────────────────────────────────────────────┐  │ │
 │ │  │ Шаг 5: Генерация реплики                                      │  │ │
 │ │  │ Agent → LLM: сгенерировать ответ                              │  │ │
-│ │  │ Agent → Kafka: chat.events.in                                 │  │ │
+│ │  │ Agent → Kafka: generated.phrases                              │  │ │
+│ │  │ Dialogue-aggregator → Chat-crud: сохранить ответ              │  │ │
+│ │  │ Dialogue-aggregator → Kafka: chat.events.in                   │  │ │
 │ │  │ BFF → Frontend: доставить ответ                               │  │ │
-│ │  │ BFF → Chat-crud: сохранить ответ                              │  │ │
 │ │  └───────────────────────────────────────────────────────────────┘  │ │
 │ │                                                                     │ │
 │ └─────────────────────────────────────────────────────────────────────┘ │
@@ -121,8 +124,10 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ Этап 4: Отчёт и пресеты (Agent Analyst)                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ 1. Interviewer → Kafka: interview.session.completed (session_id)        │
-│ 2. Analyst consume → LangGraph, подгрузка state / Chat-crud / Results   │
+│ 1. Dialogue-aggregator → Kafka: session.completed (session_id,          │
+│    session_kind, topics, level)                                         │
+│ 2. Analyst-agent-service consume → LangGraph, маршрутизация по          │
+│    session_kind, подгрузка state / Chat-crud / Results                  │
 │ 3. get_evaluations; при необходимости уточнение оценок (LLM)            │
 │ 4. group_errors_by_topic                                                │
 │ 5. Материалы: search_knowledge_base(query, topic); при нехватке —       │

@@ -8,8 +8,8 @@
 | Этап | Контейнер                       | Роль                                                        |
 | ---- | ------------------------------- | ----------------------------------------------------------- |
 | 2    | **Interview-builder-service**   | Агент-планировщик: программа интервью / тренировки / study  |
-| 3    | **Agent-service (Interviewer)** | Агент-интервьюер: диалог и оценка                           |
-| 4    | **Agent-service (Analyst)**     | Агент-аналитик: отчёт, `validate_report`, `preset_training` |
+| 3    | **Agent-service**               | Агент-интервьюер: диалог и оценка (порт 8093)               |
+| 4    | **Analyst-agent-service**       | Агент-аналитик: отчёт, `validate_report`, `preset_training` (порт 8094) |
 
 
 **Knowledge-producer-service** (этап 0) — **LLM-workflow**, не граф LangGraph; компоненты этого сервиса здесь не детализируются (см. `docs/specs/knowledge-producer-service.md`).
@@ -71,7 +71,7 @@ interview.build.request → parse_mode → tools → form_draft
 
 ## 2. Agent-service — Interviewer (этап 3)
 
-**Технологии**: LangChain, LangGraph, Redis. **Kafka**: consume `chat.events.out`, publish `chat.events.in` и по завершении всех n вопросов — `interview.session.completed`.
+**Технологии**: LangChain, LangGraph, Redis. **Kafka**: consume `messages.full.data` (от dialogue-aggregator), publish `generated.phrases` и по завершении всех n вопросов — `session.completed`.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -103,7 +103,7 @@ interview.build.request → parse_mode → tools → form_draft
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                              ▼                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │ Kafka: chat.events.in; interview.session.completed (финал)      │    │
+│  │ Kafka: generated.phrases; session.completed (финал)    │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -112,13 +112,13 @@ interview.build.request → parse_mode → tools → form_draft
 
 ---
 
-## 3. Agent-service — Analyst (этап 4)
+## 3. Analyst-agent-service (этап 4)
 
-**Технологии**: LangChain, LangGraph. **Kafka**: consume `interview.session.completed`, publish `chat.events.in` (отчёт). **Персистентность**: код сервиса → **Results-crud-service** (отчёт + `preset_training`), не как LLM-tool.
+**Технологии**: LangChain, LangGraph (порт 8094). **Kafka**: consume `session.completed`. **Персистентность**: код сервиса → **Results-crud-service** (отчёт + `presets` + `user_topic_progress`), не как LLM-tool. Маршрутизация по `session_kind`: interview → отчёт + presets, training → результаты, study → user_topic_progress.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                  Agent-service (Analyst)                                │
+│                  Analyst-agent-service                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────────────────┐    │
 │  │ LangGraph State: черновик отчёта, итерации validate_report, …   │    │
@@ -157,7 +157,7 @@ interview.build.request → parse_mode → tools → form_draft
 **Переходы (ориентир)**:
 
 ```
-interview.session.completed → load_state → get_evaluations
+session.completed → load_state → get_evaluations
 → group_errors_by_topic → retrieve_materials (KB → web_search → fetch_url)
 → generate_report_section (Summary, Errors, Strengths, Plan, Materials)
 → validate_report → [FAIL] → доработка секций / материалов → validate_report
@@ -195,11 +195,12 @@ interview.session.completed → load_state → get_evaluations
 ## Kafka (логические имена топиков)
 
 
-| Агент       | Consume                       | Publish                                         |
-| ----------- | ----------------------------- | ----------------------------------------------- |
-| Планировщик | `interview.build.request`     | `interview.build.response`                      |
-| Interviewer | `chat.events.out`             | `chat.events.in`, `interview.session.completed` |
-| Analyst     | `interview.session.completed` | `chat.events.in`                                |
+| Сервис                  | Consume                       | Publish                                              |
+| ----------------------- | ----------------------------- | ---------------------------------------------------- |
+| Interview-builder       | `interview.build.request`     | `interview.build.response`                           |
+| Agent-service           | `messages.full.data`          | `generated.phrases`, `session.completed`             |
+| Analyst-agent-service   | `session.completed`           | результаты → Results-crud (HTTP)                     |
+| Dialogue-aggregator     | `chat.events.out`, `generated.phrases` | `messages.full.data`, `chat.events.in`, `session.completed` |
 
 
 Префикс кластера (например `tensor-talks-`) — по реализации. Partition key обычно `session_id`.

@@ -2,21 +2,23 @@
 
 ## Обзор
 
-**Назначение**: Управление жизненным циклом сессии интервью.
+**Назначение**: Управление жизненным циклом сессии (interview / training / study).
 
 **Технологии**: Go 1.21+, Redis, Kafka.
 
 ## Функции
 
-- Создание новой сессии
+- Создание новой сессии с параметрами (topics, level, type, mode)
 - Кеширование в Redis (TTL: 2 часа)
 - Публикация запросов на формирование программы (Kafka)
 - Координация с session-crud-service
+- Возврат программы и метаданных сессии (`session_mode`, `topics`, `level`) по `GET /sessions/{id}/program`
 
 ## API
 
-- POST /api/sessions — создать
+- POST /api/sessions — создать (topics, level, type, mode)
 - GET /api/sessions/{id} — получить
+- GET /api/sessions/{id}/program — получить программу и метаданные
 - PUT /api/sessions/{id} — обновить
 
 ## Метрики

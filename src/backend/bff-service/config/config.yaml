@@ -22,6 +22,10 @@ results_crud:
   base_url: "http://results-crud-service:8088"
   timeout_seconds: 5
 
+knowledge_crud:
+  base_url: "http://tensor-talks-knowledge-base-crud-service:8090"
+  timeout_seconds: 5
+
 kafka:
   brokers: "kafka:9092"
   topic_chat_out: "tensor-talks-chat.events.out"

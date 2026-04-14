@@ -30,6 +30,7 @@ func (h *KnowledgeHandler) RegisterRoutes(router gin.IRouter) {
 	router.PUT("/knowledge/:id", h.UpdateKnowledge)
 	router.DELETE("/knowledge/:id", h.DeleteKnowledge)
 	router.GET("/knowledge", h.GetKnowledgeByFilters)
+	router.GET("/knowledge/subtopics", h.GetSubtopics)
 	// Semantic search endpoint (§10.3) — requires pgvector + embedding API
 	router.POST("/knowledge/search-semantic", h.SearchSemantic)
 }
@@ -155,6 +156,17 @@ func (h *KnowledgeHandler) DeleteKnowledge(c *gin.Context) {
 
 	metrics.BusinessKnowledgeOperationsTotal.WithLabelValues("knowledge-base-crud-service", "delete", "success").Inc()
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// GetSubtopics returns all knowledge items as subtopics with labels and topic grouping.
+func (h *KnowledgeHandler) GetSubtopics(c *gin.Context) {
+	subtopics, err := h.svc.GetSubtopics(c.Request.Context())
+	if err != nil {
+		h.logger.Error("GetSubtopics failed", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"subtopics": subtopics})
 }
 
 // GetKnowledgeByFilters возвращает знания по фильтрам.

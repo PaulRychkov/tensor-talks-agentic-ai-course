@@ -30,6 +30,7 @@ type Config struct {
 	ChatCRUD       ChatCRUDConfig       `mapstructure:"chat_crud"`
 	ResultsCRUD    ResultsCRUDConfig    `mapstructure:"results_crud"`
 	UserCRUD       UserCRUDConfig       `mapstructure:"user_crud"`
+	KnowledgeCRUD  KnowledgeCRUDConfig  `mapstructure:"knowledge_crud"`
 	Kafka          KafkaConfig          `mapstructure:"kafka"`
 	CORS           CORSConfig           `mapstructure:"cors"`
 	Redis          RedisConfig          `mapstructure:"redis"`
@@ -44,6 +45,12 @@ type RedisConfig struct {
 
 // UserCRUDConfig содержит параметры подключения к user-crud-service.
 type UserCRUDConfig struct {
+	BaseURL        string `mapstructure:"base_url"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
+}
+
+// KnowledgeCRUDConfig содержит параметры подключения к knowledge-base-crud-service.
+type KnowledgeCRUDConfig struct {
 	BaseURL        string `mapstructure:"base_url"`
 	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
 }
@@ -169,6 +176,12 @@ func Load() (Config, error) {
 	}
 	if cfg.UserCRUD.TimeoutSeconds == 0 {
 		cfg.UserCRUD.TimeoutSeconds = 5
+	}
+	if cfg.KnowledgeCRUD.BaseURL == "" {
+		cfg.KnowledgeCRUD.BaseURL = "http://knowledge-base-crud-service:8090"
+	}
+	if cfg.KnowledgeCRUD.TimeoutSeconds == 0 {
+		cfg.KnowledgeCRUD.TimeoutSeconds = 5
 	}
 	if cfg.SessionCRUD.BaseURL == "" {
 		cfg.SessionCRUD.BaseURL = "http://session-crud-service:8085"

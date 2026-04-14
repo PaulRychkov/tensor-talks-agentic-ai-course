@@ -1,8 +1,10 @@
-# Analyst-agent Specification
+# Analyst-agent-service Specification
 
 ## Обзор
 
 **Назначение**: Формирование структурированного отчёта по итогам сессии, подбор материалов, запись результатов и **preset_training** (рекомендации тренировок и study). LangGraph-агент с циклом валидации отчёта.
+
+**Сервис**: `analyst-agent-service` (отдельный деплой, порт 8094). Выделен из agent-service в самостоятельный сервис.
 
 **Технологии**: Python 3.11+, LangChain, LangGraph, Kafka.
 
@@ -12,12 +14,17 @@
 
 ## Вход и интеграции
 
-**Триггер**: сообщение в Kafka о завершении интервью, например топик `interview.session.completed` с `session_id` (точное имя — контракт реализации; кластер общий с `chat.events.*`).
+**Триггер**: сообщение в Kafka `session.completed` с `session_id`, `session_kind`, `topics`, `level` от dialogue-aggregator.
 
-**Потребление данных**: LangGraph State, Redis, при необходимости **Chat-crud-service** и **Results-crud-service** (история, промежуточные оценки).
+**Потребление данных**: LangGraph State, при необходимости **Chat-crud-service**, **Session-service** и **Results-crud-service** (история, промежуточные оценки, параметры сессии).
+
+**Маршрутизация по session_kind**:
+- `interview` → полный отчёт + `presets` (рекомендации тренировок)
+- `training` → результаты тренировки
+- `study` → прогресс по теме (`user_topic_progress`)
 
 **Выход**:
-- Персистентность: **Results-crud-service** — итоговый отчёт и **preset_training** (`weak_topics`, `recommended_materials`; вопросы тренировки не фиксируются, подбираются на этапе 2).
+- Персистентность: **Results-crud-service** — итоговый отчёт, **presets** (`weak_topics`, `recommended_materials`; вопросы тренировки не фиксируются, подбираются на этапе 2) и/или **user_topic_progress**.
 - Пользователю: **Kafka** `chat.events.in` (текст/метаданные отчёта).
 
 Запись в PostgreSQL выполняется кодом сервиса аналитика по контракту CRUD, не как публичный LLM-tool.
@@ -80,7 +87,7 @@
 ## Правила переходов (ориентир для графа)
 
 ```
-[interview.session.completed] → load_state → get_evaluations
+[session.completed] → load_state → get_evaluations
 → (optional) refine_evaluations_llm
 → group_errors_by_topic
 → retrieve_materials (KB → при необходимости web_search → fetch_url)

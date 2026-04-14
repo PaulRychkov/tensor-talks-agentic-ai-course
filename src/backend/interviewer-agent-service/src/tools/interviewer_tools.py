@@ -40,6 +40,8 @@ async def evaluate_answer(
     answer: str,
     theory: str,
     model: str = "",
+    prior_assistant_message: str = "",
+    session_mode: str = "interview",
 ) -> Dict[str, Any]:
     """Evaluate a candidate's answer against the expected theory.
 
@@ -58,6 +60,8 @@ async def evaluate_answer(
         question=question,
         user_message=answer,
         theory=theory,
+        prior_assistant_message=prior_assistant_message,
+        session_mode=session_mode,
     )
     try:
         result = await _llm_client.generate_json(
@@ -267,6 +271,15 @@ TOOL_DEFINITIONS: List[Dict[str, Any]] = [
                     "question": {"type": "string", "description": "The question text"},
                     "answer": {"type": "string", "description": "The candidate's answer"},
                     "theory": {"type": "string", "description": "Expected theory/reference"},
+                    "prior_assistant_message": {
+                        "type": "string",
+                        "description": "Your (assistant) previous message to the student. Required in study mode to detect parrot answers.",
+                    },
+                    "session_mode": {
+                        "type": "string",
+                        "description": "Current session mode: interview, training, or study",
+                        "default": "interview",
+                    },
                 },
                 "required": ["question", "answer", "theory"],
             },

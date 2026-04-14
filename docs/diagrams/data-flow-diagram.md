@@ -136,14 +136,19 @@ BFF → Kafka: Publish chat.events.out
        │         │           timestamp, user_id}                        │
        │         └──────────────────────────────────────────────────────┘
        │
-       ├─→ BFF → Chat-crud-service: Сохранить сообщение пользователя
+       ▼
+Dialogue-aggregator: Consume chat.events.out
+       │
+       ├─→ Chat-crud-service: Сохранить сообщение пользователя
        │         ┌──────────────────────────────────────────────────────┐
        │         │ PostgreSQL: chat_crud_db.messages                    │
        │         │ Columns: id, session_id, role, content, timestamp    │
        │         └──────────────────────────────────────────────────────┘
        │
+       ├─→ Kafka: Publish messages.full.data (полный контекст диалога)
+       │
        ▼
-Agent-service: Consume chat.events.out
+Agent-service: Consume messages.full.data
        │
        ▼
 LangGraph State: Загрузка контекста сессии
@@ -170,7 +175,19 @@ LangGraph State: Загрузка контекста сессии
 Агент → LLM: Генерация реплики
        │
        ▼
-Agent-service → Kafka: Publish chat.events.in
+Agent-service → Kafka: Publish generated.phrases
+       │         ┌──────────────────────────────────────────────────────┐
+       │         │ Topic: generated.phrases                             │
+       │         │ Message: {event_type, session_id, content,           │
+       │         │           decision, metadata}                        │
+       │         └──────────────────────────────────────────────────────┘
+       │
+       ▼
+Dialogue-aggregator: Consume generated.phrases
+       │
+       ├─→ Chat-crud-service: Сохранить ответ агента
+       │
+       ├─→ Kafka: Publish chat.events.in
        │         ┌──────────────────────────────────────────────────────┐
        │         │ Topic: chat.events.in                                │
        │         │ Message: {event_type, session_id, content,           │
@@ -179,11 +196,9 @@ Agent-service → Kafka: Publish chat.events.in
        │
        ├─→ BFF: Consume chat.events.in
        │         │
-       │         ├─→ Frontend: Доставить ответ пользователю
-       │         │
-       │         └─→ Chat-crud-service: Сохранить ответ агента
+       │         └─→ Frontend: Доставить ответ пользователю
        │
-       └─→ Results-crud-service: Сохранить промежуточную оценку
+       └─→ (при complete) Results-crud-service: placeholder (score=0)
                  ┌──────────────────────────────────────────────────────┐
                  │ PostgreSQL: results_crud_db.evaluations              │
                  │ Columns: id, session_id, question_index, score,      │
@@ -195,10 +210,10 @@ Agent-service → Kafka: Publish chat.events.in
 │                    Поток формирования отчёта (Report)                   │
 └─────────────────────────────────────────────────────────────────────────┘
 
-Kafka: interview.session.completed (session_id) от Interviewer
+Kafka: session.completed (session_id, session_kind, topics, level) от Dialogue-aggregator
        │
        ▼
-Агент-аналитик: get_evaluations(session_id); state / Redis / CRUD
+Analyst-agent-service: get_evaluations(session_id); маршрутизация по session_kind
        │
        ▼
 group_errors_by_topic(evaluations)
@@ -218,16 +233,14 @@ generate_report_section(...) по секциям: Summary, Errors, Strengths, Pl
 validate_report(report_draft, evaluations) → при FAIL: доработка (лимит итераций)
        │
        ▼
-Results-crud-service: отчёт + preset_training (weak_topics, recommended_materials)
+Results-crud-service: отчёт + presets / user_topic_progress (по session_kind)
                  ┌────────────────────────────────────────────────────────┐
                  │ PostgreSQL: results_crud_db                            │
-                 │ Таблицы отчётов и preset_training — по схеме реализации│
+                 │ Таблицы: reports, presets, user_topic_progress         │
                  └────────────────────────────────────────────────────────┘
        │
        ▼
-Agent-service → Kafka: chat.events.in (отчёт)
-       │
-       └─→ BFF → Frontend: /results (рекомендации тренировок / study)
+BFF → Frontend: /results (рекомендации тренировок / study)
 ```
 
 ## Что хранится (Data Storage)

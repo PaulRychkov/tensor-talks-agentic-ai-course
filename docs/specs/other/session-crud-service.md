@@ -2,19 +2,19 @@
 
 ## Обзор
 
-**Назначение**: Персистентное хранение сессий.
+**Назначение**: Персистентное хранение сессий (interview / training / study).
 
 **Технологии**: Go 1.21+, GORM, PostgreSQL.
 
 ## Функции
 
-- Сохранение параметров интервью
+- Сохранение параметров сессий (topics, level, type, mode/session_kind)
 - Хранение сформированных программ
 
 ## БД
 
 - session_crud_db
-- Table: sessions (id, user_id, topic, level, program JSONB, status, created_at)
+- Table: sessions (id, user_id, session_kind, type, topics JSONB, level, program JSONB, status, created_at, updated_at)
 
 ## API
 

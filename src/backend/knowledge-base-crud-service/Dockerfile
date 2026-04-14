@@ -2,7 +2,7 @@ FROM golang:1.24-alpine AS build
 WORKDIR /app
 COPY go.mod ./
 COPY go.sum* ./
-RUN GOPROXY=https://goproxy.io,https://proxy.golang.org,direct go mod download
+RUN GOPROXY=https://proxy.golang.org,direct go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o knowledge-base-crud-service ./cmd/knowledge-base-crud-service
 

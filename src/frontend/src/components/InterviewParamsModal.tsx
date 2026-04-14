@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { SessionMode } from '../services/chat'
+import { getSubtopics, type SubtopicEntry } from '../services/dashboard'
 
 export interface InterviewParams {
   level: 'junior' | 'middle' | 'senior'
@@ -25,45 +26,6 @@ const MODE_DESCRIPTIONS: Record<SessionMode, string> = {
   study: 'Изучение теории + контрольные вопросы по теме',
 }
 
-const TOPIC_SUBTOPICS: Record<string, { id: string; label: string }[]> = {
-  classic_ml: [
-    { id: 'theory_linear_regression', label: 'Линейная регрессия' },
-    { id: 'theory_logistic_regression', label: 'Логистическая регрессия' },
-    { id: 'theory_gradient_descent', label: 'Градиентный спуск' },
-    { id: 'theory_kmeans', label: 'K-means кластеризация' },
-    { id: 'theory_overfitting', label: 'Переобучение и регуляризация' },
-    { id: 'theory_cross_validation', label: 'Кросс-валидация' },
-    { id: 'theory_naive_bayes', label: 'Наивный Байес' },
-  ],
-  nlp: [
-    { id: 'theory_tokenization', label: 'Токенизация' },
-    { id: 'theory_word_embeddings', label: 'Word Embeddings' },
-    { id: 'theory_rnn', label: 'RNN' },
-    { id: 'theory_lstm', label: 'LSTM / GRU' },
-    { id: 'theory_transformer', label: 'Transformer' },
-    { id: 'theory_attention', label: 'Механизм внимания' },
-    { id: 'theory_bert', label: 'BERT' },
-    { id: 'theory_gpt', label: 'GPT и генерация' },
-    { id: 'theory_fine_tuning', label: 'Fine-tuning' },
-    { id: 'theory_prompt_engineering', label: 'Prompt Engineering' },
-    { id: 'theory_rag', label: 'RAG' },
-    { id: 'theory_rlhf', label: 'RLHF' },
-  ],
-  llm: [
-    { id: 'theory_transformer', label: 'Transformer' },
-    { id: 'theory_attention', label: 'Механизм внимания' },
-    { id: 'theory_gpt', label: 'GPT и генерация' },
-    { id: 'theory_bert', label: 'BERT' },
-    { id: 'theory_llama', label: 'LLaMA' },
-    { id: 'theory_fine_tuning', label: 'Fine-tuning / PEFT' },
-    { id: 'theory_rag', label: 'RAG' },
-    { id: 'theory_rlhf', label: 'RLHF' },
-    { id: 'theory_prompt_engineering', label: 'Prompt Engineering' },
-    { id: 'theory_chain_of_thought', label: 'Chain-of-Thought' },
-    { id: 'theory_vector_databases', label: 'Векторные БД' },
-  ],
-}
-
 export default function InterviewParamsModal({
   isOpen,
   onClose,
@@ -78,6 +40,20 @@ export default function InterviewParamsModal({
   const [mode, setMode] = useState<SessionMode>(defaultMode)
   const [selectedSubtopics, setSelectedSubtopics] = useState<string[]>(defaultSubtopics || [])
   const [duration, setDuration] = useState<'quick' | 'normal' | 'long'>('normal')
+
+  // Dynamic subtopics from knowledge base
+  const [allSubtopics, setAllSubtopics] = useState<SubtopicEntry[]>([])
+  const [subtopicsLoading, setSubtopicsLoading] = useState(false)
+
+  // Fetch subtopics on first open
+  useEffect(() => {
+    if (isOpen && allSubtopics.length === 0 && !subtopicsLoading) {
+      setSubtopicsLoading(true)
+      getSubtopics()
+        .then(setAllSubtopics)
+        .finally(() => setSubtopicsLoading(false))
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -103,7 +79,8 @@ export default function InterviewParamsModal({
   }
 
   const needsSubtopics = mode === 'training' || mode === 'study'
-  const availableSubtopics = TOPIC_SUBTOPICS[topic] || []
+  // Filter subtopics for the currently selected topic
+  const availableSubtopics = allSubtopics.filter(st => st.topics.includes(topic))
   const isValid = !needsSubtopics || selectedSubtopics.length > 0
 
   const DURATION_OPTIONS: { id: 'quick' | 'normal' | 'long'; label: string; questions: number }[] = [
@@ -219,22 +196,28 @@ export default function InterviewParamsModal({
                 Подтемы
                 <span className="text-zinc-400 font-normal ml-1">(выберите хотя бы одну)</span>
               </label>
-              <div className="flex flex-wrap gap-2">
-                {availableSubtopics.map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => toggleSubtopic(st.id)}
-                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                      selectedSubtopics.includes(st.id)
-                        ? 'bg-orange-600 text-white border-orange-600'
-                        : 'bg-white text-zinc-700 border-zinc-200 hover:border-orange-300'
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
+              {subtopicsLoading ? (
+                <div className="text-sm text-zinc-400 py-2">Загрузка подтем...</div>
+              ) : availableSubtopics.length === 0 ? (
+                <div className="text-sm text-zinc-400 py-2">Нет доступных подтем для этой темы</div>
+              ) : (
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
+                  {availableSubtopics.map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => toggleSubtopic(st.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                        selectedSubtopics.includes(st.id)
+                          ? 'bg-orange-600 text-white border-orange-600'
+                          : 'bg-white text-zinc-700 border-zinc-200 hover:border-orange-300'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               {!isValid && (
                 <p className="text-xs text-red-500 mt-1">Выберите хотя бы одну подтему</p>
               )}

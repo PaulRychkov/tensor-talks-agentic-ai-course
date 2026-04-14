@@ -805,7 +805,7 @@ export default function Chat() {
                     return (
                       <div className="self-start max-w-[90%]">
                         <div className="rounded-2xl px-4 py-3 bg-purple-50 border border-purple-200 text-purple-900">
-                          <div className="text-xs uppercase tracking-wide text-purple-600 mb-2">📋 План изучения — {planItems.length} {topicWord}, {totalPoints} {totalPoints === 1 ? 'вопрос' : totalPoints < 5 ? 'вопроса' : 'вопросов'}</div>
+                          <div className="text-xs uppercase tracking-wide text-purple-600 mb-2">📋 План изучения — {planItems.length} {topicWord}, {totalPoints} {totalPoints === 1 ? 'пункт' : totalPoints < 5 ? 'пункта' : 'пунктов'}</div>
                           <ol className="space-y-2">
                             {planItems.map((item, i) => (
                               <li key={i} className="text-sm">
@@ -1056,33 +1056,35 @@ export default function Chat() {
             (lastQMsg != null && !revealedQuestions.has(lastQMsg.id) && parseStudyContent(lastQMsg.content).type === 'theory_question')
           )
           return (
-            <div className="flex gap-2 items-start">
+            <div className="flex flex-col gap-2">
               <textarea
                 rows={3}
-                className="flex-1 px-3 py-2 rounded-lg border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none overflow-y-auto whitespace-pre-wrap"
-                placeholder={studyBlocked ? 'Нажмите «Продолжить», чтобы ответить...' : 'Напишите ответ... (Enter — отправить, Shift+Enter — новая строка)'}
+                className="w-full px-3 py-2 rounded-lg border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none overflow-y-auto whitespace-pre-wrap"
+                placeholder={studyBlocked ? 'Нажмите «Продолжить», чтобы ответить...' : 'Напишите ответ'}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading || !sessionId || chatCompleted || studyBlocked}
               />
-              <button
-                onClick={handleSend}
-                disabled={isLoading || !sessionId || !inputValue.trim() || chatCompleted || studyBlocked}
-                className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:bg-orange-300 disabled:cursor-not-allowed self-start"
-              >
-                Отправить
-              </button>
-              {sessionMode !== 'study' && (
+              <div className="flex flex-col gap-2 w-40 mx-auto">
                 <button
-                  onClick={handleTerminate}
-                  disabled={!sessionId || chatCompleted}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed"
-                  title={sessionMode === 'training' ? 'Завершить тренировку' : 'Досрочно завершить интервью'}
+                  onClick={handleSend}
+                  disabled={isLoading || !sessionId || !inputValue.trim() || chatCompleted || studyBlocked}
+                  className="w-40 px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:bg-orange-300 disabled:cursor-not-allowed"
                 >
-                  Завершить
+                  Отправить
                 </button>
-              )}
+                {sessionMode !== 'study' && (
+                  <button
+                    onClick={handleTerminate}
+                    disabled={!sessionId || chatCompleted}
+                    className="w-40 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed"
+                    title={sessionMode === 'training' ? 'Завершить тренировку' : 'Досрочно завершить интервью'}
+                  >
+                    Завершить
+                  </button>
+                )}
+              </div>
             </div>
           )
         })()}

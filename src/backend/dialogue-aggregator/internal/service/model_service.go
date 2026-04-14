@@ -986,10 +986,22 @@ func (s *ModelService) HandleUserMessage(ctx context.Context, sessionID, userID,
 				pointNum := studyPointNumber(progQuestions, arrayIdx)
 
 				if samePoint {
-					// Same point — agent's generatedText уже содержит и оценку и следующий вопрос.
-					// Отправляем как одно сообщение (без отдельного wrappedQ).
-					if err := s.producer.SendModelQuestion(sessionID, userID, generatedText, pointNum, stateTotalQuestions, piiMasked); err != nil {
-						return fmt.Errorf("send study evaluation+question: %w", err)
+					// Same point:
+					// 1) Отправляем оценку агента (plain text)
+					// 2) Отправляем следующий вопрос из программы (study-wrapped, без теории)
+					if err := s.producer.SendModelQuestion(sessionID, userID, generatedText, 0, stateTotalQuestions, piiMasked); err != nil {
+						return fmt.Errorf("send study evaluation: %w", err)
+					}
+					wrappedQ := "[STUDY_QUESTION]\n" + strings.TrimSpace(nextQ.Question) + "\n[/STUDY_QUESTION]"
+					if err := s.producer.SendModelQuestion(sessionID, userID, wrappedQ, pointNum, stateTotalQuestions); err != nil {
+						return fmt.Errorf("send study next question (same point): %w", err)
+					}
+					if err := s.chatCRUDCl.SaveMessage(ctx, sessionUUID, client.MessageTypeSystem, wrappedQ, map[string]any{
+						"message_id":   phraseEvent.Payload["message_id"],
+						"question_id":  nextQ.ID,
+						"message_kind": "study_question",
+					}); err != nil {
+						s.logger.Warn("Failed to save study question to chat-crud", zap.String("session_id", sessionID), zap.Error(err))
 					}
 					s.logger.Info("Study: sent evaluation + next question (same point, no theory)",
 						zap.String("session_id", sessionID),
@@ -1000,18 +1012,17 @@ func (s *ModelService) HandleUserMessage(ctx context.Context, sessionID, userID,
 					return nil
 				}
 
-				// New point — short transition, then theory+question block.
+				// New point — evaluation, then transition, then theory+question block.
 				theoryForWrap := nextQ.PointTheory
 				if theoryForWrap == "" {
 					theoryForWrap = nextQ.Theory
 				}
 				studyContent := studyWrapQuestion(theoryForWrap, nextQ.Question)
-				// 1) Short transition message
-				transition := "Отлично! Переходим к следующему пункту."
-				if err := s.producer.SendModelQuestion(sessionID, userID, transition, 0, stateTotalQuestions); err != nil {
-					return fmt.Errorf("send study transition: %w", err)
+				// 1) Оценка агента
+				if err := s.producer.SendModelQuestion(sessionID, userID, generatedText, 0, stateTotalQuestions, piiMasked); err != nil {
+					return fmt.Errorf("send study evaluation (new point): %w", err)
 				}
-				// 2) Theory+question block
+				// 2) Theory+question block (transition не нужен — теория сама разделяет пункты)
 				if err := s.producer.SendModelQuestion(sessionID, userID, studyContent, pointNum, stateTotalQuestions); err != nil {
 					return fmt.Errorf("send study theory+question: %w", err)
 				}

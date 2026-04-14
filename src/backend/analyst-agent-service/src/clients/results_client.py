@@ -90,11 +90,24 @@ class ResultsCrudClient:
         results = []
         try:
             for preset in presets:
-                # Map analyst preset fields to results-crud schema
+                # Map analyst preset fields to results-crud schema.
+                # Study followup presets carry `focus_points` (free-text point titles)
+                # which we stash in `materials` so the dashboard → builder path can
+                # forward them to interview-builder.
+                topics = list(preset.get("topics") or [])
+                weak = preset.get("weak_topics") or []
+                if weak and not topics:
+                    topics = list(weak)
+                materials: List[str] = []
+                focus_points = preset.get("focus_points") or []
+                for fp in focus_points:
+                    if isinstance(fp, str) and fp.strip():
+                        materials.append(f"focus_point:{fp.strip()}")
                 payload = {
                     "user_id": user_id,
                     "target_mode": preset.get("mode", preset.get("target_mode", "training")),
-                    "topics": preset.get("topics", []) + preset.get("weak_topics", []),
+                    "topics": topics,
+                    "materials": materials,
                     "source_session_id": session_id,
                 }
                 response = await self.client.post(

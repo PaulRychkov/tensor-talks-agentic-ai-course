@@ -8,7 +8,9 @@
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Interview-builder (планировщик, LangGraph)               │  │
-│  │  Agent-service: интервьюер + аналитик (LangGraph)         │  │
+│  │  Agent-service (интервьюер, LangGraph)                    │  │
+│  │  Analyst-agent-service (аналитик, LangGraph)              │  │
+│  │  Dialogue-aggregator (оркестрация Kafka)                  │  │
 │  │  Knowledge-producer-service: LLM-workflow                 │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -49,9 +51,9 @@
 - **Цель**: Буферизация событий, масштабирование, отказоустойчивость
 - **Взаимодействие**:
   - BFF публикует сообщения пользователя в `chat.events.out`
-  - Agent-service (Interviewer) читает и публикует реплики в `chat.events.in`
+  - Dialogue-aggregator → `messages.full.data` → Agent-service; Agent-service → `generated.phrases` → Dialogue-aggregator → `chat.events.in`
   - Session-service → `interview.build.request` → Interview-builder → `interview.build.response`
-  - По завершении интервью → `interview.session.completed` → Agent-service (Analyst) → отчёт в `chat.events.in`
+  - По завершении сессии → `session.completed` → Analyst-agent-service → результаты в Results-crud
 
 ### PostgreSQL
 - **Роль**: Персистентное хранилище данных
@@ -74,7 +76,7 @@
 **Внутри периметра**:
 - Все микросервисы backend + frontend
 - Kafka, Redis, PostgreSQL
-- Interview-builder-service, Agent-service (интервьюер и аналитик), Knowledge-producer-service
+- Interview-builder-service, Agent-service, Analyst-agent-service, Dialogue-aggregator, Knowledge-producer-service
 
 **Вне периметра**:
 - LLM Provider (внешний API)

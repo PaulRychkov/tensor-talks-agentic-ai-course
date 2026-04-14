@@ -107,7 +107,10 @@ func New(cfg config.Config, logger *zap.Logger) (*Server, error) {
 	// Устанавливаем обработчик событий для consumer
 	kafkaConsumer.SetEventHandler(chatService)
 
+	knowledgeCRUDClient := client.NewKnowledgeCRUDClient(cfg.KnowledgeCRUD.BaseURL, cfg.KnowledgeCRUD.TimeoutSeconds)
+
 	httpHandler := handler.NewWithUserCrud(authService, chatService, cfg.UserCRUD.BaseURL, logger)
+	httpHandler.SetKnowledgeCRUD(knowledgeCRUDClient)
 
 	engine := gin.Default()
 

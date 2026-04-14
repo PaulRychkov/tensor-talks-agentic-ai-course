@@ -74,6 +74,73 @@ func (s *KnowledgeService) GetKnowledgeByFilters(ctx context.Context, filters re
 	return s.repo.GetKnowledgeByFilters(ctx, filters)
 }
 
+// SubtopicEntry represents a subtopic derived from a knowledge item.
+type SubtopicEntry struct {
+	ID     string   `json:"id"`
+	Label  string   `json:"label"`
+	Topics []string `json:"topics"`
+}
+
+// GetSubtopics returns all knowledge items as subtopics grouped by top-level topic.
+func (s *KnowledgeService) GetSubtopics(ctx context.Context) ([]SubtopicEntry, error) {
+	all, err := s.repo.GetKnowledgeByFilters(ctx, repository.KnowledgeFilters{})
+	if err != nil {
+		return nil, err
+	}
+
+	topLevel := map[string]bool{
+		"llm": true, "nlp": true, "machine_learning": true,
+		"deep_learning": true, "neural_networks": true,
+		"cv": true, "data_science": true,
+	}
+
+	result := make([]SubtopicEntry, 0, len(all))
+	for _, k := range all {
+		id := k.Data.ID
+		if id == "" {
+			id = k.ID
+		}
+		label := k.Data.Concept
+		if label == "" {
+			label = id
+		}
+
+		var topics []string
+		for _, tag := range k.Tags {
+			if topLevel[tag] {
+				topics = append(topics, tag)
+			}
+		}
+		// Map to frontend topic names
+		for i, t := range topics {
+			switch t {
+			case "machine_learning", "deep_learning", "neural_networks":
+				topics[i] = "classic_ml"
+			}
+		}
+		// Deduplicate after mapping
+		seen := map[string]bool{}
+		deduped := topics[:0]
+		for _, t := range topics {
+			if !seen[t] {
+				seen[t] = true
+				deduped = append(deduped, t)
+			}
+		}
+		topics = deduped
+		if len(topics) == 0 {
+			topics = []string{"classic_ml"}
+		}
+
+		result = append(result, SubtopicEntry{
+			ID:     id,
+			Label:  label,
+			Topics: topics,
+		})
+	}
+	return result, nil
+}
+
 // SemanticSearchResult represents a single result from semantic search (§10.3).
 type SemanticSearchResult struct {
 	ID         string  `json:"segment_id"`

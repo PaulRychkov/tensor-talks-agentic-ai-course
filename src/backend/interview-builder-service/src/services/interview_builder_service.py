@@ -272,6 +272,15 @@ class InterviewBuilderService:
         if not subtopics:
             return None
 
+        # focus_points: free-text point titles from a previous study session that the
+        # student failed to master. When present, the LLM must focus its generated
+        # points on these specific weak areas, not give a fresh general overview.
+        focus_points_raw = params.get("focus_points") or []
+        focus_points: List[str] = [
+            fp.strip() for fp in focus_points_raw
+            if isinstance(fp, str) and fp.strip()
+        ]
+
         program_questions: List[Dict[str, Any]] = []
         order_counter = 1
         coverage: Dict[str, int] = {}
@@ -287,7 +296,9 @@ class InterviewBuilderService:
                 fallback_reason = fallback_reason or f"no_theory:{subtopic}"
                 continue
 
-            points_data = await self._llm_generate_points(llm, subtopic, theory_text)
+            points_data = await self._llm_generate_points(
+                llm, subtopic, theory_text, focus_points=focus_points,
+            )
             if not points_data:
                 logger.warning(
                     "Study builder: LLM produced no points, skipping subtopic",
@@ -342,10 +353,31 @@ class InterviewBuilderService:
         return {"questions": program_questions}, meta
 
     async def _collect_subtopic_theory(self, subtopic: str) -> str:
-        """Fetch and concatenate all knowledge-base theory for a subtopic tag."""
+        """Fetch and concatenate knowledge-base theory for a subtopic.
+
+        Looks up by knowledge item ID first (e.g. ``theory_gpt``), then
+        falls back to tag-based filter for broader coverage.
+        """
         client = self._new_knowledge_client()
         try:
-            items = await client.get_knowledge_by_filters(tags=[subtopic])
+            # Primary: fetch the exact knowledge item by ID
+            item_by_id = await client.get_knowledge_by_id(subtopic)
+            items = [item_by_id] if item_by_id else []
+            # Secondary: also fetch any items tagged with the short name
+            # (e.g. subtopic="theory_gpt" → tag "gpt") for supplementary theory
+            short_tag = subtopic
+            for prefix in ("theory_", "practice_"):
+                if subtopic.startswith(prefix):
+                    short_tag = subtopic[len(prefix):]
+                    break
+            extra = await client.get_knowledge_by_filters(tags=[short_tag])
+            if extra:
+                seen_ids = {(i.get("Data", i.get("data", {})).get("id") or i.get("ID", "")) for i in items}
+                for e in extra:
+                    eid = (e.get("Data", e.get("data", {})).get("id") or e.get("ID", ""))
+                    if eid not in seen_ids:
+                        items.append(e)
+                        seen_ids.add(eid)
         except Exception as exc:
             logger.warning("Study builder: knowledge fetch failed",
                            subtopic=subtopic, error=str(exc))
@@ -379,10 +411,17 @@ class InterviewBuilderService:
         return "\n\n".join(parts).strip()
 
     async def _llm_generate_points(
-        self, llm, subtopic: str, theory_text: str
+        self, llm, subtopic: str, theory_text: str,
+        focus_points: Optional[List[str]] = None,
     ) -> Optional[List[Dict[str, Any]]]:
-        """Ask the LLM to split theory into 1-n points with 1-3 questions each."""
+        """Ask the LLM to split theory into 1-n points with 1-3 questions each.
+
+        If `focus_points` is provided, the LLM is told to make each generated
+        point address exactly one of those weak areas (re-study mode).
+        """
         import json
+
+        focus_points = [fp for fp in (focus_points or []) if fp]
 
         system = (
             "You are an expert ML tutor. Given a theory article about a subtopic, "
@@ -397,6 +436,20 @@ class InterviewBuilderService:
             "theory fragment — never require knowledge beyond it. Questions must be "
             "strictly about the point's content, not tangential or more advanced topics."
         )
+
+        if focus_points:
+            focus_block = "\n".join(f"- {fp}" for fp in focus_points)
+            system += (
+                "\n\nRE-STUDY MODE: The student previously failed to master these specific "
+                "WEAK POINTS (from the prior study session):\n"
+                f"{focus_block}\n"
+                "Generate points that DIRECTLY ADDRESS each weak point above (one generated "
+                "point per weak point when possible). Each point's title must clearly map to "
+                "one of the weak points. Theory and questions must drill exactly into the "
+                "concept the student missed — go deeper, give more concrete examples, and "
+                "ask questions that force the student to demonstrate the missing understanding. "
+                "Do NOT cover unrelated areas of the subtopic — focus only on the listed gaps."
+            )
         user = f"""Subtopic: {subtopic}
 
 Theory:
@@ -972,7 +1025,7 @@ Rules:
         complexity = LEVEL_TO_COMPLEXITY.get(level.lower(), 2)
         # Study mode: filter strictly by the selected subtopic (weak_topics),
         # e.g. ["theory_rag"] → only RAG questions. Fall back to topic tags if no subtopic.
-        if mode == "study" and weak_topics:
+        if (mode == "study" or mode == "training") and weak_topics:
             tags = list(weak_topics)
         else:
             tags = self._map_topics_to_tags(topics)
@@ -989,9 +1042,9 @@ Rules:
                 fallback_reason = "no_questions_in_database"
 
         # 2. Filter by topic
-        # Study mode: strict — only questions whose resolved tags match the selected subtopic.
-        # Never silently expand to "all" or pass untagged/unresolved through.
-        strict_filter = (mode == "study")
+        # Study/training with subtopics: strict — only questions whose resolved tags match
+        # the selected subtopics. Never silently expand to "all" or pass untagged/unresolved through.
+        strict_filter = mode in ("study", "training") and bool(weak_topics)
         if questions and tags:
             filtered, by_tag = await self._filter_by_topic(questions, tags, strict=strict_filter)
             if filtered:

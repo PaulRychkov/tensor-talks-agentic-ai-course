@@ -116,3 +116,25 @@ export async function getDashboardRecommendations(): Promise<DashboardRecommenda
     return [];
   }
 }
+
+export type SubtopicEntry = {
+  id: string;
+  label: string;
+  topics: string[];  // e.g. ["llm", "nlp", "classic_ml"]
+};
+
+/**
+ * Fetch available subtopics from knowledge base.
+ * Public endpoint — no auth required.
+ */
+export async function getSubtopics(): Promise<SubtopicEntry[]> {
+  try {
+    const resp = await fetch(`${API_BASE}/subtopics`);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.subtopics ?? [];
+  } catch (err) {
+    console.error('[dashboard] subtopics fetch failed', err);
+    return [];
+  }
+}

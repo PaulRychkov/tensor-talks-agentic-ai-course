@@ -1,8 +1,10 @@
-# Interviewer-agent Specification
+# Agent-service (Interviewer) Specification
 
 ## Обзор
 
-**Назначение**: Ведение диалога (интервью / тренировка / сопровождение сценария по программе от планировщика), оценка ответов, принятие решений в реальном времени. Обмен с пользователем — через **Kafka** (`chat.events.out` / `chat.events.in`). После последнего вопроса публикуется событие завершения сессии для **аналитика**.
+**Назначение**: Ведение диалога (интервью / тренировка / сопровождение сценария по программе от планировщика), оценка ответов, принятие решений в реальном времени. Обмен с пользователем — через **Kafka** (потребляет `messages.full.data` от dialogue-aggregator, публикует `generated.phrases`). После последнего вопроса публикуется событие завершения сессии (`session.completed`) для **analyst-agent-service**.
+
+**Сервис**: `agent-service` (отдельный деплой, порт 8093). Аналитик выделен в отдельный сервис `analyst-agent-service` (порт 8094).
 
 **Технологии**: Python 3.11+, LangChain, LangGraph, Kafka, Redis.
 
@@ -12,8 +14,8 @@
 
 ## Вход и интеграции
 
-- **Вход**: `chat.events.out` — сообщения пользователя; программа сессии уже сформирована планировщиком (этап 2) и доступна в state.
-- **Выход**: `chat.events.in` — реплики агента; по завершении всех n вопросов — **Kafka** `interview.session.completed`  с `session_id` для **Agent-service (Analyst)**.
+- **Вход**: `messages.full.data` — сообщения пользователя (от dialogue-aggregator); программа сессии уже сформирована планировщиком (этап 2) и доступна в state.
+- **Выход**: `generated.phrases` — реплики агента (в dialogue-aggregator → `chat.events.in`); по завершении всех n вопросов — **Kafka** `session.completed` с `session_id` для **analyst-agent-service**.
 - Персистентность сообщений обеспечивают **BFF** и **Chat-crud-service** (см. `docs/system-design.md`), не через публичный **tool** у LLM.
 
 ## Архитектура
@@ -36,7 +38,7 @@
 
 ## Шаги (Workflow)
 
-1. **Kafka**: прочитать `chat.events.out` (или аналог потребления), обновить state.
+1. **Kafka**: прочитать `messages.full.data` (от dialogue-aggregator), обновить state.
 2. **LangGraph State**: загрузить контекст сессии (программа уже в state).
 3. **Агент-интервьюер**:
    - текущий вопрос и теория из программы (БД уже учтена планировщиком)
@@ -51,9 +53,9 @@
        - пропуск → зафиксировать в оценке
        - упоминание свежего фреймворка → `web_search` + при необходимости `fetch_url`
    - сгенерировать реплику
-4. **Kafka**: `chat.events.in` с ответом пользователю.
+4. **Kafka**: `generated.phrases` с ответом (dialogue-aggregator доставит пользователю через `chat.events.in`).
 5. Повторять до завершения всех **n** вопросов.
-6. После последнего вопроса: **Kafka** `interview.session.completed` (`session_id`, при необходимости метаданные сессии).
+6. После последнего вопроса: **Kafka** `session.completed` (`session_id`, при необходимости метаданные сессии).
 
 При **тренировочном** режиме (программа от планировщика с `type=practice`): более глубокое сопровождение — пояснение теории на шагах, адаптивные подсказки через **prompt policy** (отдельный список **tools** в `docs/system-design.md` не требуется).
 
@@ -64,8 +66,8 @@
 → formulate_question | evaluate_answer
 evaluate_answer → decide_action
 decide_action → next_question | hint_branch | redirect | skip | web_search_branch
-→ generate_reply → publish chat.events.in
-→ [все вопросы заданы и обработаны] → publish interview.session.completed → END
+→ generate_reply → publish generated.phrases
+→ [все вопросы заданы и обработаны] → publish session.completed → END
 ```
 
 ## Stop Condition
@@ -109,7 +111,7 @@ decide_action → next_question | hint_branch | redirect | skip | web_search_bra
 
 **Запуск**: Docker (python-slim), Kubernetes, Helm, ArgoCD.
 
-**Конфигурация**: `ENVIRONMENT`, `LOG_LEVEL`, `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_TOPIC_CHAT_IN`, `KAFKA_TOPIC_CHAT_OUT`, `KAFKA_TOPIC_SESSION_COMPLETED`, `REDIS_HOST`, `LLM_MODEL`, `MAX_CONTEXT_BUDGET`.
+**Конфигурация**: `ENVIRONMENT`, `LOG_LEVEL`, `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_TOPIC_MESSAGES_FULL_DATA`, `KAFKA_TOPIC_GENERATED_PHRASES`, `KAFKA_TOPIC_SESSION_COMPLETED`, `REDIS_HOST`, `LLM_MODEL`, `MAX_CONTEXT_BUDGET`.
 
 **Секреты (Vault)**: `OPENAI_API_KEY`, ключи поиска при использовании `web_search`.
 

@@ -10,6 +10,25 @@ TensorTalks — AI-симулятор технических ML-собеседо
 
 Проект ВКР, работает на стыке AI-EdTech и HR-Tech.
 
+**доступен на сайте https://www.tensor-talks.ru/** (пока только с нероссийским ip)
+
+**Запуск:**
+
+```bash
+docker-compose up -d
+```
+
+**Сервисы:**
+
+| Сервис | URL | Описание |
+|--------|-----|----------|
+| Frontend | http://localhost:5173 | React SPA |
+| BFF API | http://localhost:8080 | Backend API |
+| Grafana | http://localhost:3000 | Метрики и логи |
+| Prometheus | http://localhost:9090 | Метрики |
+| Kafdrop | http://localhost:9000 | Kafka UI |
+| pgAdmin | http://localhost:5050 | PostgreSQL UI |
+
 ## 4 этапа для применения агентов
 
 | Этап | Текущее состояние | Что добавляем |

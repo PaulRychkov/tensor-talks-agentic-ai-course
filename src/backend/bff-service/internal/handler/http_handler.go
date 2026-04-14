@@ -75,10 +75,11 @@ func detectPII(text string) string {
 
 // Handler инкапсулирует HTTP-эндпоинты, которые вызываются фронтендом.
 type Handler struct {
-	auth         *service.AuthService
-	chat         *service.ChatService
-	userCrudURL  string // base URL для user-crud-service (для /generate-random-login)
-	logger       *zap.Logger
+	auth          *service.AuthService
+	chat          *service.ChatService
+	userCrudURL   string // base URL для user-crud-service (для /generate-random-login)
+	knowledgeCRUD *client.KnowledgeCRUDClient
+	logger        *zap.Logger
 }
 
 // New создаёт новый обработчик HTTP-запросов BFF.
@@ -89,6 +90,11 @@ func New(auth *service.AuthService, chat *service.ChatService, logger *zap.Logge
 // NewWithUserCrud создаёт обработчик с userCrudURL для проксирования запросов генерации логина.
 func NewWithUserCrud(auth *service.AuthService, chat *service.ChatService, userCrudURL string, logger *zap.Logger) *Handler {
 	return &Handler{auth: auth, chat: chat, userCrudURL: userCrudURL, logger: logger}
+}
+
+// SetKnowledgeCRUD sets the knowledge-base-crud client for subtopics endpoint.
+func (h *Handler) SetKnowledgeCRUD(c *client.KnowledgeCRUDClient) {
+	h.knowledgeCRUD = c
 }
 
 // RegisterRoutes регистрирует маршруты BFF под префиксом /api.
@@ -135,6 +141,9 @@ func (h *Handler) RegisterRoutes(router gin.IRouter) {
 		dashboard.GET("/topic-progress", h.getDashboardTopicProgress)
 		dashboard.GET("/recommendations", h.getDashboardRecommendations)
 
+		// Knowledge base (public, no auth required)
+		api.GET("/subtopics", h.getSubtopics)
+
 		// Public auth endpoints (no token required)
 		auth.POST("/recover", h.recover)
 
@@ -166,6 +175,21 @@ type refreshRequest struct {
 
 // register обрабатывает POST /api/auth/register.
 // Детали:
+// getSubtopics returns available subtopics from the knowledge base.
+func (h *Handler) getSubtopics(c *gin.Context) {
+	if h.knowledgeCRUD == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "knowledge service not configured"})
+		return
+	}
+	subtopics, err := h.knowledgeCRUD.GetSubtopics(c.Request.Context())
+	if err != nil {
+		h.logger.Error("getSubtopics failed", zap.Error(err))
+		c.JSON(http.StatusBadGateway, gin.H{"error": "knowledge service unavailable"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"subtopics": subtopics})
+}
+
 //   - принимает JSON `{ "login": "...", "password": "..." }` от фронтенда;
 //   - делегирует регистрацию в `AuthService`, который вызывает `auth-service`;
 //   - маппит доменные ошибки BFF (конфликт, некорректный ввод) на HTTP-коды 409/400;

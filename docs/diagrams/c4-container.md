@@ -29,17 +29,29 @@
 │          │     ┌─────────────────────────────────────────────────┐      │
 │          │     │ Kafka                                           │      │
 │          │     │ chat.events.* | interview.build.*               │      │
-│          │     │ interview.session.completed                     │      │
+│          │     │ messages.full.data | generated.phrases           │      │
+│          │     │ session.completed                                │      │
 │          │     └─────────────────────────────────────────────────┘      │
 │          │                    ▲                   ▲                     │
 │          │                    │                   │                     │
 │          ▼                                        ▼                     │
 │   ┌──────────────────────────────┐   ┌──────────────────────────────┐   │
-│   │ Interview-builder            │   │ Agent-service                │   │
+│   │ Interview-builder            │   │ Agent-service (Interviewer)   │   │
 │   │ (FastAPI + LangGraph)        │   │ (LangChain + LangGraph)      │   │
-│   │ Планировщик; interview /     │   │ Интервьюер + аналитик        │   │
-│   │ training / study             │   │ (позже — на 2 два сервиса)   │   │
+│   │ Планировщик; interview /     │   │ Ведение диалога, оценка      │   │
+│   │ training / study             │   │                              │   │
 │   └──────────────────────────────┘   └──────────────────────────────┘   │
+│                                                                         │
+│                                      ┌──────────────────────────────┐   │
+│                                      │ Analyst-agent-service         │   │
+│                                      │ (LangChain + LangGraph)      │   │
+│                                      │ Отчёт, пресеты, прогресс     │   │
+│                                      └──────────────────────────────┘   │
+│                                                                         │
+│   ┌──────────────────────────────────────────────────────────────────┐   │
+│   │ Dialogue-aggregator (Go)                                         │   │
+│   │ Оркестрация Kafka-сообщений между BFF и агентами                 │   │
+│   └──────────────────────────────────────────────────────────────────┘   │
 │              │                               │                          │
 │   ┌──────────┴───────────────────────────────┴───────────────────────┐  │
 │   │ Knowledge-producer-service (FastAPI + LLM-workflow, этап 0)      │  │
@@ -139,12 +151,26 @@
   - Вызывает tools к Questions-crud и Knowledge-base-crud (`search_questions`, `check_topic_coverage`, `validate_program`, `get_topic_relations`, `search_knowledge_base` — по режиму)
   - Публикует `interview.build.response`; программа сохраняется через Session-crud
 
-### Agent-service
+### Agent-service (Interviewer)
 
-- **Технологии**: Python 3.11+, LangChain, LangGraph
-- **Ответственность**: **Интервьюер** и **аналитик** (в коде и деплое позже разделяются; см. `docs/specs/interviewer-agent.md`, `docs/specs/analyst-agent.md`)
-- **Интервьюер**: Kafka `chat.events.out` / `chat.events.in`, `evaluate_answer`, `search_knowledge_base`, `search_questions(related_to=...)`, `web_search`, `fetch_url`, `summarize_dialogue`; по завершении сессии — публикация `interview.session.completed`
-- **Аналитик**: потребляет `interview.session.completed`, `get_evaluations`, `group_errors_by_topic`, материалы (KB + web), `generate_report_section`, `validate_report` (цикл до успеха или лимита), `save_draft_material` при необходимости; запись отчёта и `preset_training` в Results-crud; отчёт пользователю — `chat.events.in`
+- **Технологии**: Python 3.11+, LangChain, LangGraph (порт 8093)
+- **Ответственность**: Агент-интервьюер — ведение диалога, оценка ответов (см. `docs/specs/interviewer-agent.md`)
+- **Kafka**: потребляет `messages.full.data` (от dialogue-aggregator), публикует `generated.phrases` и `session.completed`
+- **Tools**: `evaluate_answer`, `search_knowledge_base`, `search_questions(related_to=...)`, `web_search`, `fetch_url`, `summarize_dialogue`
+
+### Analyst-agent-service
+
+- **Технологии**: Python 3.11+, LangChain, LangGraph (порт 8094)
+- **Ответственность**: Агент-аналитик — отчёт и рекомендации (см. `docs/specs/analyst-agent.md`)
+- **Kafka**: потребляет `session.completed`, публикует результаты в Results-crud
+- **Маршрутизация**: по `session_kind` — interview → отчёт + presets, training → результаты, study → user_topic_progress
+- **Tools**: `get_evaluations`, `group_errors_by_topic`, материалы (KB + web), `generate_report_section`, `validate_report`, `save_draft_material`
+
+### Dialogue-aggregator
+
+- **Технологии**: Go 1.21+ (порт 8088)
+- **Ответственность**: Оркестрация Kafka-сообщений между BFF и агентами (бывш. mock-model-service)
+- **Kafka**: потребляет `chat.events.out`, публикует `messages.full.data` для agent-service; потребляет `generated.phrases`, публикует `chat.events.in`; публикует `session.completed` для analyst-agent-service
 
 ### Knowledge-producer-service
 
@@ -206,10 +232,11 @@
   - Interview-builder ↔ Questions-crud / Knowledge-base-crud
   - Knowledge-producer ↔ Knowledge-base-crud / Questions-crud (внутренние клиенты)
 2. **Асинхронные (Kafka)**:
-  - BFF → `chat.events.out` → Agent-service (Interviewer)
-  - Agent-service → `chat.events.in` → BFF
+  - BFF → `chat.events.out` → Dialogue-aggregator
+  - Dialogue-aggregator → `messages.full.data` → Agent-service
+  - Agent-service → `generated.phrases` → Dialogue-aggregator
+  - Dialogue-aggregator → `chat.events.in` → BFF
+  - Dialogue-aggregator → `session.completed` → Analyst-agent-service
   - Session-service → `interview.build.request` → Interview-builder
   - Interview-builder → `interview.build.response` → Session-service
-  - Agent-service (Interviewer) → `interview.session.completed` → Agent-service (Analyst)
-  - Agent-service (Analyst) → `chat.events.in` (отчёт)
 
