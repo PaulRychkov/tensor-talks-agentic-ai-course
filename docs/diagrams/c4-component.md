@@ -8,7 +8,7 @@
 | Этап | Контейнер                       | Роль                                                        |
 | ---- | ------------------------------- | ----------------------------------------------------------- |
 | 2    | **Interview-builder-service**   | Агент-планировщик: программа интервью / тренировки / study  |
-| 3    | **Agent-service**               | Агент-интервьюер: диалог и оценка (порт 8093)               |
+| 3    | **Interviewer-agent-service**   | Агент-интервьюер: диалог и оценка с confidence-aware routing (порт 8093, ранее `agent-service`) |
 | 4    | **Analyst-agent-service**       | Агент-аналитик: отчёт, `validate_report`, `preset_training` (порт 8094) |
 
 
@@ -69,13 +69,13 @@ interview.build.request → parse_mode → tools → form_draft
 
 ---
 
-## 2. Agent-service — Interviewer (этап 3)
+## 2. Interviewer-agent-service — Interviewer (этап 3)
 
 **Технологии**: LangChain, LangGraph, Redis. **Kafka**: consume `messages.full.data` (от dialogue-aggregator), publish `generated.phrases` и по завершении всех n вопросов — `session.completed`.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                  Agent-service (Interviewer)                            │
+│                  Interviewer-agent-service (Interviewer)                            │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────────────────┐    │
 │  │ LangGraph State = InterviewState (system-design)                │    │
@@ -99,7 +99,11 @@ interview.build.request → parse_mode → tools → form_draft
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                              ▼                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │ Guardrails: pre/post-call, лимиты tool calls и токенов          │    │
+│  │ Guardrails: pre-call (PII 3-level: regex→LLM→sanitize,          │    │
+│  │  injection strip), post-call (Pydantic, leakage detection)      │    │
+│  │ Structured output: AnswerEvaluation с decision_confidence,      │    │
+│  │  OffTopicClassification, PIICheckResult                         │    │
+│  │ Episodic memory: get_user_history, previous_topic_scores        │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                              ▼                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
@@ -198,7 +202,7 @@ session.completed → load_state → get_evaluations
 | Сервис                  | Consume                       | Publish                                              |
 | ----------------------- | ----------------------------- | ---------------------------------------------------- |
 | Interview-builder       | `interview.build.request`     | `interview.build.response`                           |
-| Agent-service           | `messages.full.data`          | `generated.phrases`, `session.completed`             |
+| Interviewer-agent-service           | `messages.full.data`          | `generated.phrases`, `session.completed`             |
 | Analyst-agent-service   | `session.completed`           | результаты → Results-crud (HTTP)                     |
 | Dialogue-aggregator     | `chat.events.out`, `generated.phrases` | `messages.full.data`, `chat.events.in`, `session.completed` |
 

@@ -2,7 +2,7 @@
 
 ## Обзор
 
-**Назначение**: Оркестратор диалога — маршрутизация Kafka-сообщений между BFF и AI-агентами. Сам бизнес-логику не принимает — все решения (next / hint / clarify / skip / complete) принимает agent-service.
+**Назначение**: Оркестратор диалога — маршрутизация Kafka-сообщений между BFF и AI-агентами. Сам бизнес-логику не принимает — все решения (next / hint / clarify / skip / complete) принимает interviewer-agent-service.
 
 **Технологии**: Go 1.21+, Kafka, Redis.
 
@@ -17,7 +17,7 @@
 - Получение ответов агента через `generated.phrases`
 - Публикация ответов агента в `chat.events.in` (для BFF)
 - Сохранение сообщений в chat-crud-service
-- Публикация `session.completed` (с `session_kind`, `topics`, `level`) для analyst-agent-service
+- Публикация `session.completed` (с `session_kind`, `topics`, `level`) для analyst-interviewer-agent-service
 - Сохранение placeholder-результата в results-crud-service (score=0, analyst-agent обновит)
 
 ## Kafka топики
@@ -25,10 +25,10 @@
 | Направление | Топик | Описание |
 |-------------|-------|----------|
 | Consume | `chat.events.out` | Сообщения пользователя от BFF |
-| Consume | `generated.phrases` | Ответы от agent-service |
-| Publish | `messages.full.data` | Полный контекст диалога для agent-service |
+| Consume | `generated.phrases` | Ответы от interviewer-agent-service |
+| Publish | `messages.full.data` | Полный контекст диалога для interviewer-agent-service |
 | Publish | `chat.events.in` | Ответы агента для BFF |
-| Publish | `session.completed` | Событие завершения сессии для analyst-agent-service |
+| Publish | `session.completed` | Событие завершения сессии для analyst-interviewer-agent-service |
 
 ## Порядок обработки событий
 

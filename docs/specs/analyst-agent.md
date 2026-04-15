@@ -34,7 +34,9 @@
 **Компоненты**:
 - LangGraph State — черновик отчёта, счётчик итераций валидации, ссылки на `session_id`
 - Tool Layer — см. раздел «Инструменты»
-- Guardrails — JSON Schema для секций и отчёта целиком, post-call проверки
+- **Structured output** (Pydantic-модели в `src/models/llm_outputs.py`): `AnalystReport`, `TrainingPreset`, `ProgressDelta` — ответы LLM парсятся через `model_validate_json`, с fallback на шаблон при невалидном JSON
+- **Episodic memory**: сравнение текущей сессии с предыдущими через `ProgressDelta` (динамика scores по темам) и `get_user_history`
+- Guardrails — Pydantic-валидация секций и отчёта целиком, range checks, post-call проверки (leakage detection, tone)
 
 ## Инструменты (typed JSON Schema)
 

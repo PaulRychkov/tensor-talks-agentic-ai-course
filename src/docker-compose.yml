@@ -258,7 +258,7 @@ services:
       SERVER_PORT: "8089"
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       questions-crud-service:
         condition: service_started
       knowledge-base-crud-service:
@@ -291,7 +291,7 @@ services:
       session-crud-service:
         condition: service_started
       kafka:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8083:8083"
 
@@ -333,7 +333,7 @@ services:
       results-crud-service:
         condition: service_started
       kafka:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8080:8080"
 
@@ -442,6 +442,12 @@ services:
     ports:
       - "29092:29092"
       - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
 
   dialogue-aggregator:
     build:
@@ -473,7 +479,7 @@ services:
       results-crud-service:
         condition: service_started
       kafka:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8084:8084"
 
@@ -534,7 +540,7 @@ services:
       ENABLE_PROMETHEUS: "true"
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       redis-sessions:
         condition: service_healthy
       session-service:
@@ -578,7 +584,7 @@ services:
       METRICS_PORT: "9094"
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
       results-crud-service:
         condition: service_started
     ports:

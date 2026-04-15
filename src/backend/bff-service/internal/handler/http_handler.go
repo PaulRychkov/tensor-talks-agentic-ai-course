@@ -144,6 +144,12 @@ func (h *Handler) RegisterRoutes(router gin.IRouter) {
 		// Knowledge base (public, no auth required)
 		api.GET("/subtopics", h.getSubtopics)
 
+		// Presets (study/training follow-ups created by analyst)
+		presets := api.Group("/presets")
+		presets.Use(middleware.AuthMiddleware(h.auth, h.logger))
+		presets.GET("", h.getPresets)
+		presets.DELETE("/:preset_id", h.deletePreset)
+
 		// Public auth endpoints (no token required)
 		auth.POST("/recover", h.recover)
 
@@ -175,6 +181,51 @@ type refreshRequest struct {
 
 // register обрабатывает POST /api/auth/register.
 // Детали:
+// deletePreset удаляет использованный пресет.
+func (h *Handler) deletePreset(c *gin.Context) {
+	presetID, err := uuid.Parse(c.Param("preset_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid preset_id"})
+		return
+	}
+
+	if err := h.chat.DeletePreset(c.Request.Context(), presetID); err != nil {
+		h.logger.Error("Delete preset failed", zap.Error(err), zap.String("preset_id", presetID.String()))
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to delete preset"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// getPresets возвращает пресеты (study/training follow-ups) пользователя.
+func (h *Handler) getPresets(c *gin.Context) {
+	userIDValue, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	userIDStr, ok := userIDValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+
+	presets, err := h.chat.GetPresetsByUser(c.Request.Context(), userID)
+	if err != nil {
+		h.logger.Error("Get presets failed", zap.Error(err), zap.String("user_id", userID.String()))
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to get presets"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"presets": presets})
+}
+
 // getSubtopics returns available subtopics from the knowledge base.
 func (h *Handler) getSubtopics(c *gin.Context) {
 	if h.knowledgeCRUD == nil {

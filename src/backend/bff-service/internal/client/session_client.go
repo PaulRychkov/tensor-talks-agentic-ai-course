@@ -23,6 +23,7 @@ type SessionParams struct {
 	Subtopics          []string `json:"subtopics,omitempty"`
 	UsePreviousResults bool     `json:"use_previous_results,omitempty"` // episodic memory
 	NumQuestions       *int     `json:"num_questions,omitempty"`        // interview duration: 5/10/15
+	FocusPoints        []string `json:"focus_points,omitempty"`         // specific points for follow-up study
 }
 
 // SessionClient клиент для работы с session-manager-service.

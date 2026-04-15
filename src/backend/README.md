@@ -99,7 +99,7 @@
 
 ### Базы данных
 
-**user_store_db** — хранит данные учётных записей:
+**user_crud_db** — хранит данные учётных записей:
 
 | Колонка      | Тип        | Описание                                                     |
 |--------------|-----------|--------------------------------------------------------------|
@@ -246,7 +246,7 @@
   - `interviewer-agent-service` — interviewer-agent (LangGraph) для ведения интервью;
   - `analyst-agent-service` — генератор финальных отчётов / прогресса по `session.completed`;
   - `user-crud-service` — CRUD над таблицей пользователей;
-  - PostgreSQL (несколько БД: user_store_db, session_crud_db, chat_crud_db, results_crud_db, knowledge_base_crud_db, questions_crud_db);
+  - PostgreSQL (несколько БД: user_crud_db, session_crud_db, chat_crud_db, results_crud_db, knowledge_base_crud_db, questions_crud_db);
   - Redis — кэширование активных сессий;
   - Kafka + Zookeeper для очередей;
   - Kafdrop — веб-интерфейс для просмотра Kafka (http://localhost:9000);
@@ -279,7 +279,7 @@
         | HTTP /users...      | Redis (кэш)         | Kafka
         v                     |                     |
 +-------+--------+            | HTTP                |
-| user-store-serv|            v                     |
+| user-crud-serv |            v                     |
 | (GORM, PG)     |   +-----------------+            |
 +-------+--------+   |session-crud-serv|            |
         |            |  (PostgreSQL)    |            |

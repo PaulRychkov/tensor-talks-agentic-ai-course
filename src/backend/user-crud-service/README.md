@@ -32,7 +32,7 @@
   Точка входа: загрузка конфигурации, сборка сервера, graceful shutdown.
 
 - `internal/config`  
-  Конфигурация через Viper (файл `config/config.yaml` + переменные окружения `USER_STORE_*`):
+  Конфигурация через Viper (файл `config/config.yaml` + переменные окружения):
   - `server.host`, `server.port` — HTTP-сервер;
   - `database.host`, `database.port`, `database.user`, `database.password`, `database.name`, `database.ssl_mode` — подключение к PostgreSQL.
 

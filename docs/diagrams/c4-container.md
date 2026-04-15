@@ -22,7 +22,7 @@
 │          │                    │                       │                 │
 │          │                    ▼                       │                 │
 │          │            ┌──────────────┐                │                 │
-│          │            │ User-store   │◀──────────────┘                 │
+│          │            │ User-crud    │◀──────────────┘                 │
 │          │            │ (Go + PG)    │                                  │
 │          │            └──────────────┘                                  │
 │          │                                                              │
@@ -36,10 +36,10 @@
 │          │                    │                   │                     │
 │          ▼                                        ▼                     │
 │   ┌──────────────────────────────┐   ┌──────────────────────────────┐   │
-│   │ Interview-builder            │   │ Agent-service (Interviewer)   │   │
+│   │ Interview-builder            │   │ Interviewer-agent-service    │   │
 │   │ (FastAPI + LangGraph)        │   │ (LangChain + LangGraph)      │   │
-│   │ Планировщик; interview /     │   │ Ведение диалога, оценка      │   │
-│   │ training / study             │   │                              │   │
+│   │ Планировщик; interview /     │   │ Ведение диалога, оценка,     │   │
+│   │ training / study             │   │ confidence-aware routing     │   │
 │   └──────────────────────────────┘   └──────────────────────────────┘   │
 │                                                                         │
 │                                      ┌──────────────────────────────┐   │
@@ -110,17 +110,18 @@
   - Логин/пароль аутентификация
   - Выпуск access/refresh токенов
   - Валидация токенов
-- **Взаимодействие**: Только через user-store-service (нет прямого доступа к БД)
+- **Взаимодействие**: Только через user-crud-service (нет прямого доступа к БД)
 
-### User-store-service
+### User-crud-service
 
-- **Технологии**: Go, GORM, PostgreSQL
+- **Технологии**: Go, GORM, PostgreSQL (ранее `user-store-service`)
 - **Ответственность**: Хранение данных пользователей
 - **Функции**:
   - CRUD пользователей
+  - Автогенерация логина (`{Прилагательное}{Существительное}{Число}`) — без email/PII (152-ФЗ)
+  - Recovery key для восстановления аккаунта
   - Двойная идентификация (internal_id + external_uuid)
-  - Хранение хешей паролей
-- **БД**: user_store_db
+- **БД**: user_crud_db
 
 ### Session-service
 
@@ -151,12 +152,15 @@
   - Вызывает tools к Questions-crud и Knowledge-base-crud (`search_questions`, `check_topic_coverage`, `validate_program`, `get_topic_relations`, `search_knowledge_base` — по режиму)
   - Публикует `interview.build.response`; программа сохраняется через Session-crud
 
-### Agent-service (Interviewer)
+### Interviewer-agent-service (ранее agent-service)
 
-- **Технологии**: Python 3.11+, LangChain, LangGraph (порт 8093)
-- **Ответственность**: Агент-интервьюер — ведение диалога, оценка ответов (см. `docs/specs/interviewer-agent.md`)
-- **Kafka**: потребляет `messages.full.data` (от dialogue-aggregator), публикует `generated.phrases` и `session.completed`
-- **Tools**: `evaluate_answer`, `search_knowledge_base`, `search_questions(related_to=...)`, `web_search`, `fetch_url`, `summarize_dialogue`
+- **Технологии**: Python 3.11+, LangChain, LangGraph ReAct (порт 8093)
+- **Ответственность**: Агент-интервьюер — ведение диалога, оценка ответов, confidence-aware routing (см. `docs/specs/interviewer-agent.md`)
+- **Structured output**: Pydantic (`AnswerEvaluation` с `decision_confidence`, `OffTopicClassification`, `PIICheckResult`)
+- **Episodic memory**: `get_user_history`, `previous_topic_scores` из results-crud
+- **Guardrails**: pre-call PII 3-уровневая фильтрация (regex → LLM → sanitize), injection strip; post-call Pydantic + leakage detection
+- **Kafka**: потребляет `agent_requests`/`messages.full.data`, публикует `agent_responses`/`generated.phrases` и `session.completed`
+- **Tools**: `evaluate_answer`, `search_knowledge_base`, `search_questions(related_to=...)`, `get_user_history`, `web_search`, `fetch_url`, `summarize_dialogue`, `emit_response`
 
 ### Analyst-agent-service
 
@@ -164,13 +168,15 @@
 - **Ответственность**: Агент-аналитик — отчёт и рекомендации (см. `docs/specs/analyst-agent.md`)
 - **Kafka**: потребляет `session.completed`, публикует результаты в Results-crud
 - **Маршрутизация**: по `session_kind` — interview → отчёт + presets, training → результаты, study → user_topic_progress
-- **Tools**: `get_evaluations`, `group_errors_by_topic`, материалы (KB + web), `generate_report_section`, `validate_report`, `save_draft_material`
+- **Structured output**: Pydantic `AnalystReport`, `TrainingPreset`, `ProgressDelta`
+- **Tools**: `get_evaluations`, `group_errors_by_topic`, `search_knowledge_base`, `web_search`, `fetch_url`, `generate_report_section`, `validate_report`, `save_draft_material`, `emit_report`
+- **Fallback**: линейный pipeline при невалидации отчёта
 
 ### Dialogue-aggregator
 
 - **Технологии**: Go 1.21+ (порт 8088)
 - **Ответственность**: Оркестрация Kafka-сообщений между BFF и агентами (бывш. mock-model-service)
-- **Kafka**: потребляет `chat.events.out`, публикует `messages.full.data` для agent-service; потребляет `generated.phrases`, публикует `chat.events.in`; публикует `session.completed` для analyst-agent-service
+- **Kafka**: потребляет `chat.events.out`, публикует `messages.full.data` для interviewer-agent-service; потребляет `generated.phrases`, публикует `chat.events.in`; публикует `session.completed` для analyst-agent-service
 
 ### Knowledge-producer-service
 
@@ -228,13 +234,14 @@
 
 1. **Синхронные (HTTP REST)**:
   - Frontend ↔ BFF
-  - BFF ↔ Auth/User-store/Session-crud/Chat-crud/Results-crud
+  - BFF ↔ Auth/User-crud/Session-crud/Chat-crud/Results-crud
+  - Admin-frontend ↔ Admin-bff-service ↔ Knowledge-base-crud/Questions-crud (HITL review)
   - Interview-builder ↔ Questions-crud / Knowledge-base-crud
   - Knowledge-producer ↔ Knowledge-base-crud / Questions-crud (внутренние клиенты)
 2. **Асинхронные (Kafka)**:
   - BFF → `chat.events.out` → Dialogue-aggregator
-  - Dialogue-aggregator → `messages.full.data` → Agent-service
-  - Agent-service → `generated.phrases` → Dialogue-aggregator
+  - Dialogue-aggregator → `messages.full.data` → Interviewer-agent-service
+  - Interviewer-agent-service → `generated.phrases` → Dialogue-aggregator
   - Dialogue-aggregator → `chat.events.in` → BFF
   - Dialogue-aggregator → `session.completed` → Analyst-agent-service
   - Session-service → `interview.build.request` → Interview-builder

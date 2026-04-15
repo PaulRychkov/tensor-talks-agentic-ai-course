@@ -42,3 +42,8 @@ func (s *PresetService) GetPresetByID(ctx context.Context, presetID uuid.UUID) (
 func (s *PresetService) GetPresetsByUser(ctx context.Context, userID uuid.UUID) ([]models.Preset, error) {
 	return s.repo.GetByUserID(ctx, userID)
 }
+
+// DeletePreset removes a preset by ID.
+func (s *PresetService) DeletePreset(ctx context.Context, presetID uuid.UUID) error {
+	return s.repo.Delete(ctx, presetID)
+}

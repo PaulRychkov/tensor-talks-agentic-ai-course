@@ -14,6 +14,21 @@ import {
   type PresetTraining,
 } from '../services/chat'
 
+/**
+ * Strip [STUDY_PLAN]/[STUDY_THEORY]/[STUDY_QUESTION] markers from chat history,
+ * keeping just the readable inner content so the Results page shows clean text.
+ */
+function stripStudyMarkers(content: string): string {
+  let text = content
+  // Remove wrapping tags, keep inner content
+  text = text.replace(/\[STUDY_PLAN\]([\s\S]*?)\[\/STUDY_PLAN\]/g, '$1')
+  text = text.replace(/\[STUDY_THEORY\]([\s\S]*?)\[\/STUDY_THEORY\]/g, '$1')
+  text = text.replace(/\[STUDY_QUESTION\]([\s\S]*?)\[\/STUDY_QUESTION\]/g, '$1')
+  // Also handle unclosed tags (streaming artifacts)
+  text = text.replace(/\[\/?STUDY_(?:PLAN|THEORY|QUESTION)\]/g, '')
+  return text.trim()
+}
+
 function ScoreBadge({ score }: { score: number }) {
   const color =
     score >= 80 ? 'text-green-700 bg-green-50 border-green-200'
@@ -228,19 +243,20 @@ function SessionRating({ sessionId }: { sessionId: string }) {
 
 function TrainingPreset({ preset }: { preset: PresetTraining }) {
   const isStudyFollowup = preset.follow_up_kind === 'study'
+  const weakTopics = preset.weak_topics ?? []
 
   const trainingParams = new URLSearchParams({
     source: 'preset',
     preset_id: preset.preset_id || '',
     mode: 'training',
-    weak_topics: preset.weak_topics.join(','),
+    weak_topics: weakTopics.join(','),
   }).toString()
 
   const studyParams = new URLSearchParams({
     source: isStudyFollowup ? 'study_followup' : 'preset',
     preset_id: preset.preset_id || '',
     mode: 'study',
-    weak_topics: preset.weak_topics.join(','),
+    weak_topics: weakTopics.join(','),
   }).toString()
 
   return (
@@ -254,7 +270,7 @@ function TrainingPreset({ preset }: { preset: PresetTraining }) {
           : 'По результатам сессии рекомендуется работа по темам:'}
       </p>
       <div className="flex flex-wrap gap-2 mb-3">
-        {preset.weak_topics.map((t) => (
+        {weakTopics.map((t) => (
           <span key={t} className="px-2 py-1 bg-orange-100 rounded text-xs font-medium text-orange-800">{t}</span>
         ))}
       </div>
@@ -415,7 +431,7 @@ export default function Results() {
                         {msg.type === 'system' ? 'Интервьюер' : 'Вы'} &middot; {new Date(msg.created_at).toLocaleString('ru-RU')}
                       </div>
                       <div className="markdown-content text-sm text-zinc-900">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown>{stripStudyMarkers(msg.content)}</ReactMarkdown>
                       </div>
                     </div>
                   ))

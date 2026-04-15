@@ -345,7 +345,7 @@ services:
     enabled: true
     image:
       repository: paulrychkov/tensor-talks-bff-service
-      tag: manual-20260120-141704
+      tag: presets-20260415-164000
       pullPolicy: ""  # Автоматически определяется на основе localDevelopment
     replicaCount: 1
     autoscaling:

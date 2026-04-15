@@ -6,16 +6,18 @@ import InterviewParamsModal, { type InterviewParams } from '../components/Interv
 import {
   startChat,
   getInterviews,
-  getInterviewResult,
   type InterviewInfo,
   type SessionMode,
-  type PresetTraining,
 } from '../services/chat'
 import {
   getDashboardSummary,
   getDashboardTopicProgress,
+  getUserPresets,
+  deletePreset,
+  getSubtopics,
   type DashboardSummary,
   type TopicProgress,
+  type PresetItem,
 } from '../services/dashboard'
 
 function Card({ children }: { children: React.ReactNode }) {
@@ -64,6 +66,11 @@ function guessTopicFromSubtopics(subtopics: string[]): 'classic_ml' | 'nlp' | 'l
   const llmIds = ['theory_gpt', 'theory_llama', 'theory_rlhf', 'theory_rag', 'theory_fine_tuning',
     'theory_prompt_engineering', 'theory_chain_of_thought', 'theory_vector_databases']
 
+  // Top-level topic names passed directly (e.g. from old presets where topics=["llm"]).
+  if (subtopics.includes('llm')) return 'llm'
+  if (subtopics.includes('classic_ml')) return 'classic_ml'
+  if (subtopics.includes('nlp')) return 'nlp'
+
   const mlCount = subtopics.filter(s => mlIds.includes(s)).length
   const llmCount = subtopics.filter(s => llmIds.includes(s)).length
 
@@ -84,12 +91,13 @@ export default function Dashboard() {
   const [modalDefaultTopic, setModalDefaultTopic] = useState<'classic_ml' | 'nlp' | 'llm'>('classic_ml')
   const [modalDefaultSubtopics, setModalDefaultSubtopics] = useState<string[] | undefined>(undefined)
   const [modalTitle, setModalTitle] = useState('Параметры интервью')
-  const [latestPreset, setLatestPreset] = useState<PresetTraining | null | undefined>(undefined) // undefined = not loaded yet
+  const [presets, setPresets] = useState<PresetItem[] | undefined>(undefined) // undefined = not loaded yet
   const [isLoadingPreset, setIsLoadingPreset] = useState(false)
   const [isStartingChat, setIsStartingChat] = useState(false)
   const [startingMode, setStartingMode] = useState<SessionMode>('interview')
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [topicProgress, setTopicProgress] = useState<TopicProgress[]>([])
+  const [subtopicLabels, setSubtopicLabels] = useState<Record<string, string>>({})
   const [searchParams, setSearchParams] = useSearchParams()
   const autoStarted = useRef(false)
 
@@ -168,6 +176,8 @@ export default function Dashboard() {
     topic: 'classic_ml' | 'nlp' | 'llm',
     subtopics: string[],
     level: string = 'middle',
+    focusPoints?: string[],
+    presetId?: string,
   ) => {
     const userStr = localStorage.getItem('tt_user')
     if (!userStr) { navigate('/auth'); return }
@@ -183,8 +193,12 @@ export default function Dashboard() {
         mode,
         subtopics: subtopics.length ? subtopics : undefined,
         use_previous_results: true,
+        focus_points: focusPoints?.length ? focusPoints : undefined,
+        source: presetId ? 'preset' : undefined,
+        preset_id: presetId,
       })
       if (response?.session_id) {
+        if (presetId) deletePreset(presetId).catch(() => {})
         navigate(`/chat/${response.session_id}?mode=${mode}`)
       } else {
         alert('Ошибка: неверный ответ от сервера')
@@ -266,10 +280,15 @@ export default function Dashboard() {
     } catch (e) {}
   }, [])
 
-  // Load dashboard summary + topic progress
+  // Load dashboard summary + topic progress + subtopic labels
   useEffect(() => {
     getDashboardSummary().then(s => setSummary(s ?? null))
     getDashboardTopicProgress().then(p => setTopicProgress(p ?? []))
+    getSubtopics().then(subs => {
+      const m: Record<string, string> = {}
+      for (const s of subs) m[s.id] = s.label
+      setSubtopicLabels(m)
+    })
   }, [])
 
   // Load interviews
@@ -296,40 +315,32 @@ export default function Dashboard() {
     loadInterviews()
   }, [])
 
-  // Load latest preset from most recent completed interview
+  // Load follow-up presets (study/training) created by the analyst.
   useEffect(() => {
-    const loadPreset = async () => {
-      const completed = interviews.filter(
-        i => i.params.mode === 'interview' && i.end_time && i.has_results
-      )
-      if (completed.length === 0) {
-        setLatestPreset(null)
-        return
-      }
-      setIsLoadingPreset(true)
-      try {
-        const result = await getInterviewResult(completed[0].session_id)
-        setLatestPreset(result?.preset_training ?? null)
-      } catch {
-        setLatestPreset(null)
-      } finally {
-        setIsLoadingPreset(false)
-      }
-    }
-    if (interviews.length > 0) {
-      loadPreset()
-    } else if (!isLoadingInterviews) {
-      setLatestPreset(null)
-    }
-  }, [interviews, isLoadingInterviews])
+    setIsLoadingPreset(true)
+    getUserPresets()
+      .then(list => setPresets(list))
+      .catch(() => setPresets([]))
+      .finally(() => setIsLoadingPreset(false))
+  }, [])
 
   const candidates = [
     { id: 'cand-1', name: 'Алексей Петров', role: 'ML Engineer', score: 72 },
     { id: 'cand-2', name: 'Мария Иванова', role: 'DS/ML', score: 81 },
   ]
 
-  const hasPreset = latestPreset && latestPreset.weak_topics?.length > 0
-  const presetLoaded = latestPreset !== undefined
+  const hasPreset = (presets?.length ?? 0) > 0
+  const presetLoaded = presets !== undefined
+
+  // Extract focus_point titles from a preset's materials array.
+  // Analyst encodes follow-up focus points as entries "focus_point:<title>".
+  const extractFocusPoints = (materials: string[] | undefined): string[] => {
+    if (!materials) return []
+    return materials
+      .filter(m => m.startsWith('focus_point:'))
+      .map(m => m.slice('focus_point:'.length).trim())
+      .filter(Boolean)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
@@ -494,43 +505,48 @@ export default function Dashboard() {
             {/* Рекомендовано к изучению */}
             <div>
               <h2 className="text-xl font-semibold mb-3">Рекомендовано к изучению</h2>
-              {isLoadingPreset || (isLoadingInterviews && presetLoaded === undefined) ? (
+              {isLoadingPreset || !presetLoaded ? (
                 <div className="text-sm text-zinc-400 py-4">Загрузка...</div>
               ) : hasPreset ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {latestPreset!.weak_topics.map((topicId) => {
-                    const guessedTopic = guessTopicFromSubtopics([topicId])
-                    const label = subtopicLabel(topicId)
-                    const categoryLabel = guessedTopic === 'classic_ml' ? 'Classic ML' : guessedTopic === 'llm' ? 'LLM' : 'NLP'
-                    const trainingUnlocked = summary?.training_unlocked_topics?.includes(topicId)
+                  {presets!.map((preset) => {
+                    const focusPoints = extractFocusPoints(preset.materials)
+                    const subtopicIds = (preset.materials ?? []).filter(m => !m.startsWith('focus_point:'))
+                    const subtopicId = subtopicIds[0] ?? preset.topics[0] ?? ''
+                    const topicGroup = guessTopicFromSubtopics(subtopicIds.length ? subtopicIds : preset.topics)
+                    const mode: SessionMode = preset.target_mode === 'training' ? 'training' : 'study'
+                    // Prefer focus_point title for label (specialized preset);
+                    // fall back to subtopic label for general preset.
+                    const label = focusPoints[0] || subtopicLabel(subtopicId)
+                    const categoryLabel = topicGroup === 'classic_ml' ? 'Classic ML' : topicGroup === 'llm' ? 'LLM' : 'NLP'
+                    const subtopicHint = focusPoints[0] ? subtopicLabel(subtopicId) : null
                     return (
-                      <Card key={topicId}>
+                      <Card key={preset.preset_id}>
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-xl">📚</span>
+                            <span className="text-xl">{mode === 'training' ? '🏋️' : '📚'}</span>
                             <div className="min-w-0 flex-1">
-                              <div className="text-zinc-700 font-medium text-sm leading-tight truncate">{label}</div>
-                              <p className="text-xs text-zinc-400">{categoryLabel}</p>
+                              <div className="text-zinc-700 font-medium text-sm leading-tight line-clamp-2" title={label}>{label}</div>
+                              <p className="text-xs text-zinc-400">
+                                {categoryLabel}{subtopicHint ? ` · ${subtopicHint}` : ''}
+                              </p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleDirectStart('study', guessedTopic, [topicId])}
-                              disabled={isStartingChat}
-                              className="flex-1 px-2 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 text-xs disabled:opacity-50"
-                            >
-                              📚 Изучить
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => trainingUnlocked && handleDirectStart('training', guessedTopic, [topicId])}
-                              disabled={!trainingUnlocked || isStartingChat}
-                              className={`flex-1 px-2 py-1.5 rounded-lg text-xs ${trainingUnlocked ? 'border border-orange-300 text-orange-700 hover:bg-orange-100' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'}`}
-                            >
-                              🏋️
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDirectStart(
+                              mode,
+                              topicGroup,
+                              subtopicIds.length ? subtopicIds : (subtopicId ? [subtopicId] : []),
+                              'middle',
+                              focusPoints,
+                              preset.preset_id,
+                            )}
+                            disabled={isStartingChat}
+                            className="w-full px-2 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 text-xs disabled:opacity-50"
+                          >
+                            {mode === 'training' ? '🏋️ Тренировка' : '📚 Изучить'}
+                          </button>
                         </div>
                       </Card>
                     )
@@ -579,11 +595,11 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-xl font-semibold mb-1">Прогресс по темам</h2>
                 <p className="text-sm text-zinc-400 mb-3">Накопленный результат по темам из сессий режима «Изучение»</p>
-                <div className="grid gap-2">
+                <div className="grid gap-2 max-h-[13.5rem] overflow-y-auto pr-1">
                   {topicProgress.map(tp => (
                     <div key={tp.topic} className="bg-white rounded-xl border border-orange-100 shadow-soft px-4 py-3 flex items-center gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-800 truncate">{tp.topic}</div>
+                        <div className="text-sm font-medium text-zinc-800 truncate">{subtopicLabels[tp.topic] || tp.topic}</div>
                         <div className="mt-1 h-1.5 bg-orange-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-orange-400 to-rose-400 transition-all duration-500"

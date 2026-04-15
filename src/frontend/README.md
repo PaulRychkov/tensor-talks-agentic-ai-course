@@ -31,7 +31,7 @@
                                               | HTTP /users...             |
                                               v                            v
                                          +----+----------+         +-------+-------+
-                                         | user-store    |  SQL    |  PostgreSQL   |
+                                         | user-crud     |  SQL    |  PostgreSQL   |
                                          |  - users      +-------->+  (таблица     |
                                          |    (GUID, PW) |         |   users)      |
                                          +---------------+         +---------------+

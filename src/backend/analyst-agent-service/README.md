@@ -1,6 +1,12 @@
 ## analyst-agent-service — AI-аналитик результатов сессий
 
-`analyst-agent-service` — Python FastAPI микросервис, формирующий финальный отчёт после завершения любой сессии (interview, training, study). Подписан на Kafka топик `session.completed`, по `session_kind` маршрутизирует обработку.
+`analyst-agent-service` — Python FastAPI микросервис, формирующий финальный отчёт после завершения любой сессии (interview, training, study). Реализован как **LangGraph ReAct-агент** с tool-calling. Подписан на Kafka топик `session.completed`, по `session_kind` маршрутизирует обработку.
+
+**Ключевые особенности**:
+- **Structured output (Pydantic)**: `AnalystReport` (summary, errors_by_topic, strengths, preparation_plan, materials), `TrainingPreset`, `ProgressDelta` — валидация через `model_validate_json` + fallback на линейный pipeline при невалидации.
+- **Episodic memory**: `ProgressDelta` для сравнения динамики между сессиями (текущая vs предыдущие по темам).
+- **Tools**: `get_evaluations`, `group_errors_by_topic`, `search_knowledge_base`, `web_search` (arxiv), `fetch_url` (trusted domains), `generate_report_section`, `validate_report`, `save_draft_material` (HITL), `emit_report`.
+- **Validation loop**: `validate_report` → при FAIL доработка секций (лимит итераций); после max итераций — fallback на линейный pipeline.
 
 ### Архитектура
 
@@ -100,3 +106,6 @@ Results CRUD Service (PATCH /results/:session_id)
 
 - `analyst_sessions_analyzed_total{session_kind, status}` — обработанные сессии
 - `analyst_error_count{error_type}` — ошибки обработки
+- `analyst_report_score` (Histogram) — распределение итоговых score
+- `analyst_validation_attempts` (Histogram) — число итераций `validate_report`
+- `agent_llm_call_duration_seconds`, `guardrail_triggered_total` — общие agent-метрики

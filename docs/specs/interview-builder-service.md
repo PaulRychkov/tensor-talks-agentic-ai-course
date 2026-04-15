@@ -43,6 +43,8 @@
 - LangGraph State — черновик программы, режим сессии, параметры запроса, счётчик ретраев валидации
 - Planner Agent — выбор и корректировка программы
 - Tool Layer — инструменты из `docs/system-design.md` (параметры — typed JSON Schema)
+- **Structured output** (Pydantic): `ProgramMeta` (validation_passed, coverage, fallback_reason) — валидация через `model_validate_json`
+- **Episodic memory**: при `use_previous_results=true` вызывается `get_user_history(user_id, topics)` — слабые/сильные темы и scores из результатов предыдущих сессий учитываются при подборе вопросов и прогрессии сложности
 
 ## Инструменты
 

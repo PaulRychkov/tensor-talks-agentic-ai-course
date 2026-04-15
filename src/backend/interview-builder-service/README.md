@@ -1,6 +1,12 @@
 ## interview-builder-service — сервис создания программы интервью
 
-`interview-builder-service` — Python FastAPI сервис для создания программы интервью из вопросов и знаний.
+`interview-builder-service` — Python FastAPI сервис-планировщик, реализованный как **LangGraph ReAct-агент** с tool-calling. Создаёт программу интервью/тренировки/study с осмысленной траекторией и прогрессией сложности, с fallback на детерминированный pipeline при сбое агента.
+
+**Ключевые особенности**:
+- **Tools**: `search_questions`, `check_topic_coverage`, `validate_program`, `get_topic_relations`, `search_knowledge_base`, `get_user_history`.
+- **Structured output (Pydantic)**: `ProgramMeta` (`validation_passed`, `coverage`, `fallback_reason`).
+- **Episodic memory**: при `use_previous_results=true` вызывается `get_user_history(user_id, topics)` — слабые/сильные темы и scores из предыдущих сессий учитываются при подборе вопросов и прогрессии.
+- **Fallback**: при сбое агента — детерминированный pipeline `filter → dedup → coverage → balance → mode_profile → sort → enrich`.
 
 ### Функциональность
 

@@ -148,7 +148,7 @@ Dialogue-aggregator: Consume chat.events.out
        ├─→ Kafka: Publish messages.full.data (полный контекст диалога)
        │
        ▼
-Agent-service: Consume messages.full.data
+Interviewer-agent-service: Consume messages.full.data
        │
        ▼
 LangGraph State: Загрузка контекста сессии
@@ -158,7 +158,8 @@ LangGraph State: Загрузка контекста сессии
        │
        ├─→ Tool: evaluate_answer()
        │         ├─→ LLM: Оценка ответа (GPT-5.4-mini)
-       │         └─→ Возврат: {score, errors, missing_points, strong_points}
+       │         └─→ Возврат: Pydantic AnswerEvaluation (score, decision_confidence, errors, missing_points, strong_points)
+       │         └─→ confidence-aware routing: ≥0.7 next, <0.7 hint, <0.5 self-reflection
        │
        ├─→ Tool: search_knowledge_base(query, topic) (подсказка)
        │         └─→ Knowledge-base-crud: Поиск теории
@@ -175,7 +176,7 @@ LangGraph State: Загрузка контекста сессии
 Агент → LLM: Генерация реплики
        │
        ▼
-Agent-service → Kafka: Publish generated.phrases
+Interviewer-agent-service → Kafka: Publish generated.phrases
        │         ┌──────────────────────────────────────────────────────┐
        │         │ Topic: generated.phrases                             │
        │         │ Message: {event_type, session_id, content,           │
@@ -249,7 +250,7 @@ BFF → Frontend: /results (рекомендации тренировок / stud
 | Хранилище                           | Данные                          | Схема                                   | Срок хранения                         |
 | ----------------------------------- | ------------------------------- | --------------------------------------- | ------------------------------------- |
 | Redis                               | Активные сессии                 | Key-value: session:{id} → {state}       | 2 часа (TTL)                          |
-| PostgreSQL (user_store_db)          | Пользователи, хеши паролей      | Реляционная + индексы                   | Бессрочно (пока пользователь активен) |
+| PostgreSQL (user_crud_db)           | Пользователи, хеши паролей, recovery keys | Реляционная + индексы         | Бессрочно (пока пользователь активен) |
 | PostgreSQL (session_crud_db)        | Сессии, программы интервью      | JSONB для program                       | 1 год                                 |
 | PostgreSQL (chat_crud_db)           | Сообщения чатов                 | JSONB для content                       | 1 год                                 |
 | PostgreSQL (results_crud_db)        | Оценки, отчёты, preset_training | JSONB для evaluations, report, пресетов | Бессрочно (история пользователя)      |
@@ -265,8 +266,8 @@ BFF → Frontend: /results (рекомендации тренировок / stud
 | Frontend          | Действия пользователя (клики, переходы)                | Browser console → Grafana Loki | Нет                          |
 | BFF               | HTTP запросы (метод, путь, статус, длительность)       | Structured JSON logs → Loki    | Нет (session_id, не user_id) |
 | Services          | Бизнес-события (создана сессия, сохранены результаты)  | Structured JSON logs → Loki    | Нет                          |
-| Agent-service     | Tool calls (название, параметры без PII, длительность) | Structured JSON logs → Loki    | Нет                          |
-| Agent-service     | LLM вызовы (модель, токены input/output, стоимость)    | Metrics → Prometheus           | Нет                          |
+| Interviewer-agent-service     | Tool calls (название, параметры без PII, длительность) | Structured JSON logs → Loki    | Нет                          |
+| Interviewer-agent-service     | LLM вызовы (модель, токены input/output, стоимость)    | Metrics → Prometheus           | Нет                          |
 | **Не логируется** | Текст сообщений пользователя и агента в прод-логах     | -                              | -                            |
 
 

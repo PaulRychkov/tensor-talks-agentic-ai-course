@@ -65,6 +65,9 @@ func (p *Producer) SendInterviewBuildRequest(sessionID, userID uuid.UUID, params
 	if params.NumQuestions != nil {
 		kafkaParams["num_questions"] = *params.NumQuestions
 	}
+	if len(params.FocusPoints) > 0 {
+		kafkaParams["focus_points"] = params.FocusPoints
+	}
 
 	event := InterviewBuilderEvent{
 		EventID:   uuid.New().String(),

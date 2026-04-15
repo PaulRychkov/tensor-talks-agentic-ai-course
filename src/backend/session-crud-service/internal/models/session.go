@@ -53,6 +53,7 @@ type SessionParams struct {
 	Type       string   `json:"type,omitempty"`       // specialty: ml, nlp, llm, cv, ds
 	Mode       string   `json:"mode"`                 // interview, training, study
 	Subtopics  []string `json:"subtopics,omitempty"`   // selected subtopics (study/training)
+	FocusPoints []string `json:"focus_points,omitempty"` // specific points for follow-up study
 }
 
 // Value реализует driver.Valuer для сохранения в JSONB.

@@ -29,6 +29,7 @@ func (h *PresetHandler) RegisterRoutes(router gin.IRouter) {
 	router.POST("/presets", h.CreatePreset)
 	router.GET("/presets/:preset_id", h.GetPreset)
 	router.GET("/presets", h.GetPresets)
+	router.DELETE("/presets/:preset_id", h.DeletePreset)
 }
 
 type createPresetRequest struct {
@@ -106,6 +107,27 @@ func (h *PresetHandler) GetPreset(c *gin.Context) {
 
 	metrics.BusinessResultOperationsTotal.WithLabelValues("results-crud-service", "get_preset", "success").Inc()
 	c.JSON(http.StatusOK, gin.H{"preset": preset})
+}
+
+// DeletePreset removes a preset by its id.
+func (h *PresetHandler) DeletePreset(c *gin.Context) {
+	presetID, err := uuid.Parse(c.Param("preset_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid preset_id"})
+		return
+	}
+
+	if err := h.svc.DeletePreset(c.Request.Context(), presetID); err != nil {
+		if err == repository.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "preset not found"})
+		} else {
+			h.logger.Error("DeletePreset failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
 // GetPresets returns presets for a user (query: user_id).

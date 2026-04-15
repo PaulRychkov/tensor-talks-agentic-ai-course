@@ -219,3 +219,14 @@ body {
   display: block;
   padding: 0.5rem 0.75rem;
 }
+
+.markdown-content ::selection,
+.markdown-content::selection {
+  background: transparent;
+  color: inherit;
+}
+.markdown-content ::-moz-selection,
+.markdown-content::-moz-selection {
+  background: transparent;
+  color: inherit;
+}

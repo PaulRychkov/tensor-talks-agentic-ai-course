@@ -612,6 +612,16 @@ func (s *ChatService) SubmitSessionRating(ctx context.Context, sessionID uuid.UU
 	return s.resultsCRUDCl.SubmitRating(ctx, sessionID, rating, comment)
 }
 
+// GetPresetsByUser возвращает пресеты пользователя из results-crud.
+func (s *ChatService) GetPresetsByUser(ctx context.Context, userID uuid.UUID) ([]client.Preset, error) {
+	return s.resultsCRUDCl.GetPresetsByUser(ctx, userID)
+}
+
+// DeletePreset удаляет пресет по ID.
+func (s *ChatService) DeletePreset(ctx context.Context, presetID uuid.UUID) error {
+	return s.resultsCRUDCl.DeletePreset(ctx, presetID)
+}
+
 // ── Dashboard methods (§10.2) ────────────────────────────────────────────────
 
 // DashboardSummary aggregated summary for the dashboard page.
@@ -759,16 +769,20 @@ func (s *ChatService) GetDashboardActivity(ctx context.Context, userID, from, to
 }
 
 // GetDashboardTopicProgress returns per-topic progress for the user.
-// Only study sessions contribute — topic scores are read from report_json.topic_scores.
+// Groups by session subtopic ID (not LLM-generated topic names) and uses
+// the best (max) session score so that re-study improves the progress.
 func (s *ChatService) GetDashboardTopicProgress(ctx context.Context, userID string) ([]TopicProgress, error) {
 	sessions, err := s.getUserSessions(ctx, userID)
 	if err != nil || len(sessions) == 0 {
 		return []TopicProgress{}, nil
 	}
 
+	// Build session_id → subtopics map and collect IDs.
+	sessionSubtopics := map[uuid.UUID][]string{}
 	var sessionIDs []uuid.UUID
 	for _, sess := range sessions {
 		sessionIDs = append(sessionIDs, sess.SessionID)
+		sessionSubtopics[sess.SessionID] = sess.Params.Subtopics
 	}
 
 	results, err := s.resultsCRUDCl.GetResults(ctx, sessionIDs)
@@ -776,8 +790,14 @@ func (s *ChatService) GetDashboardTopicProgress(ctx context.Context, userID stri
 		return []TopicProgress{}, nil
 	}
 
-	// Only study sessions feed topic progress; scores come from report_json.topic_scores.
-	topicScores := map[string][]float64{}
+	// Per-subtopic: collect the best score from each session.
+	// Score per session = average of its topic_scores values.
+	type subtopicAgg struct {
+		bestScore float64
+		sessions  int
+	}
+	agg := map[string]*subtopicAgg{}
+
 	for _, r := range results {
 		if r.SessionKind != "study" {
 			continue
@@ -791,29 +811,45 @@ func (s *ChatService) GetDashboardTopicProgress(ctx context.Context, userID stri
 		if err := json.Unmarshal(r.ReportJSON, &report); err != nil || len(report.TopicScores) == 0 {
 			continue
 		}
-		for topic, score := range report.TopicScores {
-			topicScores[topic] = append(topicScores[topic], score/100.0)
+
+		// Compute average score across all topics in this report.
+		var sum float64
+		for _, sc := range report.TopicScores {
+			sum += sc
+		}
+		sessionScore := sum / float64(len(report.TopicScores)) / 100.0
+
+		// Assign to session's subtopics. Fallback to "unknown" if none.
+		subs := sessionSubtopics[r.SessionID]
+		if len(subs) == 0 {
+			subs = []string{"unknown"}
+		}
+		for _, sub := range subs {
+			a, ok := agg[sub]
+			if !ok {
+				a = &subtopicAgg{}
+				agg[sub] = a
+			}
+			a.sessions++
+			if sessionScore > a.bestScore {
+				a.bestScore = sessionScore
+			}
 		}
 	}
 
 	var progress []TopicProgress
-	for topic, scores := range topicScores {
-		var sum float64
-		for _, sc := range scores {
-			sum += sc
-		}
-		avg := sum / float64(len(scores))
+	for sub, a := range agg {
 		status := "in_progress"
-		if avg >= 0.8 {
+		if a.bestScore >= 0.8 {
 			status = "completed"
-		} else if avg == 0 {
+		} else if a.bestScore == 0 {
 			status = "not_started"
 		}
 		progress = append(progress, TopicProgress{
-			Topic:    topic,
-			Score:    avg,
+			Topic:    sub,
+			Score:    a.bestScore,
 			Status:   status,
-			Sessions: len(scores),
+			Sessions: a.sessions,
 		})
 	}
 	return progress, nil

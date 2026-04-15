@@ -1066,7 +1066,7 @@ export default function Chat() {
                 onKeyDown={handleKeyDown}
                 disabled={isLoading || !sessionId || chatCompleted || studyBlocked}
               />
-              <div className="flex flex-col gap-2 w-40 mx-auto">
+              <div className="flex flex-row gap-2 justify-center">
                 <button
                   onClick={handleSend}
                   disabled={isLoading || !sessionId || !inputValue.trim() || chatCompleted || studyBlocked}

@@ -68,6 +68,7 @@ export interface SessionParams {
   subtopics?: string[];
   use_previous_results?: boolean;
   num_questions?: number;
+  focus_points?: string[];
 }
 
 export interface StartChatResponse {

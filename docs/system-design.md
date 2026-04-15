@@ -20,7 +20,7 @@
 **Агентная система (Python + LangGraph)** — автономные агенты с инструментами (планировщик, интервьюер, аналитик). Отдельно: **knowledge-producer-service** — фиксированный LLM-workflow наполнения базы (этап 0), без графа принятия решений как у агента.
 
 - Агент-планировщик (interview-builder-service)
-- Агент-интервьюер (agent-service, порт 8093)
+- Агент-интервьюер (interviewer-agent-service, порт 8093)
 - Агент-аналитик (analyst-agent-service, порт 8094)
 - LLM-workflow наполнения базы (knowledge-producer-service) — только этап 0
 
@@ -31,8 +31,8 @@
 Агенты не вызывают CRUD-сервисы напрямую. Взаимодействие через Kafka-топики:
 - `chat.events.out` — сообщения от пользователя (BFF → Dialogue-aggregator)
 - `chat.events.in` — ответы агента (Dialogue-aggregator → BFF)
-- `messages.full.data` — полные сообщения для агента (Dialogue-aggregator → Agent-service)
-- `generated.phrases` — реплики агента (Agent-service → Dialogue-aggregator)
+- `messages.full.data` — полные сообщения для агента (Dialogue-aggregator → Interviewer-agent-service)
+- `generated.phrases` — реплики агента (Interviewer-agent-service → Dialogue-aggregator)
 - `interview.build.request` / `interview.build.response` — формирование программы
 - `session.completed` — сигнал завершения сессии для запуска агента-аналитика (Dialogue-aggregator → Analyst-agent-service)
 
@@ -65,18 +65,20 @@
 **AI сервисы:**
 | Модуль | Технология | Роль |
 |--------|------------|------|
-| Agent-service | Python (LangChain + LangGraph) | Агент-интервьюер: ведение диалога, принятие решений (порт 8093) |
-| Analyst-agent-service | Python (LangChain + LangGraph) | Агент-аналитик: отчёт и рекомендации (порт 8094) |
+| Interviewer-agent-service | Python (LangGraph, ReAct) | Агент-интервьюер: ведение диалога, принятие решений, confidence-aware routing (порт 8093) |
+| Analyst-agent-service | Python (LangGraph, ReAct) | Агент-аналитик: отчёт, пресеты и рекомендации (порт 8094) |
 | Interview-builder-service | Python (FastAPI + LangGraph) | Агент-планировщик: формирование программы интервью и тренировок |
 | Knowledge-producer-service | Python (FastAPI + LLM) | LLM-workflow (не агент): наполнение базы, этап 0 |
 
 **Детерминированные сервисы:**
 | Модуль | Технология | Роль |
 |--------|------------|------|
-| Frontend | React + TypeScript | Пользовательский интерфейс |
+| Frontend | React + TypeScript | Пользовательский интерфейс (интервью, тренировки, study, результаты) |
+| Admin-frontend | React + TypeScript | Панель администратора (база знаний, черновики, метрики) |
 | BFF | Go (Gin) | Backend-for-frontend, агрегация запросов |
+| Admin-BFF | Go (Gin) | Backend-for-frontend для admin-панели |
 | Auth-service | Go | Аутентификация, JWT-токены |
-| User-store-service | Go + PostgreSQL | Хранение данных пользователей |
+| User-crud-service | Go + PostgreSQL | Хранение данных пользователей |
 | Session-service | Go + Redis | Управление сессиями, кеширование |
 | Session-crud-service | Go + PostgreSQL | Персистентное хранение сессий |
 | Knowledge-base-crud-service | Go + PostgreSQL | CRUD базы знаний |
@@ -84,7 +86,7 @@
 | Chat-crud-service | Go + PostgreSQL | Хранение сообщений чата |
 | Results-crud-service | Go + PostgreSQL | Хранение результатов |
 | Dialogue-aggregator | Go | Оркестрация Kafka-сообщений между BFF и агентами (порт 8088) |
-| Kafka | Strimzi (KRaft) | Брокер сообщений |
+| Kafka | Confluent (Zookeeper в docker-compose, KRaft в K8s) | Брокер сообщений |
 
 ## Основной workflow выполнения запроса
 
@@ -184,34 +186,32 @@
 
 ### Этап 3: Проведение интервью (агент-интервьюер)
 
-**Примечание**: Агент уже получил от планировщика программу (5 вопросов + теория из БД). Инструменты используются только при необходимости.
+**Примечание**: Агент уже получил от планировщика программу (n вопросов + теория из БД). Реализован как ReAct-агент на LangGraph — LLM самостоятельно выбирает инструменты через tool-calling, а не по фиксированной цепочке. Терминальный инструмент `emit_response` завершает ReAct-цикл.
+
+**LangGraph flow**: `receive_message → check_pii → load_context → check_off_topic → determine_question_index → agent_init → [call_agent_llm ↔ execute_tools] → finalize_response → publish_response`
 
 ```
 1. BFF → Kafka: chat.events.out (сообщение пользователя)
 2. Dialogue-aggregator → Kafka: messages.full.data (полное сообщение для агента)
-3. Agent-service читает messages.full.data
-4. LangGraph State: загрузить контекст сессии (программа уже в state)
-5. Агент-интервьюер:
-   a. Получить текущий вопрос из state (вопрос + теория уже загружены)
-   b. Если первое сообщение — сформулировать вопрос
-   c. Если ответ пользователя:
-      - evaluate_answer(question, answer, theory) — предварительная оценка для решения
-      - Принять решение:
-        * score ≥ 0.8 → следующий вопрос
-        * 0.4 ≤ score < 0.8 (только при необходимости):
-          · search_knowledge_base(query, topic) — найти дополнительную теорию
-          · search_questions(related_to=current_question) — найти подвопросы
-          · Сформулировать уточняющий подвопрос или подсказку
-        * Off-topic → вернуть к теме
-        * "Не знаю" → подсказка на основе загруженной теории
-        * Пропуск → записать в оценку
-        * Свежий фреймворк (только если кандидат упомянул) → web_search(query) + fetch_url(url)
-   d. Сгенерировать реплику
-6. Agent-service → Kafka: generated.phrases
-7. Dialogue-aggregator → Kafka: chat.events.in
-8. BFF → Frontend: доставить
-9. BFF → Chat-crud-service: сохранить
-10. Повторять до завершения всех n вопросов
+3. Interviewer-agent-service читает messages.full.data
+4. Pre-processing nodes:
+   a. check_pii — PII-фильтрация (Level 1: regex — email, телефон, ИНН, СНИЛС, паспорт, компании из blacklist; Level 2: LLM-классификация неявных данных; Level 3: санитизация prompt injection). При обнаружении PII → блокировка, маскирование в chat-crud, объяснение пользователю
+   b. load_context — загрузка из Redis (dialogue_history, per-question counters: attempts, hints_given, clarifications), программы из session-service, episodic memory (previous_topic_scores из results-crud)
+   c. check_off_topic — LLM-классификация (on_topic / off_topic / comment) через Pydantic OffTopicClassification
+   d. determine_question_index — определение текущего вопроса в истории
+5. ReAct agent loop (agent_init → call_agent_llm ↔ execute_tools):
+   - LLM видит 7 tool definitions и сам решает какой вызвать
+   - evaluate_answer(question, answer, theory) → AnswerEvaluation (Pydantic: completeness_score, accuracy_score, overall_score, decision, decision_confidence, reasoning, missing_points, strong_points)
+   - Confidence-aware routing: score ≥ 0.85 → next; score 0.75-0.85 + confidence ≥ 0.7 → next; score 0.75-0.85 + confidence < 0.7 → hint; confidence < 0.5 → self-reflection (переоценка)
+   - search_knowledge_base, search_questions, web_search, fetch_url, summarize_dialogue — по необходимости
+   - emit_response(action, message, rationale, score) — терминальный tool, завершает цикл
+   - Лимит: max 6 итераций ReAct на один ход
+6. Per-question counters: max 2 clarifications (interview), 3 (training), 1 (study); max 2 hints; max 3 attempts
+7. finalize_response — sanity checks, advance question index
+8. publish_response → Kafka: generated.phrases + Redis: persist state
+9. Dialogue-aggregator → Kafka: chat.events.in
+10. BFF → Frontend: доставить; BFF → Chat-crud-service: сохранить
+11. Повторять до завершения всех n вопросов
 ```
 
 ### Этап 4: Формирование отчёта и создание пресетов (агент-аналитик)
@@ -242,33 +242,118 @@
 
 ### LangGraph State Structure
 
+**Агент-интервьюер (AgentState)**:
 ```python
-class InterviewState(TypedDict):
+class AgentState(TypedDict):
+    # Входные данные
+    chat_id: str
     session_id: str
     user_id: str
-    program: InterviewProgram  # n вопросов с метаданными
+    user_message: str
+    session_mode: str                         # interview | training | study
+
+    # Программа и текущий вопрос
+    interview_program: List[Dict]             # n вопросов с теорией
     current_question_index: int
-    attempts: int
-    hints_given: int
-    evaluations: List[AnswerEvaluation]  # JSON-оценки по вопросам
-    dialogue_history: List[Message]  # полная история
-    dialogue_summary: str  # сжатая история (если > N токенов)
-    context_budget: int  # оставшиеся токены контекста
-    interview_status: str  # active, completed, failed
+    current_question: Optional[str]
+    current_theory: Optional[str]
+
+    # Per-question counters (persisted в Redis)
+    attempts: int                             # 0..MAX_ATTEMPTS (3)
+    hints_given: int                          # 0..MAX_HINTS (2)
+    clarifications_in_question: int           # 0..MAX по режиму (1/2/3)
+
+    # Накопленные оценки (Pydantic QuestionEvaluation)
+    evaluations: List[QuestionEvaluation]
+
+    # Episodic memory
+    previous_topic_scores: Dict[str, float]   # средние scores по темам из прошлых сессий
+
+    # ReAct transients
+    _agent_messages: List[Dict]
+    _agent_iterations: int                    # max 6
+    _skip_agent_loop: bool
+    _last_eval_score: Optional[float]
+
+    # Контроль
+    dialogue_history: List[Dict]
+    error: Optional[str]
+    pii_masked_content: Optional[str]
+```
+
+**Агент-аналитик (AnalystState)**:
+```python
+class AnalystState(TypedDict):
+    session_id: str
+    session_kind: str                         # interview | training | study
+    user_id: str
+    chat_id: str
+    topics: List[str]
+    level: str
+
+    # Загруженные данные
+    chat_messages: List[Dict]                 # Транскрипт чата
+    program: Optional[Dict]                   # Программа сессии
+    evaluations: List[Dict]                   # Per-question оценки
+
+    # Промежуточный анализ
+    errors_by_topic: Dict[str, List[str]]
+
+    # Отчёт и валидация
+    report: Optional[Dict]                    # AnalystReport (Pydantic)
+    validation_result: Optional[Dict]
+    validation_attempts: int                  # max 2
+
+    # Финальные выходы
+    presets: Optional[List[Dict]]             # TrainingPreset (для interview)
+    topic_progress: Optional[List[Dict]]      # Для study
+
+    # ReAct transients
+    _agent_messages: List[Dict]
+    _agent_iterations: int                    # max 10
+    _skip_agent_loop: bool
+```
+
+**Агент-планировщик (PlannerState)**:
+```python
+class PlannerState(TypedDict):
+    session_id: str
+    mode: str                                 # interview | training | study
+    topics: List[str]
+    level: str
+    weak_topics: List[str]
+    n_questions: int
+
+    messages: List[Dict]                      # LLM conversation (OpenAI format)
+    candidate_questions: List[Dict]
+    coverage_report: Optional[Dict]
+    validation_report: Optional[Dict]
+    knowledge_snippets: List[Dict]
+
+    final_program: Optional[List[Dict]]
+    program_meta: Optional[Dict]              # ProgramMeta (Pydantic)
+
+    iteration: int                            # max 8
+    error: Optional[str]
 ```
 
 ### Memory Policy
 
 **Краткосрочная память (Redis)**:
 - Активные сессии (TTL: 2 часа)
-- Последние 10 сообщений диалога
-- Текущий вопрос и метрики (попытки, подсказки)
+- Dialogue history и per-question counters (attempts, hints_given, clarifications_in_question)
+- Текущий вопрос и метрики
 
 **Долгосрочная память (PostgreSQL)**:
 - Полная история интервью (chat-crud-service)
 - Результаты и оценки (results-crud-service)
-- История прогресса пользователя
-- preset_training (тренировки по результатам интервью)
+- История прогресса пользователя (user_topic_progress)
+- Пресеты тренировок и study (presets)
+
+**Episodic memory (персонализация)**:
+- Интервьюер загружает `previous_topic_scores` из results-crud — средние оценки по темам из прошлых сессий пользователя, для учёта прогресса при выборе стратегии
+- Планировщик вызывает `get_user_history(user_id, topics)` — слабые/сильные темы для адаптации программы
+- Аналитик использует `ProgressDelta` (Pydantic: topic, previous_score, current_score, delta, assessment) — сравнение динамики между сессиями
 
 **Context Budget**:
 - Максимум 8000 токенов на сессию
@@ -287,6 +372,67 @@ class InterviewState(TypedDict):
 - Retrieval возвращает топ-3 релевантных элемента
 - Агент использует как контекст для оценки/подсказки
 - Для внешних материалов → фильтрация по доверенным источникам
+
+## Structured output (Pydantic-модели)
+
+Все ответы LLM парсятся в строго типизированные Pydantic-модели. JSON Schema из модели инжектируется в системный промпт. Парсинг через `model_validate_json` с fallback при невалидном JSON.
+
+**Интервьюер:**
+```python
+class AnswerEvaluation(BaseModel):
+    completeness_score: float      # [0.0, 1.0]
+    accuracy_score: float          # [0.0, 1.0]
+    overall_score: float           # [0.0, 1.0]
+    decision: Literal["next", "hint", "clarify", "redirect", "skip"]
+    missing_points: List[str]
+    strong_points: List[str]
+    feedback: str
+    decision_confidence: float     # [0.0, 1.0] — уверенность в решении
+    reasoning: str                 # обоснование уверенности
+
+class OffTopicClassification(BaseModel):
+    classification: Literal["on_topic", "off_topic", "comment"]
+    reason: str
+
+class PIICheckResult(BaseModel):
+    contains_pii: bool
+    reason: str
+    masked_text: str
+```
+
+**Аналитик:**
+```python
+class AnalystReport(BaseModel):
+    summary: str                   # min_length=10, 2-4 предложения
+    score: int                     # [0, 100], auto-clamped
+    errors_by_topic: Dict[str, List[Union[ErrorEntry, str]]]
+    strengths: List[str]
+    preparation_plan: List[str]    # 3-5 действий
+    materials: List[str]           # 3-5 материалов
+
+class TrainingPreset(BaseModel):
+    target_mode: Literal["study", "training"]
+    topic: str
+    weak_topics: List[str]
+    recommended_materials: List[str]
+    priority: int                  # [1, 3]
+
+class ProgressDelta(BaseModel):
+    topic: str
+    previous_score: float
+    current_score: float
+    delta: float
+    assessment: Literal["improved", "same", "declined"]
+```
+
+**Планировщик:**
+```python
+class ProgramMeta(BaseModel):
+    validation_passed: bool
+    coverage: Dict[str, int]       # {topic: count}
+    fallback_reason: Optional[str]
+    generator_version: str
+```
 
 ## Описание tool/API-интеграций
 
@@ -307,6 +453,14 @@ class InterviewState(TypedDict):
 | `group_errors_by_topic(evaluations)` | список оценок/ошибок | Map[topic, errors] | — | Аналитик |
 | `generate_report_section(section_type, data)` | тип секции (Summary, Errors, Strengths, Plan, Materials), данные | SectionJSON | SECTION_GENERATION_FAILED | Аналитик |
 | `validate_report(report_draft, evaluations)` | черновик отчёта, эталонные оценки | ValidationResult (ok / issues[]) | VALIDATION_FAILED | Аналитик |
+| `get_user_history(user_id, topics?, limit?)` | user_id, темы, лимит | Dict (weak/strong topics, scores) | — | Планировщик (episodic memory) |
+
+### Терминальные инструменты
+
+| Инструмент | Параметры | Действие | Где используется |
+|------------|-----------|----------|------------------|
+| `emit_response(action, message, rationale, score)` | действие (next_question, ask_clarification, give_hint, thank_you, off_topic_reminder, skip), текст, обоснование, score | Завершает ReAct-цикл, устанавливает agent_decision и generated_response | Интервьюер |
+| `emit_report(report)` | собранный отчёт (Dict) | Завершает ReAct-цикл, передаёт report в state | Аналитик |
 
 ### Внешние инструменты (Read-only)
 
@@ -365,21 +519,23 @@ GET /api/results/sessions/{session_id}:
 
 ### Guardrails
 
-**Pre-call**:
-- Маскирование PII (email, имена, телефоны) перед отправкой в LLM — по умолчанию пользователь не должен это писать, только если сам ввёл зачем-то
-- Детект prompt injection (ключевые паттерны: "ignore previous", "system prompt")
-- Лимит длины входа (max 4000 токенов)
+**Pre-call (PII-фильтрация, 152-ФЗ)**:
+- **Level 1 (regex, hard block)**: email, телефон, банковская карта, ИНН, СНИЛС, паспорт, самоидентификация ("меня зовут..."), компании из blacklist (Сбер, Яндекс, Google и др. из company_blacklist.json). При обнаружении → `agent_decision = "blocked_pii"`, маскирование в chat-crud-service
+- **Level 2 (LLM, soft block)**: классификация неявных PII (непрямые упоминания работодателя, даты). Temp=0, structured output PIICheckResult (Pydantic)
+- **Level 3 (sanitize, non-blocking)**: truncation (max 4000 chars), strip prompt injection markers (`<|...|>`, `[INST]`, `<<SYS>>`), residual PII masking
 
 **Post-call**:
-- Валидация формата (JSON Schema для оценок)
-- Запрет раскрытия промпта (детект паттернов в ответе)
-- Fallback при невалидном ответе
+- Валидация формата через Pydantic-модели (`AnswerEvaluation`, `AnalystReport`, `OffTopicClassification`, `ProgramMeta`)
+- Range checks: score в [0.0, 1.0], decision_confidence в [0.0, 1.0]
+- Leakage detection: проверка на раскрытие системного промпта в ответе
+- Tone sanitization: замена агрессивных формулировок на нейтральные
+- Fallback при невалидном JSON: retry с structured prompt → deterministic fallback
 
 **Лимиты**:
-- Max 3 tool calls на шаг агента
-- Max 10 tool calls на вопрос
-- Таймаут на каждый tool call: 10s
-- Бюджет токенов на сессию: 8000
+- Max 5 tool calls на шаг агента (интервьюер), max 6 итераций ReAct
+- Max 10 итераций ReAct (аналитик), max 8 итераций (планировщик)
+- Таймаут обработки: 120s (интервьюер), 180s (аналитик)
+- URL fetch: только trusted domains (arxiv.org, pytorch.org, huggingface.co и др.), max 5000 chars
 
 ## Технические и операционные ограничения
 
@@ -419,6 +575,6 @@ GET /api/results/sessions/{session_id}:
 
 1. **C4 Context** — система, пользователь, внешние сервисы и границы
 2. **C4 Container** — frontend/backend, orchestrator, retriever, tool layer, storage, observability
-3. **C4 Component** — внутреннее устройство agent-service
+3. **C4 Component** — внутреннее устройство interviewer-agent-service
 4. **Workflow Diagram** — пошаговое выполнение запроса, включая ветки ошибок
 5. **Data Flow Diagram** — как данные проходят через систему, что хранится, что логируется

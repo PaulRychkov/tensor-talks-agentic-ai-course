@@ -1,10 +1,10 @@
-# Agent-service (Interviewer) Specification
+# Interviewer-agent-service Specification
 
 ## Обзор
 
 **Назначение**: Ведение диалога (интервью / тренировка / сопровождение сценария по программе от планировщика), оценка ответов, принятие решений в реальном времени. Обмен с пользователем — через **Kafka** (потребляет `messages.full.data` от dialogue-aggregator, публикует `generated.phrases`). После последнего вопроса публикуется событие завершения сессии (`session.completed`) для **analyst-agent-service**.
 
-**Сервис**: `agent-service` (отдельный деплой, порт 8093). Аналитик выделен в отдельный сервис `analyst-agent-service` (порт 8094).
+**Сервис**: `interviewer-agent-service` (отдельный деплой, порт 8093; ранее `agent-service`). Реализован как **LangGraph ReAct-агент**. Аналитик выделен в отдельный сервис `analyst-agent-service` (порт 8094).
 
 **Технологии**: Python 3.11+, LangChain, LangGraph, Kafka, Redis.
 
@@ -23,13 +23,16 @@
 **Компоненты**:
 - LangGraph State — программа, текущий вопрос, оценки, история, бюджет контекста
 - Tool Layer — см. ниже
-- Guardrails — pre-call и post-call (в т.ч. JSON Schema для оценок)
+- **Structured output** (Pydantic-модели в `src/models/llm_outputs.py`): `AnswerEvaluation` (с `decision_confidence`), `OffTopicClassification`, `PIICheckResult` — LLM возвращает валидированные объекты, а не «сырой» JSON
+- **Episodic memory**: перед стартом сессии и на релевантных шагах агент подтягивает `previous_topic_scores` из results-crud через tool `get_user_history` для адаптации сложности и подсказок
+- Guardrails — pre-call (PII 3-уровневая фильтрация: regex → LLM → sanitize; strip prompt-injection; truncation) и post-call (Pydantic-валидация, range checks, leakage detection, tone)
 
 ## Инструменты
 
 | Инструмент | Назначение |
 |------------|------------|
-| `evaluate_answer(question, answer, theory)` | Предварительная оценка для решения о следующем шаге |
+| `evaluate_answer(question, answer, theory)` | Предварительная оценка (Pydantic `AnswerEvaluation` с `decision_confidence`) |
+| `get_user_history(user_id, topic?)` | Эпизодическая память: прошлые оценки по темам из results-crud |
 | `search_knowledge_base(query, topic)` | Дополнительная теория при частичном ответе |
 | `search_questions(related_to=current_question)` | Подвопросы / уточнения |
 | `web_search(query, num_results)` | Свежие фреймворки, если кандидат явно сослался |
@@ -44,11 +47,12 @@
    - текущий вопрос и теория из программы (БД уже учтена планировщиком)
    - если первое сообщение сессии диалога — сформулировать вопрос
    - если ответ пользователя:
-     - `evaluate_answer(question, answer, theory)`
-     - решение:
-       - score ≥ 0.8 → следующий вопрос
-       - 0.4 ≤ score < 0.8 (при необходимости): `search_knowledge_base`, `search_questions(related_to=...)`, уточняющий подвопрос или подсказка
-       - off-topic → вернуть к теме
+     - `evaluate_answer(question, answer, theory)` → Pydantic `AnswerEvaluation(score, decision_confidence, ...)`
+     - решение по **score + decision_confidence**:
+       - score ≥ 0.8 и `decision_confidence ≥ 0.7` → следующий вопрос
+       - `decision_confidence < 0.5` → self-reflection (перепроверка оценки с доп. контекстом)
+       - 0.4 ≤ score < 0.8 или `decision_confidence < 0.7` → подсказка: `search_knowledge_base`, `search_questions(related_to=...)`, уточняющий подвопрос
+       - off-topic (Pydantic `OffTopicClassification`) → вернуть к теме
        - «Не знаю» → подсказка из уже загруженной теории
        - пропуск → зафиксировать в оценке
        - упоминание свежего фреймворка → `web_search` + при необходимости `fetch_url`

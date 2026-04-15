@@ -39,7 +39,7 @@
 - `DIALOGUE_AGGREGATOR_KAFKA_BROKERS` — адреса Kafka брокеров
 - `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_CHAT_OUT` — топик для чтения (`chat.events.out`)
 - `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_CHAT_IN` — топик для записи (`chat.events.in`)
-- `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_SESSION_COMPLETED` — топик `session.completed` (для analyst-interviewer-agent-service)
+- `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_SESSION_COMPLETED` — топик `session.completed` (для analyst-agent-service)
 - `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_MESSAGES_FULL_DATA` — топик для отправки контекста агенту
 - `DIALOGUE_AGGREGATOR_KAFKA_TOPIC_GENERATED_PHRASES` — топик для приёма ответов агента
 - `DIALOGUE_AGGREGATOR_KAFKA_CONSUMER_GROUP` — группа consumer

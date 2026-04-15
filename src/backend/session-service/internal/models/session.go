@@ -18,6 +18,7 @@ type SessionParams struct {
 	Subtopics          []string `json:"subtopics,omitempty"`            // selected subtopics (study/training)
 	UsePreviousResults bool     `json:"use_previous_results,omitempty"` // enable episodic memory
 	NumQuestions       *int     `json:"num_questions,omitempty"`        // interview duration override (5/10/15)
+	FocusPoints        []string `json:"focus_points,omitempty"`         // specific points to focus on (from preset follow-up)
 }
 
 // InterviewProgram представляет программу интервью.

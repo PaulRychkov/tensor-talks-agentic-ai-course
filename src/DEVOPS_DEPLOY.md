@@ -106,7 +106,7 @@ Namespace: tensor-talks
 │                    PostgreSQL Cluster                        │
 │  StatefulSet: 1 под (external в production)                 │
 │  Схемы:                                                      │
-│  - user_store (auth-service, user-crud-service)            │
+│  - user_crud (auth-service, user-crud-service)             │
 │  - session_crud (session-crud-service)                     │
 │  - chat_crud (chat-crud-service)                           │
 │  - results_crud (results-crud-service)                     │

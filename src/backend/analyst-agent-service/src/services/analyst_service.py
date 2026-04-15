@@ -665,8 +665,11 @@ class AnalystService:
         if not unmastered_points:
             return None
 
-        topics = list(payload.topics or [])
-        if not topics:
+        # Prefer the original session's subtopic IDs (e.g. "theory_rag") so the
+        # follow-up study session targets the same subtopic specifically.
+        # Fall back to top-level topics only if subtopics are missing.
+        preset_topics = list(payload.subtopics or []) or list(payload.topics or [])
+        if not preset_topics:
             return None
 
         description = "Слабые пункты: " + "; ".join(unmastered_points[:5])
@@ -675,7 +678,7 @@ class AnalystService:
         preset = {
             "name": "Доизучение слабых пунктов",
             "description": description,
-            "topics": topics,
+            "topics": preset_topics,
             "level": payload.level or "middle",
             "mode": "study",
             "focus_points": unmastered_points,
@@ -730,7 +733,9 @@ class AnalystService:
             presets.append({
                 "name": f"Тренировка: {pretty}" if pretty else "Тренировка по слабым местам",
                 "description": description,
-                "topics": [topic_area],
+                # Save subtopic ID in topics so dashboard → builder routes the
+                # follow-up training to the exact subtopic, not the whole area.
+                "topics": [subtopic],
                 "level": payload.level or "middle",
                 "mode": "training",
                 "weak_topics": [subtopic],

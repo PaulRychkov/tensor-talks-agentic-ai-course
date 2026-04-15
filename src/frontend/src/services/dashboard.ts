@@ -17,8 +17,9 @@ function getAuthHeaders(): HeadersInit {
   return {};
 }
 
-async function authRequest<T>(path: string): Promise<T> {
+async function authRequest<T>(path: string, method: string = 'GET'): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
+    method,
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
@@ -122,6 +123,41 @@ export type SubtopicEntry = {
   label: string;
   topics: string[];  // e.g. ["llm", "nlp", "classic_ml"]
 };
+
+export type PresetItem = {
+  preset_id: string;
+  user_id: string;
+  target_mode: 'study' | 'training';
+  topics: string[];
+  materials: string[];            // entries like "focus_point:<title>" or subtopic ids
+  source_session_id?: string;
+  created_at: string;
+  expires_at?: string;
+};
+
+/**
+ * Fetch presets (study/training follow-ups) for the current user.
+ */
+export async function getUserPresets(): Promise<PresetItem[]> {
+  try {
+    const resp = await authRequest<{ presets: PresetItem[] }>('/presets');
+    return resp.presets ?? [];
+  } catch (err) {
+    console.error('[dashboard] presets fetch failed', err);
+    return [];
+  }
+}
+
+/**
+ * Delete a preset after it has been used to start a session.
+ */
+export async function deletePreset(presetId: string): Promise<void> {
+  try {
+    await authRequest<{ deleted: boolean }>(`/presets/${presetId}`, 'DELETE');
+  } catch (err) {
+    console.error('[dashboard] preset delete failed', err);
+  }
+}
 
 /**
  * Fetch available subtopics from knowledge base.

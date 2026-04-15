@@ -35,6 +35,7 @@ class BuildRequestParams(BaseModel):
     use_previous_results: bool = False
     user_id: Optional[str] = None
     num_questions: Optional[int] = Field(None, description="Override question count for interview mode (e.g. 5, 10, 15)")
+    focus_points: Optional[List[str]] = Field(None, description="Specific weak points to focus on (from preset follow-up)")
 
     @field_validator("level")
     @classmethod
@@ -103,6 +104,7 @@ class BuildRequest(BaseModel):
             use_previous_results=bool(raw_params.get("use_previous_results", False)),
             user_id=raw_params.get("user_id"),
             num_questions=raw_params.get("num_questions"),
+            focus_points=raw_params.get("focus_points"),
         )
 
         return cls(session_id=session_id, params=params)

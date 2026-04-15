@@ -1,6 +1,13 @@
 ## interviewer-agent-service — AI-интервьюер (LangGraph)
 
-`interviewer-agent-service` — Python FastAPI микросервис, реализующий AI-интервьюера на LangGraph. Получает контекст диалога через Kafka, прогоняет граф (классификация → оценка → решение → генерация), возвращает реплику и решение в `dialogue-aggregator`.
+`interviewer-agent-service` — Python FastAPI микросервис, реализующий AI-интервьюера на **LangGraph ReAct** с tool-calling. Получает контекст диалога через Kafka, прогоняет граф, возвращает реплику и решение в `dialogue-aggregator`.
+
+**Ключевые особенности**:
+- **Structured output (Pydantic)**: `AnswerEvaluation` (с `decision_confidence` 0–1), `OffTopicClassification`, `PIICheckResult` — парсинг через `model_validate_json`.
+- **Confidence-aware routing**: `≥ 0.7` и score в пограничной зоне → next, `< 0.7` → hint, `< 0.5` → self-reflection (переоценка).
+- **Episodic memory**: `previous_topic_scores` из results-crud, tool `get_user_history(user_id, topics)` для персонализации сложности и подсказок.
+- **PII-фильтрация (3 уровня)**: regex (email/телефон/ИНН/СНИЛС/паспорт/company blacklist) → LLM-классификация неявной PII → sanitize.
+- **Guardrails**: pre-call (strip prompt injection, truncation), post-call (Pydantic-валидация, range checks, leakage detection, tone sanitization).
 
 ### Архитектура
 
@@ -100,3 +107,7 @@ AgentState = {
 - `agent_processing_duration_seconds` — время обработки
 - `agent_current_question_index` — номер текущего вопроса
 - `agent_error_count{error_type}` — ошибки
+- `agent_decision_confidence` (Histogram) — распределение уверенности решений
+- `agent_low_confidence_decisions_total` (Counter) — решения с confidence < 0.5
+- `agent_llm_call_duration_seconds` (Histogram) — длительность LLM-вызовов
+- `guardrail_triggered_total{guardrail_name, stage}` (Counter) — срабатывания guardrails

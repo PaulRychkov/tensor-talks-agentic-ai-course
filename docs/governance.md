@@ -14,20 +14,28 @@
 | Недоступность LLM | Высокая | Среднее | Доля таймаутов, алерты | Ретраи, fallback-ответ пользователю | Средний |
 | Утечка секретов (ключи) | Низкая | Высокое | Secret-скан, аудит CI/CD | Vault, запрет секретов в git | Низкий |
 
-## Персональные данные
+## Персональные данные (152-ФЗ)
 
-Сейчас: история интервью хранится для просмотра результатов. В dev-режиме сервисы могут логировать текст сообщений.
+Платформа не собирает персональные данные: регистрация через автогенерированный логин (`{Прилагательное}{Существительное}{Число}`), без email. Восстановление — через recovery key.
 
-Правила: в прод-логах не должно быть текста сообщений. PII маскируется перед логированием и перед LLM. Сроки хранения фиксируются.
+PII-фильтрация реализована в interviewer-agent-service (3 уровня):
+- **Level 1 (regex, hard block)**: email, телефон, банковская карта (4x4), ИНН, СНИЛС, паспорт, самоидентификация ("меня зовут..."), компании из blacklist (company_blacklist.json). Блокировка сообщения, маскирование в chat-crud-service
+- **Level 2 (LLM, soft block)**: классификация неявных данных (непрямые упоминания, даты). Temp=0, structured output PIICheckResult (Pydantic)
+- **Level 3 (sanitize)**: truncation, strip prompt injection markers, residual PII masking перед LLM
+
+Правила: в прод-логах нет текста сообщений (structlog JSON, content подавлен по флагу окружения). PII не сохраняется в БД, не логируется, не передаётся в LLM.
 
 ## Защита от injection
 
-LLM не управляет системой - он выдаёт оценки/текст в заданном формате, а правила и лимиты применяются кодом. Где важна структура - строгий JSON + валидация.
+LLM не управляет системой — выдаёт оценки/текст в заданном формате (Pydantic-модели), а правила и лимиты применяются кодом. Structured output: все ответы LLM парсятся через `model_validate_json` в типизированные модели (AnswerEvaluation, AnalystReport, OffTopicClassification и др.).
 
-До вызова LLM: маскирование PII, детект инъекций, лимиты длины.
-После вызова: проверка формата, запрет на раскрытие промпта, фоллбек при невалидном ответе.
+Pre-call: PII фильтрация (3 уровня), strip prompt injection markers (`<|...|>`, `[INST]`, `<<SYS>>`), truncation (max 4000 chars).
+Post-call: Pydantic-валидация, range checks (score 0-1, confidence 0-1), leakage detection (системный промпт в ответе), tone sanitization, fallback при невалидном JSON.
 
 ## Мониторинг и evals
 
-Метрики: задержки, ошибки, число LLM-вызовов, стоимость на интервью.
-Тест-набор кейсов с периодическим прогоном. Контроль версий промптов и моделей.
+Prometheus-метрики: `agent_llm_call_duration_seconds` (Histogram), `agent_decision_confidence` (Histogram), `agent_low_confidence_decisions_total` (Counter, confidence < 0.5), `guardrail_triggered_total` (Counter с labels guardrail_name, stage), `agent_error_count` (Counter), `analyst_report_score` (Histogram), `analyst_validation_attempts` (Histogram).
+
+Продуктовые: completion rate, hint usage rate, training unlock rate, session duration.
+
+Тест-набор eval-кейсов с периодическим прогоном. Контроль версий промптов и моделей.

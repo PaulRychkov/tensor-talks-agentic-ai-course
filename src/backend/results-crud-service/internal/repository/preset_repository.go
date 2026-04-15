@@ -14,6 +14,7 @@ type PresetRepository interface {
 	Create(ctx context.Context, preset *models.Preset) error
 	GetByID(ctx context.Context, presetID uuid.UUID) (*models.Preset, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]models.Preset, error)
+	Delete(ctx context.Context, presetID uuid.UUID) error
 }
 
 // GormPresetRepository — GORM implementation of PresetRepository.
@@ -46,4 +47,15 @@ func (r *GormPresetRepository) GetByUserID(ctx context.Context, userID uuid.UUID
 		return nil, err
 	}
 	return presets, nil
+}
+
+func (r *GormPresetRepository) Delete(ctx context.Context, presetID uuid.UUID) error {
+	result := r.db.WithContext(ctx).Where("preset_id = ?", presetID).Delete(&models.Preset{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

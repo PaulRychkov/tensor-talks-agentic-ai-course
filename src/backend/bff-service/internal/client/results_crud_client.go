@@ -124,6 +124,81 @@ func (c *ResultsCRUDClient) SubmitRating(ctx context.Context, sessionID uuid.UUI
 	return nil
 }
 
+// Preset представляет пресет обучения/тренировки.
+type Preset struct {
+	PresetID        uuid.UUID  `json:"preset_id"`
+	UserID          uuid.UUID  `json:"user_id"`
+	TargetMode      string     `json:"target_mode"`
+	Topics          []string   `json:"topics"`
+	Materials       []string   `json:"materials"`
+	SourceSessionID *uuid.UUID `json:"source_session_id,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
+}
+
+// GetPresetsResponse ответ со списком пресетов.
+type GetPresetsResponse struct {
+	Presets []Preset `json:"presets"`
+}
+
+// GetPresetsByUser получает пресеты пользователя из results-crud.
+func (c *ResultsCRUDClient) GetPresetsByUser(ctx context.Context, userID uuid.UUID) ([]Preset, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET",
+		c.baseURL+"/presets?user_id="+userID.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(body, &errResp); err == nil {
+			return nil, fmt.Errorf("results crud service error: %s", errResp.Error)
+		}
+		return nil, fmt.Errorf("unexpected status: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var presetsResp GetPresetsResponse
+	if err := json.Unmarshal(body, &presetsResp); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return presetsResp.Presets, nil
+}
+
+// DeletePreset удаляет пресет по ID.
+func (c *ResultsCRUDClient) DeletePreset(ctx context.Context, presetID uuid.UUID) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE",
+		c.baseURL+"/presets/"+presetID.String(), nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete preset: status %d, body: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
 // GetResults получает результаты по списку session_id.
 func (c *ResultsCRUDClient) GetResults(ctx context.Context, sessionIDs []uuid.UUID) ([]Result, error) {
 	if len(sessionIDs) == 0 {
